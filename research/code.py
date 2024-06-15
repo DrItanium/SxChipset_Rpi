@@ -46,6 +46,13 @@ loop:
     jmp loop
 """
 
+# Use the cpu core frequency to yield the proper divisor rate
+cpuFrequency = microcontroller.cpu.frequency
+desiredRawClockRate = 20000000
+quadRawClockRate = desiredRawClockRate * 4
+divisor = cpuFrequency /quadRawClockRate 
+stateMachineFrequencyRate = int(cpuFrequency / divisor)
+
 assembled_hello = adafruit_pioasm.assemble(hello)
 assembled_clkgen = adafruit_pioasm.assemble(clkgen_program)
 
@@ -55,25 +62,14 @@ sm = rp2pio.StateMachine(
         frequency=2000,
         first_out_pin=board.LED,
 )
-cpuFrequency = microcontroller.cpu.frequency
-desiredRawClockRate = 20000000
-quadRawClockRate = desiredRawClockRate * 4
-divisor = cpuFrequency /quadRawClockRate 
-print("\n\n")
-print("state machine divisor", divisor)
 sm2 = rp2pio.StateMachine(
         assembled_clkgen,
-        frequency=int(cpuFrequency / divisor),
+        frequency=stateMachineFrequencyRate,
         first_set_pin=board.GP2,
         first_out_pin=board.GP2,
         out_pin_count=3,
         set_pin_count=3,
 )
-
-print("\n\n")
-print("cpu frequency:", microcontroller.cpu.frequency)
-print("hello real frequency", sm.frequency)
-print("clkgen real frequency", sm2.frequency)
 
 while True:
     sm.write(bytes((1,)))
