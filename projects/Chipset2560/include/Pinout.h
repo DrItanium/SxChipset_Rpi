@@ -1,5 +1,5 @@
 /*
-i960SxChipset_Type103
+i960SxChipset_RPi
 Copyright (c) 2022-2024, Joshua Scoggins
 All rights reserved.
 
@@ -23,8 +23,8 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef SXCHIPSET_TYPE103_PINOUT_H
-#define SXCHIPSET_TYPE103_PINOUT_H
+#ifndef CHIPSET2560_PINOUT_H
+#define CHIPSET2560_PINOUT_H
 #include <Arduino.h>
 /**
  * @brief Wrapper around the AVR Pins to make templating easier and cleaner
@@ -339,4 +339,4 @@ pulse() noexcept {
     toggle<pin>();
 }
 
-#endif // end SXCHIPSET_TYPE103_PINOUT_H
+#endif // end CHIPSET2560_PINOUT_H

@@ -1,5 +1,5 @@
 /*
-i960SxChipset_Type103
+i960SxChipset_RPi
 Copyright (c) 2022-2024, Joshua Scoggins
 All rights reserved.
 
@@ -23,25 +23,13 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef SXCHIPSET_TYPE103_DETECT_H__
-#define SXCHIPSET_TYPE103_DETECT_H__
+#ifndef CHIPSET2560_DETECT_H__
+#define CHIPSET2560_DETECT_H__
 #include <stdint.h>
 #ifdef __AVR__
 #include <avr/io.h>
 #endif
-#if defined(SPDR) && defined(SPIF) && defined(SPSR)
-#define AVR_SPI_AVAILABLE
-#endif
 
-#ifndef GPIOR0
-extern uint8_t GPIOR0;
-#endif
-#ifndef GPIOR1
-extern uint8_t GPIOR1;
-#endif
-#ifndef GPIOR2
-extern uint8_t GPIOR2;
-#endif
 
 constexpr auto getRAMEnd() noexcept {
     return RAMEND;
@@ -65,4 +53,4 @@ inline volatile T* adjustedMemoryPointer(size_t address) noexcept {
     return memoryPointer<T>(address + (getRAMEnd() + 1));
 }
 
-#endif // end SXCHIPSET_TYPE103_DETECT_H__
+#endif // end CHIPSET2560_DETECT_H__
