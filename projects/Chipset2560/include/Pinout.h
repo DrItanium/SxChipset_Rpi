@@ -59,34 +59,10 @@ Count = NUM_DIGITAL_PINS,
 #ifdef LED_BUILTIN
     LED = LED_BUILTIN,
 #endif
-
-    SD_EN = PortB0,
-    XINT2 = PortB4,
-    XINT0 = PortB5, // OC1A
-    Lock = PortB6,
-    Hold = PortB7,
-
-    ADS = PortD2,
-    BLAST = PortD3,
-    WR = PortD4,
-    BE0 = PortD5,
-    BE1 = PortD6,
-    IsIOOperation = PortD7,
-
     RXD0 = PortE0,
     TXD0 = PortE1,
-    XINT6 = PortE2,
-    XINT4 = PortE3,
-    HLDA = PortE4,
 
-
-    // PortE7 is free from emitting the 20MHz clock, this is handled by a
-    // separate clock controller chip
-    EBI_WR = PortG0,
-    EBI_RD = PortG1,
-    EBI_ALE = PortG2,
-    Reset = PortG3,
-    ReadyDirect = PortG4,
+    SD_EN = PortB0,
 
 };
 enum class Port : byte {
@@ -95,22 +71,6 @@ enum class Port : byte {
 #include "AVRPorts.def"
 #undef X
     None,
-    DataLinesLower = F,
-    DataLinesUpper = C,
-    AddressLinesLowest = K,
-    AddressLinesLower = H,
-    AddressLinesHigher = J,
-    AddressLinesHighest = L,
-};
-constexpr Port AddressLines[4] {
-    Port::AddressLinesLowest,
-    Port::AddressLinesLower,
-    Port::AddressLinesHigher,
-    Port::AddressLinesHighest,
-};
-constexpr Port DataLines[2] {
-    Port::DataLinesLower,
-    Port::DataLinesUpper,
 };
 constexpr auto numberOfAvailablePins() noexcept {
     return 0 

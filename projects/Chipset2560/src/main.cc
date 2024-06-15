@@ -1,5 +1,5 @@
 /*
-i960SxChipset_Type103
+i960SxChipset_RPi
 Copyright (c) 2022-2024, Joshua Scoggins
 All rights reserved.
 
@@ -41,12 +41,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 constexpr uint32_t MicrocontrollerSpeed = F_CPU;
 
 SdFs SD;
-
-
-
-
-
-
 
 void
 setup() {
