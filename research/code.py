@@ -38,12 +38,14 @@ loop_start:
     jmp loop_start
 """
 
-hello = """
-.program hello
-loop:
-    pull
-    out pins, 1
-    jmp loop
+
+ready_signal = """
+.program ready_signal
+.wrap_target
+    set pins, 1
+    pull block ; wait until we get some sort of data
+    set pins, 0 [7]
+    .wrap
 """
 
 # Use the cpu core frequency to yield the proper divisor rate
@@ -53,15 +55,10 @@ quadRawClockRate = desiredRawClockRate * 4
 divisor = cpuFrequency /quadRawClockRate 
 stateMachineFrequencyRate = int(cpuFrequency / divisor)
 
-assembled_hello = adafruit_pioasm.assemble(hello)
 assembled_clkgen = adafruit_pioasm.assemble(clkgen_program)
+assembled_ready_signal = adafruit_pioasm.assemble(ready_signal)
 
 
-sm = rp2pio.StateMachine(
-        assembled_hello,
-        frequency=2000,
-        first_out_pin=board.LED,
-)
 sm2 = rp2pio.StateMachine(
         assembled_clkgen,
         frequency=stateMachineFrequencyRate,
@@ -70,9 +67,14 @@ sm2 = rp2pio.StateMachine(
         out_pin_count=3,
         set_pin_count=3,
 )
+sm = rp2pio.StateMachine(
+        assembled_ready_signal,
+        frequency=stateMachineFrequencyRate,
+        first_out_pin=board.GP18,
+        first_set_pin=board.GP18,
+)
+
 
 while True:
-    sm.write(bytes((1,)))
-    time.sleep(0.5)
     sm.write(bytes((0,)))
     time.sleep(0.5)
