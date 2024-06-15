@@ -19,3 +19,15 @@ new terminal is run
 
 ` . bin/activate `
 
+
+# Project Structure
+
+There are two important folders, the research directory is a scratch space to
+try things out. The projects directory contains the platformio projects that I
+can use to program different chips I have access to. The here is a legend for
+the different projects:
+
+- ClockChip - An atmega4808 chip that generates the 20MHz, 10Mhz, and 5MHz clocks used  It also uses the remaining pins to provide a sensor framework. TWI is hooked up
+- Chipset2560 - An atmega2560 which has a dedicated UART, SDCard socket, and enabled TWI. All other signals are exposed for use
+- ChipsetRP2040 - A raspberry pi pico that is installed into the design through a separate custom PCB. Has logic level shifters to allow for easy interfacing of different pieces of code.
+
