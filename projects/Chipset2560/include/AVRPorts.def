@@ -1,0 +1,33 @@
+#if defined(PORTA)
+	X(A)
+#endif
+#if defined(PORTB)
+    X(B)
+#endif
+#if defined(PORTC)
+    X(C)
+#endif
+#if defined(PORTD)
+    X(D)
+#endif
+#if defined(PORTE)
+    X(E)
+#endif
+#if defined(PORTF)
+    X(F)
+#endif
+#if defined(PORTG)
+    X(G)
+#endif
+#if defined(PORTH)
+    X(H)
+#endif
+#if defined(PORTJ)
+    X(J)
+#endif
+#if defined(PORTK)
+    X(K)
+#endif
+#if defined(PORTL)
+    X(L)
+#endif

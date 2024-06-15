@@ -1,0 +1,264 @@
+#ifdef PIN_PB0
+X(B, 0)
+#endif
+#ifdef PIN_PB1
+X(B, 1)
+#endif
+#ifdef PIN_PB2
+X(B, 2)
+#endif
+#ifdef PIN_PB3
+X(B, 3)
+#endif
+#ifdef PIN_PB4
+X(B, 4)
+#endif
+#ifdef PIN_PB5
+X(B, 5)
+#endif
+#ifdef PIN_PB6
+X(B, 6)
+#endif
+#ifdef PIN_PB7
+X(B, 7)
+#endif
+#ifdef PIN_PC0
+X(C, 0)
+#endif
+#ifdef PIN_PC1
+X(C, 1)
+#endif
+#ifdef PIN_PC2
+X(C, 2)
+#endif
+#ifdef PIN_PC3
+X(C, 3)
+#endif
+#ifdef PIN_PC4
+X(C, 4)
+#endif
+#ifdef PIN_PC5
+X(C, 5)
+#endif
+#ifdef PIN_PC6
+X(C, 6)
+#endif
+#ifdef PIN_PC7
+X(C, 7)
+#endif
+#ifdef PIN_PA0
+X(A, 0)
+#endif
+#ifdef PIN_PA1
+X(A, 1)
+#endif
+#ifdef PIN_PA2
+X(A, 2)
+#endif
+#ifdef PIN_PA3
+X(A, 3)
+#endif
+#ifdef PIN_PA4
+X(A, 4)
+#endif
+#ifdef PIN_PA5
+X(A, 5)
+#endif
+#ifdef PIN_PA6
+X(A, 6)
+#endif
+#ifdef PIN_PA7
+X(A, 7)
+#endif
+#ifdef PIN_PD0
+X(D, 0)
+#endif
+#ifdef PIN_PD1
+X(D, 1)
+#endif
+#ifdef PIN_PD2
+X(D, 2)
+#endif
+#ifdef PIN_PD3
+X(D, 3)
+#endif
+#ifdef PIN_PD4
+X(D, 4)
+#endif
+#ifdef PIN_PD5
+X(D, 5)
+#endif
+#ifdef PIN_PD6
+X(D, 6)
+#endif
+#ifdef PIN_PD7
+X(D, 7)
+#endif
+#ifdef PIN_PE0
+X(E, 0)
+#endif
+#ifdef PIN_PE1
+X(E, 1)
+#endif
+#ifdef PIN_PE2
+X(E, 2)
+#endif
+#ifdef PIN_PE3
+X(E, 3)
+#endif
+#ifdef PIN_PE4
+X(E, 4)
+#endif
+#ifdef PIN_PE5
+X(E, 5)
+#endif
+#ifdef PIN_PE6
+X(E, 6)
+#endif
+#ifdef PIN_PE7
+X(E, 7)
+#endif
+#ifdef PIN_PF0
+X(F, 0)
+#endif
+#ifdef PIN_PF1
+X(F, 1)
+#endif
+#ifdef PIN_PF2
+X(F, 2)
+#endif
+#ifdef PIN_PF3
+X(F, 3)
+#endif
+#ifdef PIN_PF4
+X(F, 4)
+#endif
+#ifdef PIN_PF5
+X(F, 5)
+#endif
+#ifdef PIN_PF6
+X(F, 6)
+#endif
+#ifdef PIN_PF7
+X(F, 7)
+#endif
+#ifdef PIN_PG0
+X(G, 0)
+#endif
+#ifdef PIN_PG1
+X(G, 1)
+#endif
+#ifdef PIN_PG2
+X(G, 2)
+#endif
+#ifdef PIN_PG3
+X(G, 3)
+#endif
+#ifdef PIN_PG4
+X(G, 4)
+#endif
+#ifdef PIN_PG5
+X(G, 5)
+#endif
+#ifdef PIN_PG6
+X(G, 6)
+#endif
+#ifdef PIN_PG7
+X(G, 7)
+#endif
+#ifdef PIN_PH0
+X(H, 0)
+#endif
+#ifdef PIN_PH1
+X(H, 1)
+#endif
+#ifdef PIN_PH2
+X(H, 2)
+#endif
+#ifdef PIN_PH3
+X(H, 3)
+#endif
+#ifdef PIN_PH4
+X(H, 4)
+#endif
+#ifdef PIN_PH5
+X(H, 5)
+#endif
+#ifdef PIN_PH6
+X(H, 6)
+#endif
+#ifdef PIN_PH7
+X(H, 7)
+#endif
+#ifdef PIN_PJ0
+X(J, 0)
+#endif
+#ifdef PIN_PJ1
+X(J, 1)
+#endif
+#ifdef PIN_PJ2
+X(J, 2)
+#endif
+#ifdef PIN_PJ3
+X(J, 3)
+#endif
+#ifdef PIN_PJ4
+X(J, 4)
+#endif
+#ifdef PIN_PJ5
+X(J, 5)
+#endif
+#ifdef PIN_PJ6
+X(J, 6)
+#endif
+#ifdef PIN_PJ7
+X(J, 7)
+#endif
+#ifdef PIN_PK0
+X(K, 0)
+#endif
+#ifdef PIN_PK1
+X(K, 1)
+#endif
+#ifdef PIN_PK2
+X(K, 2)
+#endif
+#ifdef PIN_PK3
+X(K, 3)
+#endif
+#ifdef PIN_PK4
+X(K, 4)
+#endif
+#ifdef PIN_PK5
+X(K, 5)
+#endif
+#ifdef PIN_PK6
+X(K, 6)
+#endif
+#ifdef PIN_PK7
+X(K, 7)
+#endif
+#ifdef PIN_PL0
+X(L, 0)
+#endif
+#ifdef PIN_PL1
+X(L, 1)
+#endif
+#ifdef PIN_PL2
+X(L, 2)
+#endif
+#ifdef PIN_PL3
+X(L, 3)
+#endif
+#ifdef PIN_PL4
+X(L, 4)
+#endif
+#ifdef PIN_PL5
+X(L, 5)
+#endif
+#ifdef PIN_PL6
+X(L, 6)
+#endif
+#ifdef PIN_PL7
+X(L, 7)
+#endif
