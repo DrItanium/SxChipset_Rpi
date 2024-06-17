@@ -39,8 +39,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // then we get 4 clocks per i960 cycle.
 //
 constexpr uint32_t MicrocontrollerSpeed = F_CPU;
-
+constexpr bool ActivateSDCard = false;
+constexpr int32_t SDCardInitializationAttempts = 1000;
+volatile bool sdcardAvailable = false;
 SdFs SD;
+bool
+trySetupSDCard() noexcept {
+    return SD.begin(static_cast<int>(Pin::SD_EN));
+}
 
 void
 setup() {
@@ -48,14 +54,35 @@ setup() {
     Serial.begin(115200);
     Wire.begin();
     SPI.begin();
+    if constexpr (ActivateSDCard) {
+        Serial.println(F("Looking for SDCard"));
+        if constexpr (SDCardInitializationAttempts < 0) {
+            // infinite
+            while (!trySetupSDCard()) {
+                Serial.print('.');
+                delay(1000);
+            }
+            Serial.println(F("available!"));
+            sdcardAvailable = true;
+        } else {
+            for (int i = 0; i < SDCardInitializationAttempts; ++i) {
+                if (trySetupSDCard()) {
+                    sdcardAvailable = true;
+                    break;
+                }
+                delay(1000); // wait one second
+            }
+            if (sdcardAvailable) {
+                Serial.println(F("SDCard available!"));
+            } else {
+                Serial.println(F("Timeout reached, SDCard not available!"));
+            }
 
-    {
-        while (!SD.begin(static_cast<int>(Pin::SD_EN))) {
-            Serial.println(F("NO SD CARD!"));
-            delay(1000);
         }
+    } else {
+        Serial.println(F("SDCard support hard disabled!"));
     }
-    Serial.println(F("SD CARD FOUND!"));
+
     // find firmware.bin and install it into the 512k block of memory
 }
 void 
