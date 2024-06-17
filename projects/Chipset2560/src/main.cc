@@ -33,11 +33,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Pinout.h"
 #include "Setup.h"
 
-// Each AVR cycle takes some amount of time to complete. In this case, it is
-// 50ns. When we use the 20MHz clock directly in the i960 then we have a cycle
-// time of 100ns or two avr clock cycles. If we feed a 10MHz signal in the i960
-// then we get 4 clocks per i960 cycle.
-//
 constexpr uint32_t MicrocontrollerSpeed = F_CPU;
 constexpr bool ActivateSDCard = false;
 constexpr int32_t SDCardInitializationAttempts = 1000;
