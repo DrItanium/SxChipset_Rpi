@@ -62,7 +62,7 @@ trySetupSDCard() noexcept {
             if (sdcardAvailable) {
                 Serial.println(F("SDCard available!"));
             } else {
-                Serial.println(F("Timeout reached, SDCard not available!"));
+                Serial.println(F("Max attempts reached, SDCard not available!"));
             }
 
         }
