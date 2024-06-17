@@ -52,7 +52,7 @@ trySetupSDCard() noexcept {
             Serial.println(F("available!"));
             sdcardAvailable = true;
         } else {
-            for (int i = 0; i < SDCardInitializationAttempts; ++i) {
+            for (int32_t i = 0; i < SDCardInitializationAttempts; ++i) {
                 if (initsd()) {
                     sdcardAvailable = true;
                     break;
@@ -64,7 +64,6 @@ trySetupSDCard() noexcept {
             } else {
                 Serial.println(F("Max attempts reached, SDCard not available!"));
             }
-
         }
     }
 }
