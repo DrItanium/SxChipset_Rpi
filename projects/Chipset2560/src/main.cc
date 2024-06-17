@@ -43,22 +43,15 @@ constexpr bool ActivateSDCard = false;
 constexpr int32_t SDCardInitializationAttempts = 1000;
 volatile bool sdcardAvailable = false;
 SdFs SD;
-bool
-trySetupSDCard() noexcept {
-    return SD.begin(static_cast<int>(Pin::SD_EN));
-}
 
 void
-setup() {
-    // now we can start setting up peripherals
-    Serial.begin(115200);
-    Wire.begin();
-    SPI.begin();
+trySetupSDCard() noexcept {
     if constexpr (ActivateSDCard) {
+        auto initsd = []() -> bool { return SD.begin(static_cast<int>(Pin::SD_EN)); };
         Serial.println(F("Looking for SDCard"));
         if constexpr (SDCardInitializationAttempts < 0) {
             // infinite
-            while (!trySetupSDCard()) {
+            while (!initsd()) {
                 Serial.print('.');
                 delay(1000);
             }
@@ -66,7 +59,7 @@ setup() {
             sdcardAvailable = true;
         } else {
             for (int i = 0; i < SDCardInitializationAttempts; ++i) {
-                if (trySetupSDCard()) {
+                if (initsd()) {
                     sdcardAvailable = true;
                     break;
                 }
@@ -79,11 +72,37 @@ setup() {
             }
 
         }
-    } else {
-        Serial.println(F("SDCard support hard disabled!"));
     }
-
-    // find firmware.bin and install it into the 512k block of memory
+}
+void
+reconfigureRandomSeed() noexcept {
+    Serial.println(F("Reconfiguring random seed"));
+    uint32_t newSeed = 0;
+    newSeed += analogRead(A0);
+    newSeed += analogRead(A1);
+    newSeed += analogRead(A2);
+    newSeed += analogRead(A3);
+    newSeed += analogRead(A4);
+    newSeed += analogRead(A5);
+    newSeed += analogRead(A6);
+    newSeed += analogRead(A7);
+    newSeed += analogRead(A8);
+    newSeed += analogRead(A9);
+    newSeed += analogRead(A10);
+    newSeed += analogRead(A11);
+    newSeed += analogRead(A12);
+    newSeed += analogRead(A13);
+    newSeed += analogRead(A14);
+    newSeed += analogRead(A15);
+    randomSeed(newSeed);
+}
+void
+setup() {
+    Serial.begin(115200);
+    reconfigureRandomSeed();
+    Wire.begin();
+    SPI.begin();
+    trySetupSDCard();
 }
 void 
 loop() {
