@@ -33,7 +33,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Pinout.h"
 #include "Setup.h"
 
-constexpr uint32_t MicrocontrollerSpeed = F_CPU;
 constexpr bool ActivateSDCard = false;
 constexpr int32_t SDCardInitializationAttempts = 1000;
 volatile bool sdcardAvailable = false;
