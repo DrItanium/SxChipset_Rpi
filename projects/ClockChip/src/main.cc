@@ -258,8 +258,10 @@ sinkWire() {
         (void)Wire.read();
     }
 }
+
 void
 wireReceiveEvent(int howMany) {
+    // make this as simple as possible
     if (howMany >= 1) {
         switch (static_cast<WireReceiveOpcode>(Wire.read())) {
             case WireReceiveOpcode::SetMode: 

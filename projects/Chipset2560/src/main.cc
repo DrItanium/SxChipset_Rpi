@@ -93,17 +93,22 @@ void
 configureEBI() noexcept {
     // for now enable a simple 256 byte space
     XMCRB = 0b0'0000'111; // no high bits, no bus keeper
-    XMCRA = 0b1'100'00'00; // Enable the EBI, divide the memory space in half,
+    XMCRA = 0b1'100'01'01; // Enable the EBI, divide the memory space in half,
                            // no wait states in either
 }
+constexpr size_t EBIStartAddress = 0xFE00;
 void
 setup() {
     Serial.begin(115200);
     reconfigureRandomSeed();
     Wire.begin();
     SPI.begin();
+    DDRA = 0xFF;
     trySetupSDCard();
     configureEBI();
+    for (size_t i = EBIStartAddress; i < (EBIStartAddress + 32); ++i) {
+        Serial.printf(F("@0x%x : 0x%x\n"), i, memory<uint8_t>(i));
+    }
 }
 void 
 loop() {
