@@ -1,0 +1,25 @@
+
+
+ Pin # | Name     | Pin Type
+-----------------------------
+   1   | CLK      | Clock
+   2   | XRDY     | Input
+   3   | BE0      | Input
+   4   | BE1      | Input
+   5   | BLAST    | Input
+   6   | J0       | Input
+   7   | J1       | Input
+   8   | J2       | Input
+   9   | J3       | Input
+  10   | GND      | GND
+  11   | OE       | /OE
+  12   | J4       | NC
+  13   | J5       | NC
+  14   | J6       | NC
+  15   | J7       | NC
+  16   | FAIL     | Output
+  17   | Z0       | Output
+  18   | Z1       | Output
+  19   | READY    | Output
+  20   | VCC      | VCC
+
