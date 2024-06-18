@@ -1,0 +1,35 @@
+GAL16V8
+Type103CustomHandler
+
+IN0 IN1 X7   X6 X5  X4   SO0  SO1 SO2  GND
+CS1 IO  SEN3 SD MB0 INT1 INT2 RDY OUT0 VCC
+
+INT2 = X7 + X6
+INT1 = X5 + X4
+IO  = CS1
+SD  = SO0
+MB0 = SO1
+RDY = SO2
+
+DESCRIPTION
+Provides aux glue logic for spi1 decoding and interrupt merging to the i960 from the io expanders
+
+SPI1 Table is as follows:
+0. GPIO
+1. SD
+2. PSRAM0
+3. PSRAM1
+
+X5 and X4 are the interrupt lines coming from expander 4 and 5 (INT1)
+X6 and X7 are the interrupt lines coming from expander 6 and 7 (INT2)
+
+The each interrupt is from a 32-bit port comprised of two 16-bit ports.
+
+IN0, IN1, and OUT0 go unused but are exposed on the board itself
+
+OUT1 is listed on the board, it is used for the READY signal because I forgot to directly connect it.
+I also redid the pinout so SO2 is actually a passthrough for ~{READY} since
+combining it with SPI decode prevents holding the spi bus open while I'm
+talking to the i960
+
+

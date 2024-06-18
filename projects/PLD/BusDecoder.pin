@@ -1,0 +1,25 @@
+
+
+ Pin # | Name     | Pin Type
+-----------------------------
+   1   | IWR      | Input
+   2   | IRD      | Input
+   3   | IA8      | Input
+   4   | IA9      | Input
+   5   | IA10     | Input
+   6   | IA11     | Input
+   7   | IA12     | Input
+   8   | IA13     | Input
+   9   | IA14     | Input
+  10   | GND      | GND
+  11   | PC7      | Input
+  12   | S3       | NC
+  13   | S2       | NC
+  14   | S1       | NC
+  15   | S0       | Output
+  16   | EBI      | Output
+  17   | IOX      | Output
+  18   | IEN      | Output
+  19   | XEN      | Output
+  20   | VCC      | VCC
+

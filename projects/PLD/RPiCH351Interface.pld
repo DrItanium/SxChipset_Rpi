@@ -1,0 +1,19 @@
+GAL22V10
+RPiCH351Interface
+
+NC SA5 SA4 SA3 SA2  SA1  SA0 SOE SWE NC NC GND
+NC NC  NC  NC  DEV1 DEV0 RD  WR  A2  A1 A0 VCC
+
+A2 = SA2
+A1 = SA1
+A0 = SA0
+WR = SWE
+RD = SOE
+/DEV0 = /SA3 * /SA4 * /SA5
+/DEV1 =  SA3 * /SA4 * /SA5
+
+
+DESCRIPTION
+
+Decoder for CH351 that is meant to allow a raspberry pi to interface with the
+i960

@@ -1,0 +1,17 @@
+GAL16V8
+SRAMCardDecoder
+
+SEL0  SEL1 SEL2 SEL3 A19 A20 A21 A22 A23 GND
+M     NC   NC   NC NC EN0 EN3 EN2 EN1 VCC
+
+/EN0 = /M * /A19 * /A20 * SEL3 * A23 * SEL2 * A22 * SEL1 * A21 + /M * /A19 * /A20 * SEL3 * A23 * SEL2 * A22 * /SEL1 * /A21 + /M * /A19 * /A20 * SEL3 * A23 * /SEL2 * /A22 * SEL1 * A21 + /M * /A19 * /A20 * SEL3 * A23 * /SEL2 * /A22 * /SEL1 * /A21 + /M * /A19 * /A20 * /SEL3 * /A23 * SEL2 * A22 * SEL1 * A21 + /M * /A19 * /A20 * /SEL3 * /A23 * SEL2 * A22 * /SEL1 * /A21 + /M * /A19 * /A20 * /SEL3 * /A23 * /SEL2 * /A22 * SEL1 * A21 + /M * /A19 * /A20 * /SEL3 * /A23 * /SEL2 * /A22 * /SEL1 * /A21
+/EN1 = /M * A19 * /A20 * SEL3 * A23 * SEL2 * A22 * SEL1 * A21 + /M * A19 * /A20 * SEL3 * A23 * SEL2 * A22 * /SEL1 * /A21 + /M * A19 * /A20 * SEL3 * A23 * /SEL2 * /A22 * SEL1 * A21 + /M * A19 * /A20 * SEL3 * A23 * /SEL2 * /A22 * /SEL1 * /A21 + /M * A19 * /A20 * /SEL3 * /A23 * SEL2 * A22 * SEL1 * A21 + /M * A19 * /A20 * /SEL3 * /A23 * SEL2 * A22 * /SEL1 * /A21 + /M * A19 * /A20 * /SEL3 * /A23 * /SEL2 * /A22 * SEL1 * A21 + /M * A19 * /A20 * /SEL3 * /A23 * /SEL2 * /A22 * /SEL1 * /A21
+/EN2 = /M * /A19 * A20 * SEL3 * A23 * SEL2 * A22 * SEL1 * A21 + /M * /A19 * A20 * SEL3 * A23 * SEL2 * A22 * /SEL1 * /A21 + /M * /A19 * A20 * SEL3 * A23 * /SEL2 * /A22 * SEL1 * A21 + /M * /A19 * A20 * SEL3 * A23 * /SEL2 * /A22 * /SEL1 * /A21 + /M * /A19 * A20 * /SEL3 * /A23 * SEL2 * A22 * SEL1 * A21 + /M * /A19 * A20 * /SEL3 * /A23 * SEL2 * A22 * /SEL1 * /A21 + /M * /A19 * A20 * /SEL3 * /A23 * /SEL2 * /A22 * SEL1 * A21 + /M * /A19 * A20 * /SEL3 * /A23 * /SEL2 * /A22 * /SEL1 * /A21
+/EN3 = /M * A19 * A20 * SEL3 * A23 * SEL2 * A22 * SEL1 * A21 + /M * A19 * A20 * SEL3 * A23 * SEL2 * A22 * /SEL1 * /A21 + /M * A19 * A20 * SEL3 * A23 * /SEL2 * /A22 * SEL1 * A21 + /M * A19 * A20 * SEL3 * A23 * /SEL2 * /A22 * /SEL1 * /A21 + /M * A19 * A20 * /SEL3 * /A23 * SEL2 * A22 * SEL1 * A21 + /M * A19 * A20 * /SEL3 * /A23 * SEL2 * A22 * /SEL1 * /A21 + /M * A19 * A20 * /SEL3 * /A23 * /SEL2 * /A22 * SEL1 * A21 + /M * A19 * A20 * /SEL3 * /A23 * /SEL2 * /A22 * /SEL1 * /A21
+
+DESCRIPTION
+
+SRAM Decoder card that selects one of four 512k SRAM chips
+
+Have to describe the terms fully since using intermediate product terms fails
+horribly

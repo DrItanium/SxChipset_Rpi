@@ -1,0 +1,12 @@
+GAL16V8
+DecoderCircuit
+
+RD WR M  A11 A12 A13 A14 A15 NC GND
+NC NC NC NC  NC  NC  NC  XEN EN VCC
+
+/XEN = /RD * WR + RD * /WR
+/EN = /M * /RD * WR * /A11 * /A12 * A13 * /A14 * /A15 + /M * RD * /WR * /A11 * /A12 * A13 * /A14 * /A15
+
+DESCRIPTION
+
+Simple Decoder circuit for the ch351

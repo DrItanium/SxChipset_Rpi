@@ -1,0 +1,30 @@
+GAL16V8
+NarrowWideOperationDetect
+
+CLK A24 A25  A26   A27 A28 A29 A30 A31 GND
+OE  RAM SRAM FLASH IO  DEN WR  DIR SW  VCC
+
+/FLASH = /A31 * /A30 * /A29 * /A28 * /A27 * /A26 * /A25 * /A24 * /DEN
+/SRAM  = /A31 * /A30 * /A29 * /A28 * /A27 * /A26 * /A25 *  A24 * /DEN
+/RAM   = /A31 *  A30 * /DEN
+/IO    =  A31 *  A30 *  A29 *  A28 *  A27 *  A26 *  A25 * /A24 * /DEN
+
+SW = DIR * /WR + /DIR * WR
+
+
+
+DESCRIPTION
+
+Combines wide and narrow mode accelerators to provide data decoding support as
+well as space detection
+
+RAM is an unused section of memory that maps to DRAM/ExtendedPSRAM etc.
+Previously it was the fallback but it doesn't really mean much to do things
+that way.
+
+FLASH => 0x0000'0000 - 0x00FF'FFFF
+SRAM  => 0x0100'0000 - 0x01FF'FFFF
+RAM   => 0x4000'0000 - 0x7FFF'FFFF
+IO    => 0xFE00'0000 - 0xFEFF'FFFF
+
+Having holes in the design is just fine to be honest!

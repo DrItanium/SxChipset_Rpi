@@ -1,0 +1,10 @@
+GAL22V10
+StateMachine0
+
+CLK NC NC NC NC NC NC NC NC NC NC GND
+NC  NC NC NC NC NC NC D  C  B  A  VCC
+
+A.R = /D * /C * /B * /A 
+B.R = /D * /C * /B * A 
+C.R = /D * /C * B * /A 
+D.R = /D * C * /B * /A

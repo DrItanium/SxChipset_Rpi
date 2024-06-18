@@ -1,0 +1,29 @@
+
+
+ Pin # | Name     | Pin Type
+-----------------------------
+   1   | CLK      | Clock/Input
+   2   | DEN      | Input
+   3   | FLASH    | Input
+   4   | SRAM     | Input
+   5   | RAM      | Input
+   6   | IO       | Input
+   7   | RDY2560  | Input
+   8   | D0       | Input
+   9   | NC       | Input
+  10   | NC       | Input
+  11   | NC       | Input
+  12   | GND      | GND
+  13   | NC       | Input
+  14   | RDY      | Output
+  15   | Z0       | Output
+  16   | Z1       | Output
+  17   | RSYNC    | Output
+  18   | Q3       | Output
+  19   | Q2       | Output
+  20   | Q1       | Output
+  21   | Q0       | Output
+  22   | EN2560   | Output
+  23   | IR       | Output
+  24   | VCC      | VCC
+

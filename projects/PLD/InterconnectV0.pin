@@ -1,0 +1,29 @@
+
+
+ Pin # | Name     | Pin Type
+-----------------------------
+   1   | CLK      | Clock/Input
+   2   | A24      | Input
+   3   | A25      | Input
+   4   | A26      | Input
+   5   | A27      | Input
+   6   | A28      | Input
+   7   | A29      | Input
+   8   | A30      | Input
+   9   | A31      | Input
+  10   | P10      | Input
+  11   | P11      | Input
+  12   | GND      | GND
+  13   | P13      | Input
+  14   | SEC8     | NC
+  15   | SEC7     | NC
+  16   | SEC6     | NC
+  17   | SEC5     | NC
+  18   | SEC4     | NC
+  19   | SEC3     | NC
+  20   | SEC2     | NC
+  21   | SEC1     | NC
+  22   | SRAM     | Output
+  23   | PD7      | Output
+  24   | VCC      | VCC
+

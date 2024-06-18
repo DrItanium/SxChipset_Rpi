@@ -1,0 +1,20 @@
+GAL22V10
+NewIntegratedChip2
+
+CLK ADS BLAST READY WR  A24   A25  A26 A27 A28 A29 GND
+A30 A31 SP4   IO    RAM FLASH SRAM PE6 PE5 PE4 PE2 VCC
+
+PE4 = ADS
+PE5 = WR
+/PE6.R = /A31 * /A30 * /A29 * /A28 * /A27 * /A26 * /A25 * /A24
+/PE2.R =  A31 *  A30 *  A29 *  A28 *  A27 *  A26 *  A25 * /A24
+/SRAM = /A31 * /A30 * /A29 * /A28 * /A27 * /A26 * /A25 * /A24
+
+
+
+DESCRIPTION
+New i960 integrated configuration IC
+
+PE2 is the memory space operation detect
+PE5 is the write operation detect
+PE6 is the internal memory operation detect

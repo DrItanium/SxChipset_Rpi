@@ -1,0 +1,17 @@
+GAL22V10
+EBIMemoryAccessorV2
+
+NC  EN  IWR IRD A1 A2  A3  A4  A5  A6  A7  GND
+A19 A20 NC  NC  NC EN3 EN2 EN1 EN0 ORD OWR VCC
+
+OWR = IWR 
+ORD = IRD 
+
+/EN0 = /A19 * /A20 * /EN
+/EN1 = A19 * /A20 * /EN
+/EN2 = /A19 * A20 * /EN
+/EN3 = A19 * A20 * /EN
+
+DESCRIPTION
+
+Simple decoder circuit to allow simplified EBI memory access patterns

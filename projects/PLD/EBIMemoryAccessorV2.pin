@@ -1,0 +1,29 @@
+
+
+ Pin # | Name     | Pin Type
+-----------------------------
+   1   | NC       | Clock/Input
+   2   | EN       | Input
+   3   | IWR      | Input
+   4   | IRD      | Input
+   5   | A1       | Input
+   6   | A2       | Input
+   7   | A3       | Input
+   8   | A4       | Input
+   9   | A5       | Input
+  10   | A6       | Input
+  11   | A7       | Input
+  12   | GND      | GND
+  13   | A19      | Input
+  14   | A20      | Input
+  15   | NC       | NC
+  16   | NC       | NC
+  17   | NC       | NC
+  18   | EN3      | Output
+  19   | EN2      | Output
+  20   | EN1      | Output
+  21   | EN0      | Output
+  22   | ORD      | Output
+  23   | OWR      | Output
+  24   | VCC      | VCC
+

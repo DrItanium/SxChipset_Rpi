@@ -1,0 +1,15 @@
+GAL22V10
+InterconnectV0Decoder
+
+CLK A24  A25  A26  A27  A28  A29  A30  A31  P10  P11 GND
+P13 SEC8 SEC7 SEC6 SEC5 SEC4 SEC3 SEC2 SEC1 SRAM PD7 VCC
+
+/SRAM = /A24 * /A25 * /A26 * /A27 * /A28 * /A29 * /A30 * /A31
+/PD7  = /A24 *  A25 *  A26 *  A27 *  A28 *  A29 *  A30 *  A31
+
+
+
+DESCRIPTION
+
+Interconnect V0 desgin
+

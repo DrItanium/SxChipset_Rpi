@@ -1,0 +1,18 @@
+GAL16V8
+AddressDecoder
+
+NC  A24 A25 A26 A27 A28  A29   A30 A31 GND
+NC  X4  X5  X6  X7  SRAM FLASH RAM IO  VCC
+
+
+/SRAM = /A31 * /A30 * /A29 * /A28 * /A27 * /A26 * /A25 * /A24
+/IO   =  A31 *  A30 *  A29 *  A28 *  A27 *  A26 *  A25 * /A24
+
+
+
+DESCRIPTION
+Divides the i960 address space into eight different parts, currently only IO
+and SRAM are in use.
+
+[0x00000000,0x00FFFFFF] -> SRAM
+[0xFE000000,0xFEFFFFFF] -> IO

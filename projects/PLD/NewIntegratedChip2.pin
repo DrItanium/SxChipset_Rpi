@@ -1,0 +1,29 @@
+
+
+ Pin # | Name     | Pin Type
+-----------------------------
+   1   | CLK      | Clock/Input
+   2   | ADS      | Input
+   3   | BLAST    | Input
+   4   | READY    | Input
+   5   | WR       | Input
+   6   | A24      | Input
+   7   | A25      | Input
+   8   | A26      | Input
+   9   | A27      | Input
+  10   | A28      | Input
+  11   | A29      | Input
+  12   | GND      | GND
+  13   | A30      | Input
+  14   | A31      | Input
+  15   | SP4      | NC
+  16   | IO       | NC
+  17   | RAM      | NC
+  18   | FLASH    | NC
+  19   | SRAM     | Output
+  20   | PE6      | Output
+  21   | PE5      | Output
+  22   | PE4      | Output
+  23   | PE2      | Output
+  24   | VCC      | VCC
+

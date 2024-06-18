@@ -1,0 +1,18 @@
+GAL22V10
+RAM2DecoderChip
+
+CLK M4 M5 M6 M7 IEN IA22 IA21 IA20 IA19 X0 GND
+X1 EN0 EN7 EN1 EN6 X3 X2 EN5 EN2 EN4 EN3 VCC
+
+/EN0 = IA22 * M4 * /IA21 * /IA20 * /IA19 * /IEN + /IA22 * /M4 * /IA21 * /IA20 * /IA19 * /IEN
+/EN1 = IA22 * M4 * /IA21 * /IA20 * IA19 * /IEN + /IA22 * /M4 * /IA21 * /IA20 * IA19 * /IEN
+/EN2 = IA22 * M4 * /IA21 * IA20 * /IA19 * /IEN + /IA22 * /M4 * /IA21 * IA20 * /IA19 * /IEN
+/EN3 = IA22 * M4 * /IA21 * IA20 * IA19 * /IEN + /IA22 * /M4 * /IA21 * IA20 * IA19 * /IEN
+/EN4 = IA22 * M4 * IA21 * /IA20 * /IA19 * /IEN + IA22 * /M4 * /IA21 * /IA20 * /IA19 * /IEN
+/EN5 = IA22 * M4 * IA21 * /IA20 * IA19 * /IEN + IA22 * /M4 * /IA21 * /IA20 * IA19 * /IEN
+/EN6 = IA22 * M4 * IA21 * IA20 * /IA19 * /IEN + IA22 * /M4 * /IA21 * IA20 * /IA19 * /IEN
+/EN7 = IA22 * M4 * IA21 * IA20 * IA19 * /IEN + IA22 * /M4 * /IA21 * IA20 * IA19 * /IEN
+
+DESCRIPTION
+
+Provide decoder and configuration services to the new MCU RAM board. 

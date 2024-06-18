@@ -1,0 +1,25 @@
+
+
+ Pin # | Name     | Pin Type
+-----------------------------
+   1   | CLK      | Clock
+   2   | RST      | Input
+   3   | XINT0    | Input
+   4   | XINT2    | Input
+   5   | XINT4    | Input
+   6   | XINT6    | Input
+   7   | RDY      | Input
+   8   | NC       | Input
+   9   | NC       | Input
+  10   | GND      | GND
+  11   | OE       | /OE
+  12   | RSYNC    | Output
+  13   | Z1       | Output
+  14   | Z0       | Output
+  15   | I3       | Output
+  16   | I2       | Output
+  17   | I1       | Output
+  18   | I0       | Output
+  19   | SRST     | Output
+  20   | VCC      | VCC
+

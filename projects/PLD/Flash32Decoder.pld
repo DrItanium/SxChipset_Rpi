@@ -1,0 +1,11 @@
+GAL16V8
+Flash32Decoder
+
+NC WR A21 A22 A23 M0 M1 M2 FLASH GND
+NC NC NC  NC  NC  NC NC EN RD    VCC
+
+/EN = /FLASH * /A21 * /M0 * /A22 * /M1 * /A23 * /M2 + /FLASH *  A21 *  M0 * /A22 * /M1 * /A23 * /M2 + /FLASH * /A21 * /M0 *  A22 *  M1 * /A23 * /M2 + /FLASH *  A21 *  M0 *  A22 *  M1 * /A23 * /M2 + /FLASH * /A21 * /M0 * /A22 * /M1 *  A23 *  M2 + /FLASH *  A21 *  M0 * /A22 * /M1 *  A23 *  M2 + /FLASH * /A21 * /M0 *  A22 *  M1 *  A23 *  M2 + /FLASH *  A21 *  M0 *  A22 *  M1 *  A23 *  M2
+/RD = /WR * /FLASH
+DESCRIPTION
+
+Decodes 32-bit flash chips

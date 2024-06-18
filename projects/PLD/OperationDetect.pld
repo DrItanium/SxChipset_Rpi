@@ -1,0 +1,21 @@
+GAL16V8
+OperationDetect
+
+NC A28 A29 A30 A31 PG5 WR NC NC GND
+NC NC  NC  NC  NC  NC  NC SW IO VCC
+
+/IO = A31 * A30 * A29 * A28
+SW = PG5 * /WR + /PG5 * WR
+
+
+DESCRIPTION
+
+Translates the given upper four address lines from the i960 into what kind of
+space to be looking at. There are five space, 
+
+IO : last 256 mb of the memory space (0xF000'0000 - 0xFFFF'FFFF)
+
+SW is used to detect if we need to swap the data lines direction or not. It
+compares W/~R with PG5 in an exclusive or fashion. If it is true then no change
+is necessary. If it is false then a change is needed
+
