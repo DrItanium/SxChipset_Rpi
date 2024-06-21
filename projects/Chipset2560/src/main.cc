@@ -97,6 +97,42 @@ configureEBI() noexcept {
                            // no wait states in either
 }
 constexpr size_t EBIStartAddress = 0xFE00;
+union [[gnu::packed]] CH351 {
+    struct {
+        uint32_t data32;
+        uint32_t direction32;
+    };
+    struct {
+        uint16_t data16[2];
+        uint16_t direction16[2];
+    };
+    struct {
+        uint8_t data8[4];
+        uint8_t direction8[4];
+    };
+    struct {
+        uint16_t dataLines;
+        uint8_t be1 : 1;
+        uint8_t be0 : 1;
+        uint8_t wr : 1;
+        uint8_t den : 1;
+        uint8_t blast : 1;
+        uint8_t ads : 1;
+        uint8_t lock : 1;
+        uint8_t hold : 1;
+        uint8_t int3 : 1;
+        uint8_t int2 : 1;
+        uint8_t int1 : 1;
+        uint8_t int0 : 1;
+        uint8_t reset : 1;
+        uint8_t ready : 1;
+        uint8_t hlda : 1;
+        uint8_t fail : 1;
+    };
+};
+
+volatile CH351 dev0 [[gnu::address(0xFE00)]];
+volatile CH351 dev1 [[gnu::address(0xFE08)]];
 void
 setup() {
     Serial.begin(115200);
@@ -106,6 +142,7 @@ setup() {
     DDRA = 0xFF;
     trySetupSDCard();
     configureEBI();
+#if 0
     for (size_t i = EBIStartAddress; i < (EBIStartAddress + 0x100); ++i) {
         auto result = memory<uint8_t>(i);
         if (result != static_cast<uint8_t>(i)) {
@@ -115,8 +152,16 @@ setup() {
     Serial.println();
     for (size_t i = EBIStartAddress; i < (EBIStartAddress + 0x100); i+= sizeof(uint32_t)) {
         auto result = memory<uint32_t>(i);
-        Serial.printf(F("@0x%x : 0x%lx\n"), i, result);
+        Serial.printf(F("@0x%x : 0b"), i);
+        Serial.println(result, BIN);
+        //Serial.printf(F("@0x%x : 0x%lx\n"), i, result);
     }
+#else
+    dev0.direction32 = 0; // input
+    dev1.direction32 = 0; // input
+    Serial.printf(F("dev0.io: 0x%lx\n"), dev0.data32);
+    Serial.printf(F("dev1.io: 0x%lx\n"), dev1.data32);
+#endif
 }
 void 
 loop() {
