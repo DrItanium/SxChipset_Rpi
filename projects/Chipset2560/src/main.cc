@@ -131,6 +131,30 @@ union [[gnu::packed]] CH351 {
     };
 };
 
+struct [[gnu::packed]] i960Interface {
+    uint32_t address;
+    uint32_t addressDirection;
+    uint16_t dataLines;
+    uint8_t be1 : 1;
+    uint8_t be0 : 1;
+    uint8_t wr : 1;
+    uint8_t den : 1;
+    uint8_t blast : 1;
+    uint8_t ads : 1;
+    uint8_t lock : 1;
+    uint8_t hold : 1;
+    uint8_t int3 : 1;
+    uint8_t int2 : 1;
+    uint8_t int1 : 1;
+    uint8_t int0 : 1;
+    uint8_t reset : 1;
+    uint8_t ready : 1;
+    uint8_t hlda : 1;
+    uint8_t fail : 1;
+    uint32_t controlDirection;
+};
+static_assert(sizeof(i960Interface) == (4*sizeof(uint32_t)));
+
 volatile CH351 dev0 [[gnu::address(0xFE00)]];
 volatile CH351 dev1 [[gnu::address(0xFE08)]];
 void
