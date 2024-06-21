@@ -109,8 +109,13 @@ setup() {
     for (size_t i = EBIStartAddress; i < (EBIStartAddress + 0x100); ++i) {
         auto result = memory<uint8_t>(i);
         if (result != static_cast<uint8_t>(i)) {
-            Serial.printf(F("@0x%x : 0x%x\n"), i, result);
+            Serial.printf(F("@0x%x : 0x%x\n"), i, memory<uint8_t>(i));
         }
+    }
+    Serial.println();
+    for (size_t i = EBIStartAddress; i < (EBIStartAddress + 0x100); i+= sizeof(uint32_t)) {
+        auto result = memory<uint32_t>(i);
+        Serial.printf(F("@0x%x : 0x%lx\n"), i, result);
     }
 }
 void 
