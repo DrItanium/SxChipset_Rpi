@@ -99,8 +99,13 @@ configureEBI() noexcept {
                            // wait states are necessary too
 }
 
+template<uint8_t delayAmount = 6>
 void
 signalReady() noexcept {
+    toggle<Pin::READY>();
+    if constexpr (delayAmount > 0) {
+        insertCustomNopCount<delayAmount>();
+    }
 }
 
 void
