@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 constexpr bool ActivateSDCard = false;
 constexpr int32_t SDCardInitializationAttempts = 1000;
-constexpr bool ShouldReconfigureRandomSeed = false;
+constexpr bool ShouldReconfigureRandomSeed = true;
 volatile bool sdcardAvailable = false;
 SdFs SD;
 
