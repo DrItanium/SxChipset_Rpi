@@ -115,7 +115,9 @@ setup() {
     configureEBI();
     interface960.begin();
     pinMode(Pin::READY, OUTPUT);
+    pinMode(Pin::ADS, INPUT);
     digitalWrite<Pin::READY, HIGH>();
+    /// @todo activate interrupt flags without vector enable for Pin::ADS
     Wire.begin();
     SPI.begin();
     trySetupSDCard();

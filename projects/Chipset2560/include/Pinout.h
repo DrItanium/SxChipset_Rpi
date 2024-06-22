@@ -59,10 +59,12 @@ Count = NUM_DIGITAL_PINS,
 #ifdef LED_BUILTIN
     LED = LED_BUILTIN,
 #endif
+    SD_EN = PortB0,
+
     RXD0 = PortE0,
     TXD0 = PortE1,
+    ADS = PortE7,
 
-    SD_EN = PortB0,
     READY = PortG3,
 };
 enum class Port : byte {
