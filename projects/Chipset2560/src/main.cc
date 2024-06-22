@@ -35,9 +35,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 constexpr bool ActivateSDCard = false;
 constexpr int32_t SDCardInitializationAttempts = 1000;
-constexpr bool ShouldReconfigureRandomSeed = true;
 volatile bool sdcardAvailable = false;
 SdFs SD;
+
+volatile i960Interface interface960 [[gnu::address(0xFE00)]];
 
 void
 trySetupSDCard() noexcept {
@@ -70,27 +71,25 @@ trySetupSDCard() noexcept {
 }
 void
 reconfigureRandomSeed() noexcept {
-    if constexpr (ShouldReconfigureRandomSeed) {
-        Serial.println(F("Reconfiguring random seed"));
-        uint32_t newSeed = 0;
-        newSeed += analogRead(A0);
-        newSeed += analogRead(A1);
-        newSeed += analogRead(A2);
-        newSeed += analogRead(A3);
-        newSeed += analogRead(A4);
-        newSeed += analogRead(A5);
-        newSeed += analogRead(A6);
-        newSeed += analogRead(A7);
-        newSeed += analogRead(A8);
-        newSeed += analogRead(A9);
-        newSeed += analogRead(A10);
-        newSeed += analogRead(A11);
-        newSeed += analogRead(A12);
-        newSeed += analogRead(A13);
-        newSeed += analogRead(A14);
-        newSeed += analogRead(A15);
-        randomSeed(newSeed);
-    }
+    Serial.println(F("Reconfiguring random seed"));
+    uint32_t newSeed = 0;
+    newSeed += analogRead(A0);
+    newSeed += analogRead(A1);
+    newSeed += analogRead(A2);
+    newSeed += analogRead(A3);
+    newSeed += analogRead(A4);
+    newSeed += analogRead(A5);
+    newSeed += analogRead(A6);
+    newSeed += analogRead(A7);
+    newSeed += analogRead(A8);
+    newSeed += analogRead(A9);
+    newSeed += analogRead(A10);
+    newSeed += analogRead(A11);
+    newSeed += analogRead(A12);
+    newSeed += analogRead(A13);
+    newSeed += analogRead(A14);
+    newSeed += analogRead(A15);
+    randomSeed(newSeed);
 }
 void
 configureEBI() noexcept {
@@ -99,104 +98,23 @@ configureEBI() noexcept {
     XMCRA = 0b1'100'01'01; // Enable the EBI, divide the memory space in half,
                            // wait states are necessary too
 }
-constexpr size_t EBIStartAddress = 0xFE00;
-union [[gnu::packed]] CH351 {
-    struct {
-        uint32_t data32;
-        uint32_t direction32;
-    };
-    struct {
-        uint16_t data16[2];
-        uint16_t direction16[2];
-    };
-    struct {
-        uint8_t data8[4];
-        uint8_t direction8[4];
-    };
-    struct {
-        uint16_t dataLines;
-        uint8_t be1 : 1;
-        uint8_t be0 : 1;
-        uint8_t wr : 1;
-        uint8_t den : 1;
-        uint8_t blast : 1;
-        uint8_t ads : 1;
-        uint8_t lock : 1;
-        uint8_t hold : 1;
-        uint8_t int3 : 1;
-        uint8_t int2 : 1;
-        uint8_t int1 : 1;
-        uint8_t int0 : 1;
-        uint8_t reset : 1;
-        uint8_t ready : 1;
-        uint8_t hlda : 1;
-        uint8_t fail : 1;
-    };
-};
 
-struct [[gnu::packed]] i960Interface {
-    union {
-        uint32_t full;
-        uint16_t halves[2];
-        uint8_t bytes[4];
-    } addressLines;
-    uint32_t addressDirection;
-    union {
-        uint16_t full;
-        uint8_t bytes[2];
-    } dataLines;
-    union {
-        uint16_t full;
-        struct {
-            uint8_t be1 : 1;
-            uint8_t be0 : 1;
-            uint8_t wr : 1;
-            uint8_t den : 1;
-            uint8_t blast : 1;
-            uint8_t ads : 1;
-            uint8_t lock : 1;
-            uint8_t hold : 1;
-            uint8_t int3 : 1;
-            uint8_t int2 : 1;
-            uint8_t int1 : 1;
-            uint8_t int0 : 1;
-            uint8_t reset : 1;
-            uint8_t ready : 1;
-            uint8_t hlda : 1;
-            uint8_t fail : 1;
-        };
-    } controlLines;
-    uint16_t dataLinesDirection;
-    uint16_t controlDirection;
+void
+signalReady() noexcept {
+}
 
-    void begin() volatile {
-        dataLinesDirection = 0xFFFF;
-        controlDirection = 0x3F80;
-        controlLines.int3 = 1;
-        controlLines.int2 = 0;
-        controlLines.int1 = 0;
-        controlLines.int0 = 1;
-        controlLines.hold = 0;
-        controlLines.reset = 0;
-        controlLines.ready = 1;
-        addressDirection = 0x0000'0000; 
-    }
-    [[nodiscard]] bool isReadOperation() const volatile noexcept { return controlLines.wr == 0; }
-    [[nodiscard]] bool lastWordOfTransaction() const volatile noexcept { return controlLines.blast == 0; }
-
-};
-static_assert(sizeof(i960Interface) == (4*sizeof(uint32_t)));
-
-volatile i960Interface interface960 [[gnu::address(0xFE00)]];
 void
 setup() {
     Serial.begin(115200);
     reconfigureRandomSeed();
+    configureEBI();
+    interface960.begin();
+    pinMode(Pin::READY, OUTPUT);
+    digitalWrite<Pin::READY, HIGH>();
     Wire.begin();
     SPI.begin();
     trySetupSDCard();
-    configureEBI();
-    interface960.begin();
+    
     delay(1000);
     interface960.controlLines.reset = 1;
     Serial.printf(F("addressLines: 0x%lx\n"), interface960.addressLines.full);
@@ -208,5 +126,20 @@ setup() {
 }
 void 
 loop() {
+}
+
+void 
+i960Interface::begin() volatile {
+    dataLinesDirection = 0xFFFF;
+    // turn ready into an input
+    controlDirection = 0b0001'1111'1000'0000;
+    controlLines.int3 = 1;
+    controlLines.int2 = 0;
+    controlLines.int1 = 0;
+    controlLines.int0 = 1;
+    controlLines.hold = 0;
+    controlLines.reset = 0;
+    controlLines.ready = 1;
+    addressDirection = 0x0000'0000; 
 }
 

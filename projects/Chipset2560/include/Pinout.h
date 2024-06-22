@@ -63,7 +63,7 @@ Count = NUM_DIGITAL_PINS,
     TXD0 = PortE1,
 
     SD_EN = PortB0,
-
+    READY = PortG3,
 };
 enum class Port : byte {
     // stop at mega2560 tier
