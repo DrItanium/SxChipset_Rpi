@@ -97,6 +97,12 @@ struct [[gnu::packed]] i960Interface {
     void begin() volatile;
     [[nodiscard]] bool isReadOperation() const volatile noexcept { return controlLines.wr == 0; }
     [[nodiscard]] bool lastWordOfTransaction() const volatile noexcept { return controlLines.blast == 0; }
+    [[nodiscard]] uint32_t getAddress() const volatile noexcept { return addressLines.full; }
+    [[nodiscard]] uint16_t getDataLines() const volatile noexcept { return dataLines.full; }
+    void setDataLines(uint16_t value) volatile noexcept { dataLines.full = value; }
+    [[nodiscard]] bool inDataTransaction() const volatile noexcept { return controlLines.den == 0; }
+    void putI960InReset() volatile noexcept { controlLines.reset = 0; }
+    void pullI960OutOfReset() volatile noexcept { controlLines.reset = 1; }
 };
 static_assert(sizeof(i960Interface) == (4*sizeof(uint32_t)));
 

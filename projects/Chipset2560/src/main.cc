@@ -33,47 +33,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Pinout.h"
 #include "Setup.h"
 
-constexpr bool ActivateSDCard = false;
-constexpr int32_t SDCardInitializationAttempts = 1000;
-volatile bool sdcardAvailable = false;
+static inline constexpr bool ActivateSDCard = false;
+static inline constexpr int32_t SDCardInitializationAttempts = 1000;
 SdFs SD;
+volatile bool _sdAvailable = false;
 
 volatile i960Interface interface960 [[gnu::address(0xFE00)]];
-/**
- * @brief A singleton class responsible for providing the common interface
- * between the i960 and the 2560
- */
-class TransactionInterface final {
-    public:
-        using Self = TransactionInterface;
-        TransactionInterface() = delete;
-        ~TransactionInterface() = delete;
-        TransactionInterface(const Self&) = delete;
-        TransactionInterface(Self&&) = delete;
-        Self& operator=(const Self&) = delete;
-        Self&& operator=(const Self&&) = delete;
-        [[nodiscard]] static bool isReadOperation() noexcept { return _theInterface.isReadOperation(); }
-        [[nodiscard]] static bool lastWordOfTransaction() noexcept { return _theInterface.lastWordOfTransaction(); }
-        [[nodiscard]] static bool inDataTransaction() noexcept { return _theInterface.controlLines.den == 0; }
-        [[nodiscard]] static bool lowerByteEnabled() noexcept { return _theInterface.controlLines.be0 == 0; }
-        [[nodiscard]] static bool upperByteEnabled() noexcept { return _theInterface.controlLines.be1 == 0; }
-        static void putI960InReset() noexcept {
-            _theInterface.controlLines.reset = 0;
-        }
-        static void takeI960OutOfReset() noexcept {
-            _theInterface.controlLines.reset = 1;
-        }
-        static void newTransaction() noexcept {
-            _transactionIndex = 0;
-        }
-        template<uint8_t delayAmount = 6>
-        static void signalReady() noexcept {
-            /// @todo implement
-        }
-private:
-        static inline uint8_t _transactionIndex = 0;
-        static volatile i960Interface _theInterface [[gnu::address(0xFE00)]];
-};
 
 void
 trySetupSDCard() noexcept {
@@ -87,16 +52,16 @@ trySetupSDCard() noexcept {
                 delay(1000);
             }
             Serial.println(F("available!"));
-            sdcardAvailable = true;
+            _sdAvailable = true;
         } else {
             for (int32_t i = 0; i < SDCardInitializationAttempts; ++i) {
                 if (initsd()) {
-                    sdcardAvailable = true;
+                    _sdAvailable = true;
                     break;
                 }
                 delay(1000); // wait one second
             }
-            if (sdcardAvailable) {
+            if (_sdAvailable) {
                 Serial.println(F("SDCard available!"));
             } else {
                 Serial.println(F("Max attempts reached, SDCard not available!"));
@@ -104,6 +69,16 @@ trySetupSDCard() noexcept {
         }
     }
 }
+template<uint8_t delayAmount = 6>
+void signalReady() noexcept {
+    /// @todo implement fully
+    //toggle<Pin::READY>();
+    if constexpr (delayAmount > 0) {
+        insertCustomNopCount<delayAmount>();
+    }
+}
+
+
 void
 reconfigureRandomSeed() noexcept {
     Serial.println(F("Reconfiguring random seed"));
@@ -134,21 +109,12 @@ configureEBI() noexcept {
                            // wait states are necessary too
 }
 
-template<uint8_t delayAmount = 6>
-void
-signalReady() noexcept {
-    toggle<Pin::READY>();
-    if constexpr (delayAmount > 0) {
-        insertCustomNopCount<delayAmount>();
-    }
-}
-
 void
 setup() {
-    reconfigureRandomSeed();
-    Serial.begin(115200);
     configureEBI();
     interface960.begin();
+    reconfigureRandomSeed();
+    Serial.begin(115200);
     pinMode(Pin::READY, OUTPUT);
     pinMode(Pin::ADS, INPUT);
     digitalWrite<Pin::READY, HIGH>();
@@ -158,16 +124,16 @@ setup() {
     trySetupSDCard();
     
     delay(1000);
-    interface960.controlLines.reset = 1;
+    interface960.pullI960OutOfReset();
     Serial.print(F("WAITING"));
-    while (interface960.controlLines.den != 0) {
+    while (!interface960.inDataTransaction()) {
         Serial.print('.');
     }
     Serial.println(F("DONE!"));
     Serial.print(F("address lines: 0x"));
-    Serial.println(interface960.addressLines.full, HEX);
+    Serial.println(interface960.getAddress(), HEX);
     Serial.print(F("data lines: 0x"));
-    Serial.println(interface960.dataLines.full, HEX);
+    Serial.println(interface960.getDataLines(), HEX);
     Serial.print(F("ControlSignals: 0b"));
     Serial.println(interface960.controlLines.full, BIN);
 
