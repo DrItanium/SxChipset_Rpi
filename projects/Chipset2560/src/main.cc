@@ -37,8 +37,21 @@ static inline constexpr bool ActivateSDCard = false;
 static inline constexpr int32_t SDCardInitializationAttempts = 1000;
 SdFs SD;
 volatile bool _sdAvailable = false;
-
-volatile i960Interface interface960 [[gnu::address(0xFE00)]];
+volatile i960Interface interface960 [[gnu::address(0x7F00)]];
+// With the way that the 2560 and CH351s are connected to the i960, I have to
+// transfer data through the 2560 to the i960. This is due to the fact that the
+// CH351s are not buffered to prevent this. However, there is nothing stopping
+// me from expanding the width of the EBI for my own internal purposes. I can
+// also make a 256 byte window into the i960 bus as well.
+//
+// Actually, if I keep the data lines on the CH351 off the bus (via making them
+// inputs) then I can actually do this. I just need to move the data lines to
+// buffered parts using two AHC374s per 8-bit block. That way, I can actually
+// keep the parts off of the bus as well. 
+//
+// However, I can easily use the EBI on the 2560 to provide its own internal
+// bus. For example, attaching an internal 32k SRAM to allow for more memory
+// (if desired). 
 
 void
 trySetupSDCard() noexcept {
