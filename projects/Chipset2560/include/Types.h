@@ -97,10 +97,9 @@ struct [[gnu::packed]] i960Interface {
     void begin() volatile;
     [[nodiscard]] bool isReadOperation() const volatile noexcept { return controlLines.wr == 0; }
     [[nodiscard]] bool lastWordOfTransaction() const volatile noexcept { return controlLines.blast == 0; }
-    [[nodiscard]] bool inDataOperation() const volatile noexcept { return controLines.den == 0; }
-
 };
 static_assert(sizeof(i960Interface) == (4*sizeof(uint32_t)));
+
 
 
 #endif //CHIPSET2560_TYPES_H__

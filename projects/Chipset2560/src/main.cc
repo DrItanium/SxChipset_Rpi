@@ -39,6 +39,41 @@ volatile bool sdcardAvailable = false;
 SdFs SD;
 
 volatile i960Interface interface960 [[gnu::address(0xFE00)]];
+/**
+ * @brief A singleton class responsible for providing the common interface
+ * between the i960 and the 2560
+ */
+class TransactionInterface final {
+    public:
+        using Self = TransactionInterface;
+        TransactionInterface() = delete;
+        ~TransactionInterface() = delete;
+        TransactionInterface(const Self&) = delete;
+        TransactionInterface(Self&&) = delete;
+        Self& operator=(const Self&) = delete;
+        Self&& operator=(const Self&&) = delete;
+        [[nodiscard]] static bool isReadOperation() noexcept { return _theInterface.isReadOperation(); }
+        [[nodiscard]] static bool lastWordOfTransaction() noexcept { return _theInterface.lastWordOfTransaction(); }
+        [[nodiscard]] static bool inDataTransaction() noexcept { return _theInterface.controlLines.den == 0; }
+        [[nodiscard]] static bool lowerByteEnabled() noexcept { return _theInterface.controlLines.be0 == 0; }
+        [[nodiscard]] static bool upperByteEnabled() noexcept { return _theInterface.controlLines.be1 == 0; }
+        static void putI960InReset() noexcept {
+            _theInterface.controlLines.reset = 0;
+        }
+        static void takeI960OutOfReset() noexcept {
+            _theInterface.controlLines.reset = 1;
+        }
+        static void newTransaction() noexcept {
+            _transactionIndex = 0;
+        }
+        template<uint8_t delayAmount = 6>
+        static void signalReady() noexcept {
+            /// @todo implement
+        }
+private:
+        static inline uint8_t _transactionIndex = 0;
+        static volatile i960Interface _theInterface [[gnu::address(0xFE00)]];
+};
 
 void
 trySetupSDCard() noexcept {
