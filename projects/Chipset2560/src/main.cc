@@ -110,8 +110,11 @@ signalReady() noexcept {
 
 void
 setup() {
-    Serial.begin(115200);
     reconfigureRandomSeed();
+    Serial.begin(115200);
+    Serial1.begin(115200); // use Serial1 as a connection back to another
+                           // device as a "slow" channel for communication
+                           // purposes, something like a display, etc.
     configureEBI();
     interface960.begin();
     pinMode(Pin::READY, OUTPUT);
