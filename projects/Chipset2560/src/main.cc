@@ -124,9 +124,15 @@ setup() {
     
     delay(1000);
     interface960.controlLines.reset = 1;
-    Serial.printf(F("addressLines: 0x%lx\n"), interface960.addressLines.full);
-    Serial.printf(F("dataLines: 0x%x\n"), interface960.dataLines.full);
-    //Serial.printf(F("controlSignals: 0x%x\n"), interface960.controlLines.full);
+    Serial.print(F("WAITING"));
+    while (interface960.controlLines.den != 0) {
+        Serial.print('.');
+    }
+    Serial.println(F("DONE!"));
+    Serial.print(F("address lines: 0x"));
+    Serial.println(interface960.addressLines.full, HEX);
+    Serial.print(F("data lines: 0x"));
+    Serial.println(interface960.dataLines.full, HEX);
     Serial.print(F("ControlSignals: 0b"));
     Serial.println(interface960.controlLines.full, BIN);
 
