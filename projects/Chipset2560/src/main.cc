@@ -122,6 +122,11 @@ configureEBI() noexcept {
                            // wait states are necessary too
 }
 [[gnu::always_inline]] inline void clearADSInterrupt() noexcept { bitSet(EIFR, INTF7); }
+
+[[gnu::always_inline]] inline void waitForTransaction() noexcept {
+    loop_until_bit_is_set(EIFR, INTF7);
+    clearADSInterrupt();
+}
 void 
 configurePins() noexcept {
     pinMode(Pin::READY, OUTPUT);
