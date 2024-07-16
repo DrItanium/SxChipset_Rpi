@@ -152,54 +152,52 @@ setup() {
     delay(1000);
     interface960.pullI960OutOfReset();
 }
+[[gnu::always_inline]] inline bool isReadOperation() noexcept {
+    return interface960.isReadOperation();
+}
+[[gnu::always_inline]] inline bool isLastWordOfTransaction() noexcept {
+    return interface960.lastWordOfTransaction();
+}
 void 
 loop() {
     waitForTransaction();
-    if (interface960.controlLines.wr) {
-        interface960.dataLinesDirection = 0;
-    } else {
-        interface960.dataLinesDirection = 0xFFFF;
-    }
+    interface960.dataLinesDirection = isReadOperation() ? 0 : 0xFFFF;
     Serial.printf(F("address lines: 0x%lx\n"), interface960.getAddress());
-    if (interface960.lastWordOfTransaction()) {
+    if (isLastWordOfTransaction()) {
         signalReady();
         return;
     }
     signalReady();
-    if (interface960.lastWordOfTransaction()) {
+    if (isLastWordOfTransaction()) {
         signalReady();
         return;
     }
     signalReady();
-    if (interface960.lastWordOfTransaction()) {
+    if (isLastWordOfTransaction()) {
         signalReady();
         return;
     }
     signalReady();
-    if (interface960.lastWordOfTransaction()) {
+    if (isLastWordOfTransaction()) {
         signalReady();
         return;
     }
     signalReady();
-    if (interface960.lastWordOfTransaction()) {
+    if (isLastWordOfTransaction()) {
         signalReady();
         return;
     }
     signalReady();
-    if (interface960.lastWordOfTransaction()) {
+    if (isLastWordOfTransaction()) {
         signalReady();
         return;
     }
     signalReady();
-    if (interface960.lastWordOfTransaction()) {
+    if (isLastWordOfTransaction()) {
         signalReady();
         return;
     }
     signalReady();
-    if (interface960.lastWordOfTransaction()) {
-        signalReady();
-        return;
-    }
     signalReady();
 }
 
