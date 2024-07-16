@@ -158,12 +158,8 @@ setup() {
 [[gnu::always_inline]] inline bool isLastWordOfTransaction() noexcept {
     return interface960.lastWordOfTransaction();
 }
-void 
-loop() {
-    waitForTransaction();
-    interface960.dataLinesDirection = isReadOperation() ? 0 : 0xFFFF;
-    auto address = interface960.getAddress();
-    Serial.printf(F("address lines: 0x%lx\n"), address);
+void
+doMemoryWriteTransaction(uint32_t address) noexcept {
     if (isLastWordOfTransaction()) {
         signalReady();
         return;
@@ -201,6 +197,158 @@ loop() {
     signalReady();
     // last part of the word will just be finished soon
     signalReady();
+}
+void
+doIOWriteTransaction(uint32_t address) noexcept {
+    if (isLastWordOfTransaction()) {
+        signalReady();
+        return;
+    }
+    signalReady();
+    if (isLastWordOfTransaction()) {
+        signalReady();
+        return;
+    }
+    signalReady();
+    if (isLastWordOfTransaction()) {
+        signalReady();
+        return;
+    }
+    signalReady();
+    if (isLastWordOfTransaction()) {
+        signalReady();
+        return;
+    }
+    signalReady();
+    if (isLastWordOfTransaction()) {
+        signalReady();
+        return;
+    }
+    signalReady();
+    if (isLastWordOfTransaction()) {
+        signalReady();
+        return;
+    }
+    signalReady();
+    if (isLastWordOfTransaction()) {
+        signalReady();
+        return;
+    }
+    signalReady();
+    // last part of the word will just be finished soon
+    signalReady();
+}
+void
+doMemoryReadTransaction(uint32_t address) noexcept {
+    if (isLastWordOfTransaction()) {
+        signalReady();
+        return;
+    }
+    signalReady();
+    if (isLastWordOfTransaction()) {
+        signalReady();
+        return;
+    }
+    signalReady();
+    if (isLastWordOfTransaction()) {
+        signalReady();
+        return;
+    }
+    signalReady();
+    if (isLastWordOfTransaction()) {
+        signalReady();
+        return;
+    }
+    signalReady();
+    if (isLastWordOfTransaction()) {
+        signalReady();
+        return;
+    }
+    signalReady();
+    if (isLastWordOfTransaction()) {
+        signalReady();
+        return;
+    }
+    signalReady();
+    if (isLastWordOfTransaction()) {
+        signalReady();
+        return;
+    }
+    signalReady();
+    // last part of the word will just be finished soon
+    signalReady();
+}
+void
+doIOReadTransaction(uint32_t address) noexcept {
+    if (isLastWordOfTransaction()) {
+        signalReady();
+        return;
+    }
+    signalReady();
+    if (isLastWordOfTransaction()) {
+        signalReady();
+        return;
+    }
+    signalReady();
+    if (isLastWordOfTransaction()) {
+        signalReady();
+        return;
+    }
+    signalReady();
+    if (isLastWordOfTransaction()) {
+        signalReady();
+        return;
+    }
+    signalReady();
+    if (isLastWordOfTransaction()) {
+        signalReady();
+        return;
+    }
+    signalReady();
+    if (isLastWordOfTransaction()) {
+        signalReady();
+        return;
+    }
+    signalReady();
+    if (isLastWordOfTransaction()) {
+        signalReady();
+        return;
+    }
+    signalReady();
+    // last part of the word will just be finished soon
+    signalReady();
+}
+[[gnu::always_inline]] inline bool isIOOperation(uint32_t address) {
+    return (static_cast<uint8_t>(address >> 24)) == 0xFE;
+}
+void 
+doReadTransaction(uint32_t address) noexcept {
+    interface960.dataLinesDirection = 0xFFFF;
+    if (isIOOperation(address)) {
+        doIOReadTransaction(address);
+    } else {
+        doMemoryReadTransaction(address);
+    }
+}
+void
+doWriteTransaction(uint32_t address) noexcept {
+    interface960.dataLinesDirection = 0;
+    if (isIOOperation(address)) {
+        doIOWriteTransaction(address);
+    } else {
+        doMemoryWriteTransaction(address);
+    }
+}
+void 
+loop() {
+    waitForTransaction();
+    auto address = interface960.getAddress();
+    Serial.printf(F("address lines: 0x%lx\n"), address);
+    if (isReadOperation()) {
+        doReadTransaction(address);
+    } else {
+        doWriteTransaction(address);
+    }
 }
 
 void 
