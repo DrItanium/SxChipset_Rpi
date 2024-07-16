@@ -161,13 +161,45 @@ loop() {
         interface960.dataLinesDirection = 0xFFFF;
     }
     Serial.printf(F("address lines: 0x%lx\n"), interface960.getAddress());
+    if (interface960.lastWordOfTransaction()) {
+        signalReady();
+        return;
+    }
     signalReady();
+    if (interface960.lastWordOfTransaction()) {
+        signalReady();
+        return;
+    }
     signalReady();
+    if (interface960.lastWordOfTransaction()) {
+        signalReady();
+        return;
+    }
     signalReady();
+    if (interface960.lastWordOfTransaction()) {
+        signalReady();
+        return;
+    }
     signalReady();
+    if (interface960.lastWordOfTransaction()) {
+        signalReady();
+        return;
+    }
     signalReady();
+    if (interface960.lastWordOfTransaction()) {
+        signalReady();
+        return;
+    }
     signalReady();
+    if (interface960.lastWordOfTransaction()) {
+        signalReady();
+        return;
+    }
     signalReady();
+    if (interface960.lastWordOfTransaction()) {
+        signalReady();
+        return;
+    }
     signalReady();
 }
 
