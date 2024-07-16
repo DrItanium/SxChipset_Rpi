@@ -121,17 +121,26 @@ configureEBI() noexcept {
     XMCRA = 0b1'100'01'01; // Enable the EBI, divide the memory space in half,
                            // wait states are necessary too
 }
+[[gnu::always_inline]] inline void clearADSInterrupt() noexcept { bitSet(EIFR, INTF7); }
+void 
+configurePins() noexcept {
+    pinMode(Pin::READY, OUTPUT);
+    digitalWrite<Pin::READY, HIGH>();
+
+    // configure ADS to trigger on rising edge (the address operation is
+    // complete)
+    pinMode(Pin::ADS, INPUT);
+    bitSet(EICRB, ISC70);
+    bitSet(EICRB, ISC71);
+}
 
 void
 setup() {
     configureEBI();
     interface960.begin();
     reconfigureRandomSeed();
+    configurePins();
     Serial.begin(115200);
-    pinMode(Pin::READY, OUTPUT);
-    pinMode(Pin::ADS, INPUT);
-    digitalWrite<Pin::READY, HIGH>();
-    /// @todo activate interrupt flags without vector enable for Pin::ADS
     Wire.begin();
     SPI.begin();
     trySetupSDCard();
