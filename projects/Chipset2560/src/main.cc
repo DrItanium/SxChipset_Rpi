@@ -162,7 +162,8 @@ void
 loop() {
     waitForTransaction();
     interface960.dataLinesDirection = isReadOperation() ? 0 : 0xFFFF;
-    Serial.printf(F("address lines: 0x%lx\n"), interface960.getAddress());
+    auto address = interface960.getAddress();
+    Serial.printf(F("address lines: 0x%lx\n"), address);
     if (isLastWordOfTransaction()) {
         signalReady();
         return;
@@ -198,6 +199,7 @@ loop() {
         return;
     }
     signalReady();
+    // last part of the word will just be finished soon
     signalReady();
 }
 
