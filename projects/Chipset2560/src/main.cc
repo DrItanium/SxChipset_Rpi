@@ -84,8 +84,7 @@ trySetupSDCard() noexcept {
 }
 template<uint8_t delayAmount = 6>
 void signalReady() noexcept {
-    /// @todo implement fully
-    //toggle<Pin::READY>();
+    toggle<Pin::READY>();
     if constexpr (delayAmount > 0) {
         insertCustomNopCount<delayAmount>();
     }
@@ -156,12 +155,20 @@ setup() {
 void 
 loop() {
     waitForTransaction();
-    Serial.print(F("address lines: 0x"));
-    Serial.println(interface960.getAddress(), HEX);
-    Serial.print(F("data lines: 0x"));
-    Serial.println(interface960.getDataLines(), HEX);
-    Serial.print(F("ControlSignals: 0b"));
-    Serial.println(interface960.controlLines.full, BIN);
+    if (interface960.controlLines.wr) {
+        interface960.dataLinesDirection = 0;
+    } else {
+        interface960.dataLinesDirection = 0xFFFF;
+    }
+    Serial.printf(F("address lines: 0x%lx\n"), interface960.getAddress());
+    signalReady();
+    signalReady();
+    signalReady();
+    signalReady();
+    signalReady();
+    signalReady();
+    signalReady();
+    signalReady();
 }
 
 void 
@@ -176,5 +183,6 @@ i960Interface::begin() volatile {
     controlLines.int0 = 1;
     controlLines.hold = 0;
     controlLines.reset = 0;
+    dataLines.full = 0;
 }
 
