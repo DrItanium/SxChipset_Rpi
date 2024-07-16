@@ -278,6 +278,50 @@ doMemoryReadTransaction(uint32_t address) noexcept {
     // last part of the word will just be finished soon
     signalReady();
 }
+template<bool isReadOperation>
+void
+doNothingOperation() noexcept {
+    if constexpr(isReadOperation) {
+        interface960.dataLines.full = 0;
+    }
+    if (isLastWordOfTransaction()) {
+        signalReady();
+        return;
+    }
+    signalReady();
+    if (isLastWordOfTransaction()) {
+        signalReady();
+        return;
+    }
+    signalReady();
+    if (isLastWordOfTransaction()) {
+        signalReady();
+        return;
+    }
+    signalReady();
+    if (isLastWordOfTransaction()) {
+        signalReady();
+        return;
+    }
+    signalReady();
+    if (isLastWordOfTransaction()) {
+        signalReady();
+        return;
+    }
+    signalReady();
+    if (isLastWordOfTransaction()) {
+        signalReady();
+        return;
+    }
+    signalReady();
+    if (isLastWordOfTransaction()) {
+        signalReady();
+        return;
+    }
+    signalReady();
+    // last part of the word will just be finished soon
+    signalReady();
+}
 void
 doIOReadTransaction(uint32_t address) noexcept {
     if (isLastWordOfTransaction()) {
