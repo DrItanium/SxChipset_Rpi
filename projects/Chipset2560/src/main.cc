@@ -339,15 +339,25 @@ doWriteTransaction(uint32_t address) noexcept {
         doMemoryWriteTransaction(address);
     }
 }
+
+template<bool isReadOperation>
+void
+doTransaction(uint32_t address) noexcept {
+    if constexpr (isReadOperation) {
+        doReadTransaction(address);
+    } else {
+        doWriteTransaction(address);
+    }
+}
 void 
 loop() {
     waitForTransaction();
     auto address = interface960.getAddress();
     Serial.printf(F("address lines: 0x%lx\n"), address);
     if (isReadOperation()) {
-        doReadTransaction(address);
+        doTransaction<true>(address);
     } else {
-        doWriteTransaction(address);
+        doTransaction<false>(address);
     }
 }
 
