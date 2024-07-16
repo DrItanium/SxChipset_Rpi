@@ -152,25 +152,21 @@ setup() {
     
     delay(1000);
     interface960.pullI960OutOfReset();
-    Serial.print(F("WAITING"));
-    while (!interface960.inDataTransaction()) {
-        Serial.print('.');
-    }
-    Serial.println(F("DONE!"));
+}
+void 
+loop() {
+    waitForTransaction();
     Serial.print(F("address lines: 0x"));
     Serial.println(interface960.getAddress(), HEX);
     Serial.print(F("data lines: 0x"));
     Serial.println(interface960.getDataLines(), HEX);
     Serial.print(F("ControlSignals: 0b"));
     Serial.println(interface960.controlLines.full, BIN);
-
-}
-void 
-loop() {
 }
 
 void 
 i960Interface::begin() volatile {
+    addressDirection = 0x0000'0000; 
     dataLinesDirection = 0xFFFF;
     // turn ready into an input
     controlDirection = 0b0001'1111'1000'0000;
@@ -180,7 +176,5 @@ i960Interface::begin() volatile {
     controlLines.int0 = 1;
     controlLines.hold = 0;
     controlLines.reset = 0;
-    controlLines.ready = 1;
-    addressDirection = 0x0000'0000; 
 }
 
