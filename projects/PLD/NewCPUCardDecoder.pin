@@ -16,7 +16,7 @@
   12   | J4       | NC
   13   | J5       | NC
   14   | J6       | NC
-  15   | J7       | NC
+  15   | READY2   | Output
   16   | FAIL     | Output
   17   | Z0       | Output
   18   | Z1       | Output
