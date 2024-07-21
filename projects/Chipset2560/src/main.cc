@@ -122,8 +122,13 @@ configureEBI() noexcept {
 }
 [[gnu::always_inline]] inline void clearADSInterrupt() noexcept { bitSet(EIFR, INTF7); }
 
+template<bool allowYields = false>
 [[gnu::always_inline]] inline void waitForTransaction() noexcept {
-    loop_until_bit_is_set(EIFR, INTF7);
+    do{
+        if constexpr (allowYields) {
+            yield();
+        }
+    } while (bit_is_clear(EIFR, INTF7));
     clearADSInterrupt();
 }
 void 
@@ -145,6 +150,9 @@ setup() {
     reconfigureRandomSeed();
     configurePins();
     Serial.begin(115200);
+    //Serial1.begin(115200);
+    //Serial2.begin(115200);
+    //Serial3.begin(115200);
     Wire.begin();
     SPI.begin();
     trySetupSDCard();
@@ -419,4 +427,3 @@ i960Interface::begin() volatile {
     controlLines.reset = 0;
     dataLines.full = 0;
 }
-
