@@ -184,7 +184,11 @@ setup() {
     return interface960.isReadOperation();
 }
 [[gnu::always_inline]] inline bool isLastWordOfTransaction() noexcept {
+#if 0
     return interface960.lastWordOfTransaction();
+#else
+    return bit_is_set(EIFR, INTF5);
+#endif
 }
 void
 doMemoryWriteTransaction(uint32_t address) noexcept {
