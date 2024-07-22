@@ -126,10 +126,11 @@ configureEBI() noexcept {
     clearADSInterrupt();
 }
 
+
 [[gnu::always_inline]] inline void waitForReadySynchronization() noexcept {
     do { } while (bit_is_clear(EIFR, INTF6));
     clearREADYInterrupt();
-    Serial.println(F("Synchronized!"));
+    Serial.println("Ready Synchronized");
 }
 
 //template<uint8_t delayAmount = 6>
@@ -187,137 +188,12 @@ setup() {
 #if 0
     return interface960.lastWordOfTransaction();
 #else
-    return bit_is_set(EIFR, INTF5);
+    auto value = bit_is_set(EIFR, INTF5);
+    if (value) {
+        Serial.println("Is Burst Last!");
+    }
+    return value;
 #endif
-}
-void
-doMemoryWriteTransaction(uint32_t address) noexcept {
-    if (isLastWordOfTransaction()) {
-        signalReady();
-        return;
-    }
-    signalReady();
-    if (isLastWordOfTransaction()) {
-        clearBLASTInterrupt();
-        signalReady();
-        return;
-    }
-    signalReady();
-    if (isLastWordOfTransaction()) {
-        clearBLASTInterrupt();
-
-        signalReady();
-        return;
-    }
-    signalReady();
-    if (isLastWordOfTransaction()) {
-        clearBLASTInterrupt();
-        signalReady();
-        return;
-    }
-    signalReady();
-    if (isLastWordOfTransaction()) {
-        clearBLASTInterrupt();
-        signalReady();
-        return;
-    }
-    signalReady();
-    if (isLastWordOfTransaction()) {
-        clearBLASTInterrupt();
-        signalReady();
-        return;
-    }
-    signalReady();
-    if (isLastWordOfTransaction()) {
-        clearBLASTInterrupt();
-        signalReady();
-        return;
-    }
-    signalReady();
-    // last part of the word will just be finished soon
-    clearBLASTInterrupt();
-    signalReady();
-
-}
-void
-doIOWriteTransaction(uint32_t address) noexcept {
-    if (isLastWordOfTransaction()) {
-        signalReady();
-        return;
-    }
-    signalReady();
-    if (isLastWordOfTransaction()) {
-        signalReady();
-        return;
-    }
-    signalReady();
-    if (isLastWordOfTransaction()) {
-        signalReady();
-        return;
-    }
-    signalReady();
-    if (isLastWordOfTransaction()) {
-        signalReady();
-        return;
-    }
-    signalReady();
-    if (isLastWordOfTransaction()) {
-        signalReady();
-        return;
-    }
-    signalReady();
-    if (isLastWordOfTransaction()) {
-        signalReady();
-        return;
-    }
-    signalReady();
-    if (isLastWordOfTransaction()) {
-        signalReady();
-        return;
-    }
-    signalReady();
-    // last part of the word will just be finished soon
-    signalReady();
-}
-void
-doMemoryReadTransaction(uint32_t address) noexcept {
-    if (isLastWordOfTransaction()) {
-        signalReady();
-        return;
-    }
-    signalReady();
-    if (isLastWordOfTransaction()) {
-        signalReady();
-        return;
-    }
-    signalReady();
-    if (isLastWordOfTransaction()) {
-        signalReady();
-        return;
-    }
-    signalReady();
-    if (isLastWordOfTransaction()) {
-        signalReady();
-        return;
-    }
-    signalReady();
-    if (isLastWordOfTransaction()) {
-        signalReady();
-        return;
-    }
-    signalReady();
-    if (isLastWordOfTransaction()) {
-        signalReady();
-        return;
-    }
-    signalReady();
-    if (isLastWordOfTransaction()) {
-        signalReady();
-        return;
-    }
-    signalReady();
-    // last part of the word will just be finished soon
-    signalReady();
 }
 template<bool isReadOperation>
 void
@@ -326,81 +202,52 @@ doNothingOperation() noexcept {
         interface960.dataLines.full = 0;
     }
     if (isLastWordOfTransaction()) {
+        clearBLASTInterrupt();
         signalReady();
         return;
     }
     signalReady();
     if (isLastWordOfTransaction()) {
+        clearBLASTInterrupt();
         signalReady();
         return;
     }
     signalReady();
     if (isLastWordOfTransaction()) {
+        clearBLASTInterrupt();
         signalReady();
         return;
     }
     signalReady();
     if (isLastWordOfTransaction()) {
+        clearBLASTInterrupt();
         signalReady();
         return;
     }
     signalReady();
     if (isLastWordOfTransaction()) {
+        clearBLASTInterrupt();
         signalReady();
         return;
     }
     signalReady();
     if (isLastWordOfTransaction()) {
+        clearBLASTInterrupt();
         signalReady();
         return;
     }
     signalReady();
     if (isLastWordOfTransaction()) {
-        signalReady();
-        return;
-    }
-    signalReady();
-    // last part of the word will just be finished soon
-    signalReady();
-}
-void
-doIOReadTransaction(uint32_t address) noexcept {
-    if (isLastWordOfTransaction()) {
+        clearBLASTInterrupt();
         signalReady();
         return;
     }
     signalReady();
     if (isLastWordOfTransaction()) {
+        clearBLASTInterrupt();
         signalReady();
         return;
     }
-    signalReady();
-    if (isLastWordOfTransaction()) {
-        signalReady();
-        return;
-    }
-    signalReady();
-    if (isLastWordOfTransaction()) {
-        signalReady();
-        return;
-    }
-    signalReady();
-    if (isLastWordOfTransaction()) {
-        signalReady();
-        return;
-    }
-    signalReady();
-    if (isLastWordOfTransaction()) {
-        signalReady();
-        return;
-    }
-    signalReady();
-    if (isLastWordOfTransaction()) {
-        signalReady();
-        return;
-    }
-    signalReady();
-    // last part of the word will just be finished soon
     signalReady();
 }
 [[gnu::always_inline]] inline bool isIOOperation(uint32_t address) {
@@ -409,20 +256,29 @@ doIOReadTransaction(uint32_t address) noexcept {
 void 
 doReadTransaction(uint32_t address) noexcept {
     interface960.dataLinesDirection = 0xFFFF;
+#if 0
     if (isIOOperation(address)) {
         doIOReadTransaction(address);
     } else {
         doMemoryReadTransaction(address);
     }
+#else 
+    doNothingOperation<true>();
+#endif
 }
 void
 doWriteTransaction(uint32_t address) noexcept {
     interface960.dataLinesDirection = 0;
+#if 0
     if (isIOOperation(address)) {
         doIOWriteTransaction(address);
     } else {
         doMemoryWriteTransaction(address);
     }
+#else
+    doNothingOperation<false>();
+#endif
+
 }
 
 template<bool isReadOperation>
