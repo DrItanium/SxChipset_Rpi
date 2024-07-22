@@ -129,6 +129,7 @@ configureEBI() noexcept {
 [[gnu::always_inline]] inline void waitForReadySynchronization() noexcept {
     do { } while (bit_is_clear(EIFR, INTF6));
     clearREADYInterrupt();
+    Serial.println(F("Synchronized!"));
 }
 
 //template<uint8_t delayAmount = 6>
