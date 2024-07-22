@@ -139,8 +139,19 @@ configurePins() noexcept {
     // configure ADS to trigger on rising edge (the address operation is
     // complete)
     pinMode(Pin::ADS, INPUT);
-    bitSet(EICRB, ISC70);
-    bitSet(EICRB, ISC71);
+    pinMode(Pin::READY_SYNC_IN, INPUT);
+    pinMode(Pin::BLAST, INPUT);
+    pinMode(Pin::HLDA, INPUT);
+    // Configure INT7 on rising edge of ADS
+    // Configure INT6 on rising edge of READY
+    // Configure INT5 on falling edge of BLAST
+    // Configure INT4 on rising edge of HLDA (the hold request is acknowledged)
+    EICRB = 0b11'11'10'11;
+    // clear the interrupt flags to be on the safe side
+    bitSet(EIFR, INTF4);
+    bitSet(EIFR, INTF5);
+    bitSet(EIFR, INTF6);
+    bitSet(EIFR, INTF7);
 }
 
 void
@@ -150,9 +161,6 @@ setup() {
     reconfigureRandomSeed();
     configurePins();
     Serial.begin(115200);
-    //Serial1.begin(115200);
-    //Serial2.begin(115200);
-    //Serial3.begin(115200);
     Wire.begin();
     SPI.begin();
     trySetupSDCard();

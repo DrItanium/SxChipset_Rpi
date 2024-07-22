@@ -70,6 +70,7 @@ Count = NUM_DIGITAL_PINS,
     RXD3 = PortJ0,
     TXD3 = PortJ1,
 
+    HLDA = PortE4,
     BLAST = PortE5,
     READY_SYNC_IN = PortE6,
     ADS = PortE7,
