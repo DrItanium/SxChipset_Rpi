@@ -82,13 +82,6 @@ trySetupSDCard() noexcept {
         }
     }
 }
-template<uint8_t delayAmount = 6>
-void signalReady() noexcept {
-    toggle<Pin::READY>();
-    if constexpr (delayAmount > 0) {
-        insertCustomNopCount<delayAmount>();
-    }
-}
 
 
 void
@@ -121,15 +114,33 @@ configureEBI() noexcept {
                            // wait states are necessary too
 }
 [[gnu::always_inline]] inline void clearADSInterrupt() noexcept { bitSet(EIFR, INTF7); }
+[[gnu::always_inline]] inline void clearREADYInterrupt() noexcept { bitSet(EIFR, INTF6); }
+[[gnu::always_inline]] inline void clearBLASTInterrupt() noexcept { bitSet(EIFR, INTF5); }
+[[gnu::always_inline]] inline void clearHLDAInterrupt() noexcept { bitSet(EIFR, INTF4); }
 
-template<bool allowYields = false>
 [[gnu::always_inline]] inline void waitForTransaction() noexcept {
+    // clear the READY signal interrupt ahead of waiting for the last
+    clearREADYInterrupt();
     do{
-        if constexpr (allowYields) {
-            yield();
-        }
     } while (bit_is_clear(EIFR, INTF7));
     clearADSInterrupt();
+}
+
+[[gnu::always_inline]] inline void waitForReadySynchronization() noexcept {
+    do { } while (bit_is_clear(EIFR, INTF6));
+    clearREADYInterrupt();
+}
+
+//template<uint8_t delayAmount = 6>
+void signalReady() noexcept {
+    toggle<Pin::READY>();
+#if 0
+    if constexpr (delayAmount > 0) {
+        insertCustomNopCount<delayAmount>();
+    }
+#else
+    waitForReadySynchronization();
+#endif
 }
 void 
 configurePins() noexcept {
@@ -182,37 +193,46 @@ doMemoryWriteTransaction(uint32_t address) noexcept {
     }
     signalReady();
     if (isLastWordOfTransaction()) {
+        clearBLASTInterrupt();
         signalReady();
         return;
     }
     signalReady();
     if (isLastWordOfTransaction()) {
+        clearBLASTInterrupt();
+
         signalReady();
         return;
     }
     signalReady();
     if (isLastWordOfTransaction()) {
+        clearBLASTInterrupt();
         signalReady();
         return;
     }
     signalReady();
     if (isLastWordOfTransaction()) {
+        clearBLASTInterrupt();
         signalReady();
         return;
     }
     signalReady();
     if (isLastWordOfTransaction()) {
+        clearBLASTInterrupt();
         signalReady();
         return;
     }
     signalReady();
     if (isLastWordOfTransaction()) {
+        clearBLASTInterrupt();
         signalReady();
         return;
     }
     signalReady();
     // last part of the word will just be finished soon
+    clearBLASTInterrupt();
     signalReady();
+
 }
 void
 doIOWriteTransaction(uint32_t address) noexcept {
