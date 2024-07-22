@@ -184,16 +184,13 @@ setup() {
 [[gnu::always_inline]] inline bool isReadOperation() noexcept {
     return interface960.isReadOperation();
 }
+template<bool useIOExpander = false>
 [[gnu::always_inline]] inline bool isLastWordOfTransaction() noexcept {
-#if 0
-    return interface960.lastWordOfTransaction();
-#else
-    auto value = bit_is_set(EIFR, INTF5);
-    if (value) {
-        Serial.println("Is Burst Last!");
+    if constexpr (useIOExpander) {
+        return interface960.lastWordOfTransaction();
+    } else {
+        return bit_is_set(EIFR, INTF5);
     }
-    return value;
-#endif
 }
 template<bool isReadOperation>
 void
@@ -201,6 +198,14 @@ doNothingOperation() noexcept {
     if constexpr(isReadOperation) {
         interface960.dataLines.full = 0;
     }
+    while (!isLastWordOfTransaction()) {
+        signalReady();
+    }
+    clearBLASTInterrupt();
+    signalReady();
+}
+void 
+genericExecutionBody() noexcept {
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
         signalReady();
