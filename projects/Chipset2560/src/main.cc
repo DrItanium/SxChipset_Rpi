@@ -153,10 +153,10 @@ configurePins() noexcept {
     // Configure INT4 on rising edge of HLDA (the hold request is acknowledged)
     EICRB = 0b11'11'10'11;
     // clear the interrupt flags to be on the safe side
-    bitSet(EIFR, HLDAFLAG);
-    bitSet(EIFR, BLASTFLAG);
-    bitSet(EIFR, READYFLAG);
-    bitSet(EIFR, ADSFLAG);
+    clearHLDAInterrupt();
+    clearBLASTInterrupt();
+    clearREADYInterrupt();
+    clearADSInterrupt();
 }
 
 void
