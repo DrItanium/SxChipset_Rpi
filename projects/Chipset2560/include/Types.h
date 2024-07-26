@@ -103,6 +103,7 @@ struct [[gnu::packed]] i960Interface {
     [[nodiscard]] bool inDataTransaction() const volatile noexcept { return controlLines.den == 0; }
     void putI960InReset() volatile noexcept { controlLines.reset = 0; }
     void pullI960OutOfReset() volatile noexcept { controlLines.reset = 1; }
+    [[nodiscard]] bool isIOOperation() const volatile noexcept { return addressLines.bytes[3] == 0xFE; }
 };
 static_assert(sizeof(i960Interface) == (4*sizeof(uint32_t)));
 

@@ -229,14 +229,17 @@ genericExecutionBody() noexcept {
     }
     signalReady();
 }
-[[gnu::always_inline]] inline bool isIOOperation(uint32_t address) {
+[[gnu::always_inline]] inline bool isIOOperation(uint32_t address) noexcept {
     return (static_cast<uint8_t>(address >> 24)) == 0xFE;
+}
+[[gnu::always_inline]] inline bool isIOOperation() noexcept {
+    return interface960.isIOOperation();
 }
 void 
 doReadTransaction(uint32_t address) noexcept {
     interface960.dataLinesDirection = 0xFFFF;
 #if 0
-    if (isIOOperation(address)) {
+    if (interface960.isIOOperation(address)) {
         doIOReadTransaction(address);
     } else {
         doMemoryReadTransaction(address);
