@@ -113,36 +113,28 @@ configureEBI() noexcept {
     XMCRA = 0b1'100'01'01; // Enable the EBI, divide the memory space in half,
                            // wait states are necessary too
 }
-[[gnu::always_inline]] inline void clearADSInterrupt() noexcept { bitSet(EIFR, INTF7); }
-[[gnu::always_inline]] inline void clearREADYInterrupt() noexcept { bitSet(EIFR, INTF6); }
-[[gnu::always_inline]] inline void clearBLASTInterrupt() noexcept { bitSet(EIFR, INTF5); }
-[[gnu::always_inline]] inline void clearHLDAInterrupt() noexcept { bitSet(EIFR, INTF4); }
+#define ADSFLAG INTF7
+#define READYFLAG INTF6
+#define BLASTFLAG INTF5
+#define HLDAFLAG INTF4
+[[gnu::always_inline]] inline void clearADSInterrupt() noexcept { bitSet(EIFR, ADSFLAG); }
+[[gnu::always_inline]] inline void clearREADYInterrupt() noexcept { bitSet(EIFR, READYFLAG); }
+[[gnu::always_inline]] inline void clearBLASTInterrupt() noexcept { bitSet(EIFR, BLASTFLAG); }
+[[gnu::always_inline]] inline void clearHLDAInterrupt() noexcept { bitSet(EIFR, HLDAFLAG); }
 
 [[gnu::always_inline]] inline void waitForTransaction() noexcept {
     // clear the READY signal interrupt ahead of waiting for the last
     clearREADYInterrupt();
-    do{
-    } while (bit_is_clear(EIFR, INTF7));
+    do{ } while (bit_is_clear(EIFR, ADSFLAG));
     clearADSInterrupt();
 }
 
 
-[[gnu::always_inline]] inline void waitForReadySynchronization() noexcept {
-    do { } while (bit_is_clear(EIFR, INTF6));
-    clearREADYInterrupt();
-    Serial.println("Ready Synchronized");
-}
 
-//template<uint8_t delayAmount = 6>
-void signalReady() noexcept {
+[[gnu::always_inline]] inline void signalReady() noexcept {
     toggle<Pin::READY>();
-#if 0
-    if constexpr (delayAmount > 0) {
-        insertCustomNopCount<delayAmount>();
-    }
-#else
-    waitForReadySynchronization();
-#endif
+    do { } while (bit_is_clear(EIFR, READYFLAG));
+    clearREADYInterrupt();
 }
 void 
 configurePins() noexcept {
@@ -161,10 +153,10 @@ configurePins() noexcept {
     // Configure INT4 on rising edge of HLDA (the hold request is acknowledged)
     EICRB = 0b11'11'10'11;
     // clear the interrupt flags to be on the safe side
-    bitSet(EIFR, INTF4);
-    bitSet(EIFR, INTF5);
-    bitSet(EIFR, INTF6);
-    bitSet(EIFR, INTF7);
+    bitSet(EIFR, HLDAFLAG);
+    bitSet(EIFR, BLASTFLAG);
+    bitSet(EIFR, READYFLAG);
+    bitSet(EIFR, ADSFLAG);
 }
 
 void
@@ -189,7 +181,7 @@ template<bool useIOExpander = false>
     if constexpr (useIOExpander) {
         return interface960.lastWordOfTransaction();
     } else {
-        return bit_is_set(EIFR, INTF5);
+        return bit_is_set(EIFR, BLASTFLAG);
     }
 }
 template<bool isReadOperation>
