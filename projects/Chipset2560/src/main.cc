@@ -85,28 +85,6 @@ trySetupSDCard() noexcept {
 
 
 void
-reconfigureRandomSeed() noexcept {
-    Serial.println(F("Reconfiguring random seed"));
-    uint32_t newSeed = 0;
-    newSeed += analogRead(A0);
-    newSeed += analogRead(A1);
-    newSeed += analogRead(A2);
-    newSeed += analogRead(A3);
-    newSeed += analogRead(A4);
-    newSeed += analogRead(A5);
-    newSeed += analogRead(A6);
-    newSeed += analogRead(A7);
-    newSeed += analogRead(A8);
-    newSeed += analogRead(A9);
-    newSeed += analogRead(A10);
-    newSeed += analogRead(A11);
-    newSeed += analogRead(A12);
-    newSeed += analogRead(A13);
-    newSeed += analogRead(A14);
-    newSeed += analogRead(A15);
-    randomSeed(newSeed);
-}
-void
 configureEBI() noexcept {
     // for now enable a simple 256 byte space
     XMCRB = 0b0'0000'111; // no high bits, no bus keeper
@@ -136,6 +114,20 @@ configureEBI() noexcept {
     do { } while (bit_is_clear(EIFR, READYFLAG));
     clearREADYInterrupt();
 }
+void
+configureInterrupts() noexcept {
+    // Configure INT7 on rising edge of ADS
+    // Configure INT6 on rising edge of READY
+    // Configure INT5 on falling edge of BLAST
+    // Configure INT4 on rising edge of HLDA (the hold request is acknowledged)
+    EICRB = 0b11'11'10'11;
+    // clear the interrupt flags to be on the safe side
+    clearHLDAInterrupt();
+    clearBLASTInterrupt();
+    clearREADYInterrupt();
+    clearADSInterrupt();
+
+}
 void 
 configurePins() noexcept {
     pinMode(Pin::READY, OUTPUT);
@@ -147,24 +139,14 @@ configurePins() noexcept {
     pinMode(Pin::READY_SYNC_IN, INPUT);
     pinMode(Pin::BLAST, INPUT);
     pinMode(Pin::HLDA, INPUT);
-    // Configure INT7 on rising edge of ADS
-    // Configure INT6 on rising edge of READY
-    // Configure INT5 on falling edge of BLAST
-    // Configure INT4 on rising edge of HLDA (the hold request is acknowledged)
-    EICRB = 0b11'11'10'11;
-    // clear the interrupt flags to be on the safe side
-    clearHLDAInterrupt();
-    clearBLASTInterrupt();
-    clearREADYInterrupt();
-    clearADSInterrupt();
 }
 
 void
 setup() {
     configureEBI();
     interface960.begin();
-    reconfigureRandomSeed();
     configurePins();
+    configureInterrupts();
     Serial.begin(115200);
     Wire.begin();
     SPI.begin();
