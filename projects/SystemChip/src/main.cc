@@ -35,7 +35,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define CACHE_MEMORY_SECTION DMAMEM
 #define MEMORY_POOL_SECTION EXTMEM
-
+#define DebugPort Serial
+#define PCLink Serial4
+#define SodiumLink0 Serial7
+#define SodiumLink1 Serial8
 void
 setupRandomNumberGeneration() {
     uint32_t randomSeedValue = analogRead(A0) + analogRead(A1) + 
@@ -46,19 +49,33 @@ setupRandomNumberGeneration() {
 }
 constexpr uint8_t InitializeSystemSetupCode = 0xFE;
 constexpr uint8_t BeginInstructionCode = 0xFF;
-
+bool sdcardInstalled = false;
 void
 establishContact() {
-    while (Serial.available() <= 0) {
-        Serial.write(InitializeSystemSetupCode);
+    while (PCLink.available() <= 0) {
+        PCLink.write(InitializeSystemSetupCode);
         delay(300);
     }
     // clear the serial cache
-    (void)Serial.read();
+    (void)PCLink.read();
 }
 void
 setupHardware() {
-
+#define X(item, baud) item . begin (baud ) ; \
+    while (! item ) { \
+        delay(10) ; \
+    }
+    X(DebugPort, 9600);
+    X(PCLink, 500000);
+    X(SodiumLink0, 500000);
+    X(SodiumLink1, 500000);
+#undef X
+    sdcardInstalled = SD.begin();
+    DebugPort.print("SDCARD ");
+    if (!sdcardInstalled) {
+        DebugPort.println("NOT ");
+    } 
+    DebugPort.println("FOUND");
 }
 void
 setupCaches() {
@@ -67,10 +84,6 @@ setupCaches() {
 void 
 setup() {
     setupRandomNumberGeneration();
-    Serial.begin(500000);
-    while (!Serial) {
-        delay(10);
-    }
     setupHardware();
     setupCaches();
     establishContact();
