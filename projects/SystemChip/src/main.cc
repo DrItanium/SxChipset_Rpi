@@ -39,6 +39,59 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define PCLink Serial4
 #define SodiumLink0 Serial7
 #define SodiumLink1 Serial8
+using Address = uint32_t;
+using RawCacheLineData = uint8_t*;
+void writeCacheLine(Address address, uint8_t* data, uint8_t size) noexcept;
+void readCacheLine(Address address, uint8_t* data, uint8_t size) noexcept;
+struct CacheLine {
+    static constexpr uint8_t NumDataElements = 16;
+    static constexpr uint8_t DataMask = 0xF;
+    static constexpr Address AddressMask = 0xFFFF'FFF0;
+private:
+    Address _key = 0;
+    bool _valid = false;
+    bool _dirty = false;
+    uint8_t _data[NumDataElements] = { 0 };
+public:
+    constexpr auto getAddress() const noexcept { return _key; }
+    constexpr auto isDirty() const noexcept { return _dirty; }
+    constexpr auto isValid() const noexcept { return _valid; }
+    constexpr auto getData(uint8_t index) const noexcept { return _data[index & DataMask]; }
+    void markDirty() noexcept { _dirty = true; }
+    void setData(uint8_t index, uint8_t value) noexcept {
+        markDirty();
+        _data[index & DataMask] = value;
+    }
+    void sync() noexcept {
+        if (_valid) {
+            if (_dirty) {
+                writeCacheLine(_key, _data, NumDataElements);
+                _dirty = false;
+            }
+        }
+    }
+    void clear() noexcept {
+        _key = 0;
+        _valid = false;
+        _dirty = false;
+        for (int i = 0; i < NumDataElements; ++i) {
+            _data[i] = 0;
+        }
+    }
+    static constexpr auto maskAddress(Address targetAddress) noexcept {
+        return targetAddress & AddressMask;
+    }
+    constexpr auto matches(Address targetAddress) const noexcept {
+        return _valid & (_key == maskAddress(targetAddress));
+    }
+    void reuse(Address newKey) {
+        sync();
+        _valid = true;
+        _dirty = false;
+        _key = maskAddress(newKey);
+        readCacheLine(_key, _data, NumDataElements);
+    }
+};
 void
 setupRandomNumberGeneration() {
     uint32_t randomSeedValue = analogRead(A0) + analogRead(A1) + 
@@ -92,4 +145,14 @@ setup() {
 void 
 loop() {
     
+}
+
+
+void 
+writeCacheLine(Address address, uint8_t* data, uint8_t size) noexcept {
+
+}
+void 
+readCacheLine(Address address, uint8_t* data, uint8_t size) noexcept {
+
 }
