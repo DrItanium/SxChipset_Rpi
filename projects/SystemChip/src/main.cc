@@ -41,8 +41,23 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define SodiumLink1 Serial8
 using Address = uint32_t;
 using RawCacheLineData = uint8_t*;
+constexpr uint8_t ReadMemoryCode = 0xFC;
+constexpr uint8_t WriteMemoryCode = 0xFD;
+constexpr uint8_t InitializeSystemSetupCode = 0xFE;
+constexpr uint8_t BeginInstructionCode = 0xFF;
+bool sdcardInstalled = false;
 void writeCacheLine(Address address, uint8_t* data, uint8_t size) noexcept;
 void readCacheLine(Address address, uint8_t* data, uint8_t size) noexcept;
+void
+sendCommandHeader(uint8_t size, uint8_t code) noexcept {
+    PCLink.write(BeginInstructionCode);
+    PCLink.write(size);
+    PCLink.write(code);
+}
+void
+send32BitNumber(uint32_t number) {
+    PCLink.write(reinterpret_cast<char*>(&number), sizeof(number));
+}
 struct CacheLine {
     static constexpr uint8_t NumDataElements = 16;
     static constexpr uint8_t DataMask = 0xF;
@@ -100,9 +115,6 @@ setupRandomNumberGeneration() {
         analogRead(A6) + analogRead(A7);
     randomSeed(randomSeedValue);
 }
-constexpr uint8_t InitializeSystemSetupCode = 0xFE;
-constexpr uint8_t BeginInstructionCode = 0xFF;
-bool sdcardInstalled = false;
 void
 establishContact() {
     while (PCLink.available() <= 0) {
@@ -148,11 +160,18 @@ loop() {
 }
 
 
+
 void 
 writeCacheLine(Address address, uint8_t* data, uint8_t size) noexcept {
-
+    sendCommandHeader(1 + sizeof(address) + size + 1, WriteMemoryCode);
+    send32BitNumber(address);
+    PCLink.write(size);
+    PCLink.write(data, size);
 }
 void 
 readCacheLine(Address address, uint8_t* data, uint8_t size) noexcept {
-
+    sendCommandHeader(1 + sizeof(address) + 1, WriteMemoryCode);
+    send32BitNumber(address);
+    PCLink.write(size);
+    PCLink.readBytes(reinterpret_cast<char*>(data), size);
 }
