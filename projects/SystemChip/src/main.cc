@@ -73,7 +73,7 @@ setupHardware() {
     sdcardInstalled = SD.begin();
     DebugPort.print("SDCARD ");
     if (!sdcardInstalled) {
-        DebugPort.println("NOT ");
+        DebugPort.print("NOT ");
     } 
     DebugPort.println("FOUND");
 }
