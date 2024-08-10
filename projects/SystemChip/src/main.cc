@@ -120,7 +120,11 @@ class HardwareSerialServer {
     public:
         HardwareSerialServer(HardwareSerial& link) : _link(link) { }
         auto& getBackingStore() noexcept { return _link; }
-        void begin(uint32_t baud) noexcept { _link.begin(baud); }
+        void begin(uint32_t baud) noexcept { 
+            _link.begin(baud); 
+            Serial.println("Server Link Up!");
+            Serial.println("Waiting for first contact!");
+        }
         void handleReadRequest(const Packet& packet) noexcept {
             for (uint32_t a = packet.address, i = 0; i < packet.size; ++i, ++a) {
                 _link.write(a < 0x0100'0000 ? memory960[a] : 0);
@@ -149,6 +153,7 @@ class HardwareSerialServer {
             clearInput();
             _firstContact = true;
             _link.write(Deception::MemoryCodes::InitializeSystemSetupCode);
+            Serial.println("First Contact Successful!");
         }
         void processEvent() noexcept {
             if (auto inByte = _link.read(); !_firstContact) {
