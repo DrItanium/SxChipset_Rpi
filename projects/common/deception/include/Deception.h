@@ -82,19 +82,6 @@ namespace Deception {
         private:
             HardwareSerial& _link;
     };
-    class FileBasedBackingStore : public BackingStore {
-        public:
-            void begin(File& target) noexcept {
-                _backingStore = &target;
-            }
-            constexpr operator bool() const noexcept { return _backingStore != nullptr; }
-            size_t read(Address addr, uint8_t* storage, size_t count) noexcept override;
-            size_t write(Address addr, uint8_t* storage, size_t count) noexcept override;
-            constexpr size_t capacity() const noexcept { return this->operator bool() ? _backingStore->size() : 0; }
-        private:
-            bool _available = false;
-            File* _backingStore = nullptr;
-    };
     constexpr bool isPowerOfTwo(uint16_t value) noexcept {
         switch (value) {
             case 0b0000000000000001:
