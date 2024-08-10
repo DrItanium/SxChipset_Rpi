@@ -41,4 +41,36 @@ establishContact(HardwareSerial& connection, OnConnectionEstablishedCallback cal
     }
 }
 
+void
+CacheLine::clear() noexcept {
+    _dirty = false;
+    _valid = false;
+    _key = 0;
+    for (auto i = 0u; i < NumBytes; ++i) {
+        _bytes[i] = 0;
+    }
+}
+void
+CacheLine::sync(BackingStore& store) noexcept {
+    if (_valid) {
+        if (_dirty) {
+            _dirty = false;
+            (void)store.write(_key, _bytes, NumBytes);
+        }
+    }
+}
+void
+CacheLine::replace(BackingStore& store, Address newAddress) noexcept {
+    sync(store);
+    _valid = true;
+    _key = normalizeAddress(newAddress);
+    (void)store.read(_key, _bytes, NumBytes);
+}
+
+void
+CacheLine::setByte(uint8_t offset, uint8_t value) noexcept {
+    _dirty = true;
+    _bytes[computeByteOffset(offset)] = value;
+}
+
 } // end namespace Deception

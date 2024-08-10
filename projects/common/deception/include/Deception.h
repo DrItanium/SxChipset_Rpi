@@ -27,6 +27,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define DECEPTION_H__
 #include <Arduino.h>
 namespace Deception {
+    using Address = uint32_t;
     namespace MemoryCodes {
         constexpr uint8_t ReadMemoryCode = 0xFC;
         constexpr uint8_t WriteMemoryCode = 0xFD;
@@ -42,5 +43,45 @@ namespace Deception {
      * @return the result from invoking the callback
      */
     bool establishContact(HardwareSerial& connection, OnConnectionEstablishedCallback callback, int waitBetween = 300) noexcept;
+    
+    /**
+     * @brief An abstract representation of backing storage (memory, disk, etc)
+     */
+    class BackingStore {
+        public:
+            virtual size_t read(Address targetAddress, uint8_t* storage, size_t count) = 0;
+            virtual size_t write(Address targetAddress, uint8_t* storage, size_t count) = 0;
+    };
+    /**
+     * @brief A simple 16-byte cache line
+     */
+    class CacheLine {
+        public:
+            static constexpr uint8_t NumBytes = 16;
+            static constexpr uint32_t AddressMask = 0xFFFFFFF0;
+            static constexpr Address normalizeAddress(Address input) noexcept {
+                return input & AddressMask;
+            }
+            static constexpr uint8_t computeByteOffset(uint8_t input) noexcept {
+                return input & 0xF;
+            }
+            constexpr bool dirty() const noexcept { return _dirty; }
+            constexpr bool valid() const noexcept { return _valid; }
+            constexpr bool matches(Address other) const noexcept {
+                return valid() && (_key == normalizeAddress(other));
+            }
+            void sync(BackingStore& store) noexcept;
+            void replace(BackingStore& store, Address newAddress) noexcept;
+            void setByte(uint8_t offset, uint8_t value) noexcept;
+            constexpr uint8_t getByte(uint8_t offset) const noexcept {
+                return _bytes[computeByteOffset(offset)];
+            }
+            void clear() noexcept;
+        private:
+            uint8_t _bytes[NumBytes] = { 0 };
+            uint32_t _key = 0;
+            bool _dirty = false;
+            bool _valid = false;
+    };
 } // end namespace Deception
 #endif // end DECEPTION_H__
