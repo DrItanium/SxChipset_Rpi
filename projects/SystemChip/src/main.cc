@@ -159,11 +159,16 @@ class HardwareSerialServer {
         }
         void processPacket() noexcept {
             Packet& packet = *reinterpret_cast<Packet*>(_data);
+            Serial.println("PROCESSING PACKET");
+            Serial.print("\tTYPECODE: 0x");
+            Serial.println(packet.typeCode, HEX);
+
             switch (packet.typeCode) {
                 case Deception::MemoryCodes::ReadMemoryCode:
                     handleReadRequest(packet);
                     break;
                 case Deception::MemoryCodes::WriteMemoryCode:
+                    handleWriteRequest(packet);
                     break;
                 default:
                     break;
@@ -193,6 +198,8 @@ class HardwareSerialServer {
                             break;
                     }
                 } else if (_serialCapacity == -1) {
+                    Serial.print("Length: 0x");
+                    Serial.println(inByte, HEX);
                     _serialCapacity = inByte;
                 } else {
                    _data[_serialCount] = inByte;

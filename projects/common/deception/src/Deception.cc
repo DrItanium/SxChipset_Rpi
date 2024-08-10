@@ -84,7 +84,7 @@ writeMemoryBlock(T& link, Address address, uint8_t* data, uint8_t size) noexcept
 template<typename T>
 void 
 readMemoryBlock(T& link, Address address, uint8_t* data, uint8_t size) noexcept {
-    sendCommandHeader(link, 1 + sizeof(address) + 1, MemoryCodes::WriteMemoryCode);
+    sendCommandHeader(link, 1 + sizeof(address) + 1, MemoryCodes::ReadMemoryCode);
     send32BitNumber(link, address);
     link.write(size);
     link.readBytes(reinterpret_cast<char*>(data), size);
