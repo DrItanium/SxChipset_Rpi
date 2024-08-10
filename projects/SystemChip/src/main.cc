@@ -93,6 +93,14 @@ setupSDCard() {
                     Serial.println("prog.bin could not be fully transferred!");
                 } else {
                     Serial.println("Transfer complete!");
+                    Serial.println("Header Contents:");
+                    auto* header = reinterpret_cast<uint32_t*>(memory960);
+                    for (int i = 0; i < 8; ++i) {
+                        Serial.print("\t0x");
+                        Serial.print(i, HEX);
+                        Serial.print(": 0x");
+                        Serial.println(header[i], HEX);
+                    }
                 }
             } else {
                 Serial.println("prog.bin is too large to fit in 16 megabytes!");
@@ -113,9 +121,11 @@ setupHardware() {
     X(Serial, 9600, true);
 #undef X
     setupServers();
-    setupSDCard();
     setupMemoryPool();
     setupCaches();
+    // the sdcard should come last to make sure that we don't clear out all of
+    // our work!
+    setupSDCard();
 }
 void 
 setup() {
