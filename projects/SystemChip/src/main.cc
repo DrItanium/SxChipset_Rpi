@@ -77,11 +77,29 @@ setupMemoryPool() {
 void
 setupSDCard() {
     sdcardInstalled = SD.begin(BUILTIN_SDCARD);
-    Serial.print("SDCARD ");
     if (!sdcardInstalled) {
-        Serial.print("NOT ");
-    } 
-    Serial.println("FOUND");
+        Serial.println("No SDCard found!");
+    } else {
+        Serial.println("Found an SDCard, will try to transfer the contents of prog.bin to onboard psram");
+        auto f = SD.open("prog.bin", FILE_READ); 
+        if (!f) {
+            Serial.println("Could not open prog.bin...skipping!");
+        } else {
+            Serial.println("Found prog.bin...");
+            if (f.size() <= 0x100000) {
+                Serial.println("Transferring prog.bin to memory");
+                auto result = f.read(memory960, f.size());
+                if (result != f.size()) {
+                    Serial.println("prog.bin could not be fully transferred!");
+                } else {
+                    Serial.println("Transfer complete!");
+                }
+            } else {
+                Serial.println("prog.bin is too large to fit in 16 megabytes!");
+            }
+            f.close();
+        }
+    }
 }
 void setupServers();
 void
