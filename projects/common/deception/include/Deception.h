@@ -101,7 +101,7 @@ namespace Deception {
     /**
      * @brief A simple 16-byte cache line
      */
-    class CacheLine {
+    class CacheLine16 {
         public:
             static constexpr uint8_t NumBytes = 16;
             static constexpr auto ShiftAmount = 4;
@@ -134,7 +134,7 @@ namespace Deception {
             bool _dirty = false;
             BackingStore* _backingStore = nullptr;
     };
-    template<uint16_t C, typename L = CacheLine>
+    template<uint16_t C, typename L>
     class DirectMappedCache {
         public:
             static_assert(C > 0, "Must have at least one cache line!");
@@ -163,7 +163,8 @@ namespace Deception {
         private:
             Line_t lines[NumLines];
     };
-    using DirectMappedCache4K = DirectMappedCache<256>;
+    using DirectMappedCache4K = DirectMappedCache<256, CacheLine16>;
     static_assert(DirectMappedCache4K::computeIndex(0xFFFF'FFFF) == 0xFF);
+    static_assert(DirectMappedCache4K::computeIndex(0xFFFF'FFDF) == 0xFD);
 } // end namespace Deception
 #endif // end DECEPTION_H__

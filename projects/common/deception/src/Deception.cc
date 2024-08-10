@@ -42,7 +42,7 @@ establishContact(HardwareSerial& connection, OnConnectionEstablishedCallback cal
 }
 
 void
-CacheLine::clear() noexcept {
+CacheLine16::clear() noexcept {
     _dirty = false;
     _backingStore = nullptr;
     _key = 0;
@@ -51,7 +51,7 @@ CacheLine::clear() noexcept {
     }
 }
 void
-CacheLine::sync() noexcept {
+CacheLine16::sync() noexcept {
     if (valid()) {
         if (_dirty) {
             _dirty = false;
@@ -60,7 +60,7 @@ CacheLine::sync() noexcept {
     }
 }
 void
-CacheLine::replace(BackingStore& store, Address newAddress) noexcept {
+CacheLine16::replace(BackingStore& store, Address newAddress) noexcept {
     sync();
     _backingStore = &store;
     _key = normalizeAddress(newAddress);
@@ -68,7 +68,7 @@ CacheLine::replace(BackingStore& store, Address newAddress) noexcept {
 }
 
 void
-CacheLine::setByte(uint8_t offset, uint8_t value) noexcept {
+CacheLine16::setByte(uint8_t offset, uint8_t value) noexcept {
     _dirty = true;
     _bytes[computeByteOffset(offset)] = value;
 }
