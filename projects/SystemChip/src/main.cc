@@ -50,20 +50,9 @@ constexpr auto MemoryPoolSize = 16_MB;
 
 MEMORY_POOL_SECTION uint8_t memory960[MemoryPoolSize];
 CACHE_MEMORY_SECTION Deception::DirectMappedCache_CacheLine16<0x1000> externalCache;
+bool sdcardInstalled = false;
 static_assert(MemoryPoolSize <= MaxMemoryPoolSize, "Requested memory capacity is too large!");
 static_assert(MemoryPoolSize >= MinimumPoolSize, "Requested memory capacity will not fit a default boot image!");
-bool sdcardInstalled = false;
-void
-setupRandomNumberGeneration() {
-    uint32_t randomSeedValue = analogRead(A0) + analogRead(A1) + 
-        analogRead(A2) + analogRead(A3) + 
-        analogRead(A4) + analogRead(A5) +
-        analogRead(A6) + analogRead(A7);
-    randomSeed(randomSeedValue);
-}
-void
-establishContact() {
-}
 void
 setupCaches() {
     externalCache.begin();
@@ -120,18 +109,17 @@ setupHardware() {
     }
     X(Serial, 9600, true);
 #undef X
-    setupServers();
     setupMemoryPool();
     setupCaches();
     // the sdcard should come last to make sure that we don't clear out all of
     // our work!
     setupSDCard();
+    // servers should be setup last to prevent race conditions
+    setupServers();
 }
 void 
 setup() {
-    setupRandomNumberGeneration();
     setupHardware();
-    //establishContact();
 }
 
 void 
