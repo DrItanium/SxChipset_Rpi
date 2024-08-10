@@ -36,10 +36,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define CACHE_MEMORY_SECTION DMAMEM
 #define MEMORY_POOL_SECTION EXTMEM
-#define DebugPort Serial
-#define PCLink Serial4
-#define SodiumLink0 Serial7
-#define SodiumLink1 Serial8
 using Address = uint32_t;
 using RawCacheLineData = uint8_t*;
 constexpr unsigned long long int operator ""_KB(unsigned long long int value) noexcept {
@@ -81,12 +77,13 @@ setupMemoryPool() {
 void
 setupSDCard() {
     sdcardInstalled = SD.begin();
-    DebugPort.print("SDCARD ");
+    Serial.print("SDCARD ");
     if (!sdcardInstalled) {
-        DebugPort.print("NOT ");
+        Serial.print("NOT ");
     } 
-    DebugPort.println("FOUND");
+    Serial.println("FOUND");
 }
+void setupServers();
 void
 setupHardware() {
 #define X(item, baud, wait) item . begin (baud ) ; \
@@ -95,16 +92,13 @@ setupHardware() {
             delay(10) ; \
         } \
     }
-    X(DebugPort, 9600, true);
-    //X(PCLink, 500000, false);
-    //X(SodiumLink0, 115200, false);
-    //X(SodiumLink1, 115200, false);
+    X(Serial, 9600, true);
 #undef X
+    setupServers();
     setupSDCard();
     setupMemoryPool();
     setupCaches();
 }
-
 void 
 setup() {
     setupRandomNumberGeneration();
@@ -116,6 +110,82 @@ void
 loop() {
     
 }
+struct [[gnu::packed]] Packet {
+    uint8_t typeCode;
+    uint32_t address;
+    uint8_t size;
+    uint8_t data[];
+};
+class HardwareSerialServer {
+    public:
+        HardwareSerialServer(HardwareSerial& link) : _link(link) { }
+        auto& getBackingStore() noexcept { return _link; }
+        void begin(uint32_t baud) noexcept { _link.begin(baud); }
+        void processPacket() noexcept {
+            Packet& packet = *reinterpret_cast<Packet*>(_data);
+            switch (_data[0]) {
+                case Deception::MemoryCodes::ReadMemoryCode:
 
-
-
+                    break;
+                case Deception::MemoryCodes::WriteMemoryCode:
+                    break;
+                default:
+                    break;
+            }
+        }
+        void processEvent() noexcept {
+            if (auto inByte = _link.read(); !_firstContact) {
+                if (inByte == Deception::MemoryCodes::InitializeSystemSetupCode) {
+                    _firstContact = true;
+                    _link.write(Deception::MemoryCodes::InitializeSystemSetupCode);
+                    clearInput();
+                }
+            } else {
+                if (_serialCapacity == 0) {
+                    switch (inByte) {
+                        case Deception::MemoryCodes::BeginInstructionCode:
+                            _serialCapacity = -1;
+                            _serialCount = 0;
+                            break;
+                        case Deception::MemoryCodes::InitializeSystemSetupCode:
+                            clearInput();
+                            _firstContact = true;
+                            _link.write(Deception::MemoryCodes::InitializeSystemSetupCode);
+                            break;
+                        default:
+                            break;
+                    }
+                } else if (_serialCapacity == -1) {
+                    _serialCapacity = inByte;
+                } else {
+                   _data[_serialCount] = inByte;
+                   ++_serialCount;
+                   if (_serialCount == _serialCapacity) {
+                        processPacket();
+                        _serialCapacity = 0;
+                        _serialCount = 0;
+                   }
+                }
+            }
+        }
+        void clearInput() noexcept {
+            while (_link.available() > 0) {
+                (void)_link.read();
+            }
+        }
+    private:
+        HardwareSerial& _link;
+        bool _firstContact = false;
+        int _serialCapacity = 0;
+        int _serialCount = 0;
+        uint8_t _data[256] = { 0 };
+};
+HardwareSerialServer link0(Serial8);
+void 
+setupServers() {
+    link0.begin(115200);
+}
+void 
+serialEvent8() {
+    link0.processEvent();
+}

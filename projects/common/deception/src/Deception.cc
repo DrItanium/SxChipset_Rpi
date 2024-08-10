@@ -91,35 +91,26 @@ readMemoryBlock(T& link, Address address, uint8_t* data, uint8_t size) noexcept 
 }
 
 size_t 
-HardwareSerialBackingStore::read(Address addr, uint8_t* storage, size_t count) noexcept {
+StreamBackingStore::read(Address addr, uint8_t* storage, size_t count) noexcept {
     readMemoryBlock(_link, addr, storage, count);
     return count;
 }
 size_t 
-HardwareSerialBackingStore::write(Address addr, uint8_t* storage, size_t count) noexcept {
+StreamBackingStore::write(Address addr, uint8_t* storage, size_t count) noexcept {
     writeMemoryBlock(_link, addr, storage, count);
     return count;
 }
 
-void
-HardwareSerialBackingStore::begin(uint32_t baud, bool waitUntilAvailable, int waitBetween) noexcept {
-    _link.begin(baud);
-    if (waitUntilAvailable) {
-        while (!_link) {
-            delay(waitBetween);
-        }
-    }
-}
 
 void
-HardwareSerialBackingStore::connect(int waitBetween) noexcept {
+StreamBackingStore::connect(int waitBetween) noexcept {
     while (_link.available() <= 0) {
         _link.write(MemoryCodes::InitializeSystemSetupCode);
         delay(waitBetween);
     }
 }
 bool
-HardwareSerialBackingStore::tryConnect(int attempts, int waitBetween) noexcept {
+StreamBackingStore::tryConnect(int attempts, int waitBetween) noexcept {
     if (attempts <= 0) {
         connect(waitBetween);
         return true;
@@ -138,9 +129,20 @@ HardwareSerialBackingStore::tryConnect(int attempts, int waitBetween) noexcept {
 }
 
 void
-HardwareSerialBackingStore::clearInputBuffer() noexcept {
+StreamBackingStore::clearInputBuffer() noexcept {
     while (_link.available() > 0) {
         (void)_link.read();
+    }
+}
+
+void
+HardwareSerialBackingStore::begin(uint32_t baud, bool waitUntilAvailable, int waitBetween) noexcept {
+    HardwareSerial& link = static_cast<HardwareSerial&>(getBackingStore());
+    link.begin(baud);
+    if (waitUntilAvailable) {
+        while (!link) {
+            delay(waitBetween);
+        }
     }
 }
 

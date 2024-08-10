@@ -66,21 +66,26 @@ namespace Deception {
     };
 
     /**
-     * @brief A connection to a pool of memory over serial
+     * @brief A connection to another backing store over a Stream
      */
-    class HardwareSerialBackingStore : public BackingStore {
+    class StreamBackingStore : public BackingStore {
         public:
-            HardwareSerialBackingStore(HardwareSerial& link) : _link(link) { }
-            ~HardwareSerialBackingStore() override = default;
-            void begin(uint32_t baud, bool waitUntilAvailable = false, int waitBetween = 10) noexcept;
-            void connect(int waitBetween = 300) noexcept;
-            bool tryConnect(int attempts, int waitBetween = 300) noexcept;
+            StreamBackingStore(Stream& link) : _link(link) { }
+            ~StreamBackingStore() override = default;
             void clearInputBuffer() noexcept;
             size_t read(Address addr, uint8_t* storage, size_t count) noexcept override;
             size_t write(Address addr, uint8_t* storage, size_t count) noexcept override;
             auto& getBackingStore() noexcept { return _link; }
+            void connect(int waitBetween = 300) noexcept;
+            bool tryConnect(int attempts, int waitBetween = 300) noexcept;
         private:
-            HardwareSerial& _link;
+            Stream& _link;
+    };
+    class HardwareSerialBackingStore : public StreamBackingStore {
+        public:
+            HardwareSerialBackingStore(HardwareSerial& link) : StreamBackingStore(link) { }
+            ~HardwareSerialBackingStore() override = default;
+            void begin(uint32_t baud, bool waitUntilAvailable = false, int waitBetween = 10) noexcept;
     };
     constexpr bool isPowerOfTwo(uint16_t value) noexcept {
         switch (value) {
@@ -180,5 +185,6 @@ namespace Deception {
     using DirectMappedCache4K = DirectMappedCache_CacheLine16<256>; 
     static_assert(DirectMappedCache4K::computeIndex(0xFFFF'FFFF) == 0xFF);
     static_assert(DirectMappedCache4K::computeIndex(0xFFFF'FFDF) == 0xFD);
+
 } // end namespace Deception
 #endif // end DECEPTION_H__
