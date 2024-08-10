@@ -142,11 +142,15 @@ class HardwareSerialServer {
             Serial.println("Waiting for first contact!");
         }
         void handleReadRequest(const Packet& packet) noexcept {
+            Serial.print("READ REQUEST 0x");
+            Serial.println(packet.address, HEX);
             for (uint32_t a = packet.address, i = 0; i < packet.size; ++i, ++a) {
                 _link.write(a < 0x0100'0000 ? memory960[a] : 0);
             }
         }
         void handleWriteRequest(const Packet& packet) noexcept {
+            Serial.print("WRITE REQUEST 0x");
+            Serial.println(packet.address, HEX);
             for (uint32_t a = packet.address, i = 0; i < packet.size; ++i, ++a) {
                 if (a < 0x0100'0000) {
                     memory960[a] = packet.data[i];
@@ -166,10 +170,8 @@ class HardwareSerialServer {
             }
         }
         void handleFirstContact() noexcept {
-            clearInput();
             _firstContact = true;
             _link.write(Deception::MemoryCodes::InitializeSystemSetupCode);
-            Serial.println("First Contact Successful!");
         }
         void processEvent() noexcept {
             if (auto inByte = _link.read(); !_firstContact) {
@@ -180,6 +182,7 @@ class HardwareSerialServer {
                 if (_serialCapacity == 0) {
                     switch (inByte) {
                         case Deception::MemoryCodes::BeginInstructionCode:
+                            Serial.println("New Instruction!");
                             _serialCapacity = -1;
                             _serialCount = 0;
                             break;
@@ -200,11 +203,6 @@ class HardwareSerialServer {
                         _serialCount = 0;
                    }
                 }
-            }
-        }
-        void clearInput() noexcept {
-            while (_link.available() > 0) {
-                (void)_link.read();
             }
         }
     private:

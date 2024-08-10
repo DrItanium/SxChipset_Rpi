@@ -85,7 +85,6 @@ namespace Deception {
         public:
             HardwareSerialBackingStore(HardwareSerial& link) : StreamBackingStore(link) { }
             ~HardwareSerialBackingStore() override = default;
-            void begin(uint32_t baud, bool waitUntilAvailable = false, int waitBetween = 10) noexcept;
     };
     constexpr bool isPowerOfTwo(uint16_t value) noexcept {
         switch (value) {

@@ -135,15 +135,5 @@ StreamBackingStore::clearInputBuffer() noexcept {
     }
 }
 
-void
-HardwareSerialBackingStore::begin(uint32_t baud, bool waitUntilAvailable, int waitBetween) noexcept {
-    HardwareSerial& link = static_cast<HardwareSerial&>(getBackingStore());
-    link.begin(baud);
-    if (waitUntilAvailable) {
-        while (!link) {
-            delay(waitBetween);
-        }
-    }
-}
 
 } // end namespace Deception

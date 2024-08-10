@@ -24,7 +24,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 #include <Arduino.h>
 #include <SPI.h>
-#include <SdFat.h>
 #include <Wire.h>
 #include <Deception.h>
 
@@ -34,10 +33,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Pinout.h"
 #include "Setup.h"
 
-#define PCLink Serial3
+Deception::HardwareSerialBackingStore PCLink(Serial2);
 Deception::DirectMappedCache4K onboardCache;
-static inline constexpr bool ActivateSDCard = false;
-static inline constexpr int32_t SDCardInitializationAttempts = 1000;
 volatile i960Interface interface960 [[gnu::address(0x7F00)]];
 // With the way that the 2560 and CH351s are connected to the i960, I have to
 // transfer data through the 2560 to the i960. This is due to the fact that the
@@ -125,9 +122,25 @@ setup() {
     configureInterrupts();
     onboardCache.begin();
     Serial.begin(115200);
-    PCLink.begin(115200);
+    Serial2.begin(115200);
+    Serial.println("Waiting for connection!");
+    PCLink.connect();
+    (void)PCLink.getBackingStore().read();
+    auto& line = onboardCache.find(PCLink, 0);
+    for (int i = 0; i < 16; ++i) {
+        Serial.println(line.getByte(i), HEX);
+    }
+    auto& line2 = onboardCache.find(PCLink, 16);
+    for (int i = 0; i < 16; ++i) {
+        Serial.println(line2.getByte(i), HEX);
+    }
     delay(1000);
     interface960.pullI960OutOfReset();
+}
+void handleI960();
+void 
+loop() {
+    handleI960();
 }
 [[gnu::always_inline]] inline bool isReadOperation() noexcept {
     return interface960.isReadOperation();
@@ -246,8 +259,8 @@ doTransaction(uint32_t address) noexcept {
         doWriteTransaction(address);
     }
 }
-void 
-loop() {
+void
+handleI960() noexcept {
     waitForTransaction();
     auto address = interface960.getAddress();
     Serial.printf(F("address lines: 0x%lx\n"), address);
