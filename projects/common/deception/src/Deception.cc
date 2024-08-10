@@ -23,24 +23,22 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef DECEPTION_H__
-#define DECEPTION_H__
-#include <Arduino.h>
+#include <Deception.h>
+
 namespace Deception {
-    namespace MemoryCodes {
-        constexpr uint8_t ReadMemoryCode = 0xFC;
-        constexpr uint8_t WriteMemoryCode = 0xFD;
-        constexpr uint8_t InitializeSystemSetupCode = 0xFE;
-        constexpr uint8_t BeginInstructionCode = 0xFF;
-    } // end namespace MemoryCodes
-    using OnConnectionEstablishedCallback = bool(*)(HardwareSerial&);
-    /**
-     * @brief establish a connection on a hardware serial connection; will wait until a response
-     * @param connection The hardware serial device to establish the connection across
-     * @param callback The function to call after the connection has been established
-     * @param waitBetween The number of milliseconds to wait between connection attempts (default 300)
-     * @return the result from invoking the callback
-     */
-    bool establishContact(HardwareSerial& connection, OnConnectionEstablishedCallback callback, HardwareSerialint waitBetween = 300) noexcept;
+
+bool
+establishContact(HardwareSerial& connection, OnConnectionEstablishedCallback callback, int waitBetween) noexcept {
+    while (connection.available() <= 0) {
+        connection.write(MemoryCodes::InitializeSystemSetupCode);
+        delay(waitBetween);
+    }
+    // invoke the callback
+    if (callback) {
+        return callback(connection);
+    } else {
+        return true;
+    }
+}
+
 } // end namespace Deception
-#endif // end DECEPTION_H__

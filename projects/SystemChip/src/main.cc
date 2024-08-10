@@ -67,7 +67,7 @@ setupRandomNumberGeneration() {
 void
 establishContact() {
     while (PCLink.available() <= 0) {
-        PCLink.write(InitializeSystemSetupCode);
+        PCLink.write(MemoryCodes::InitializeSystemSetupCode);
         delay(300);
     }
     // clear the serial cache
@@ -99,10 +99,10 @@ setupHardware() {
             delay(10) ; \
         } \
     }
-    X(DebugPort, 9600, false);
-    X(PCLink, 500000, false);
-    X(SodiumLink0, 115200, false);
-    X(SodiumLink1, 115200, false);
+    X(DebugPort, 9600, true);
+    //X(PCLink, 500000, false);
+    //X(SodiumLink0, 115200, false);
+    //X(SodiumLink1, 115200, false);
 #undef X
     setupSDCard();
     setupMemoryPool();
@@ -113,7 +113,7 @@ void
 setup() {
     setupRandomNumberGeneration();
     setupHardware();
-    establishContact();
+    //establishContact();
 }
 
 void 
