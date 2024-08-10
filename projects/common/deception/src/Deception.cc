@@ -27,19 +27,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace Deception {
 
-bool
-establishContact(HardwareSerial& connection, OnConnectionEstablishedCallback callback, int waitBetween) noexcept {
-    while (connection.available() <= 0) {
-        connection.write(MemoryCodes::InitializeSystemSetupCode);
-        delay(waitBetween);
-    }
-    // invoke the callback
-    if (callback) {
-        return callback(connection);
-    } else {
-        return true;
-    }
-}
 
 void
 CacheLine16::clear() noexcept {
@@ -71,6 +58,90 @@ void
 CacheLine16::setByte(uint8_t offset, uint8_t value) noexcept {
     _dirty = true;
     _bytes[computeByteOffset(offset)] = value;
+}
+
+template<typename T>
+void
+sendCommandHeader(T& link, uint8_t size, uint8_t code) noexcept {
+    link.write(MemoryCodes::BeginInstructionCode);
+    link.write(size);
+    link.write(code);
+}
+template<typename T>
+void
+send32BitNumber(T& link, uint32_t number) {
+    link.write(reinterpret_cast<char*>(&number), sizeof(number));
+}
+
+template<typename T>
+void 
+writeMemoryBlock(T& link, Address address, uint8_t* data, uint8_t size) noexcept {
+    sendCommandHeader(link, 1 + sizeof(address) + size + 1, MemoryCodes::WriteMemoryCode);
+    send32BitNumber(link, address);
+    link.write(size);
+    link.write(data, size);
+}
+template<typename T>
+void 
+readMemoryBlock(T& link, Address address, uint8_t* data, uint8_t size) noexcept {
+    sendCommandHeader(link, 1 + sizeof(address) + 1, MemoryCodes::WriteMemoryCode);
+    send32BitNumber(link, address);
+    link.write(size);
+    link.readBytes(reinterpret_cast<char*>(data), size);
+}
+
+size_t 
+HardwareSerialBackingStore::read(Address addr, uint8_t* storage, size_t count) noexcept {
+    readMemoryBlock(_link, addr, storage, count);
+    return count;
+}
+size_t 
+HardwareSerialBackingStore::write(Address addr, uint8_t* storage, size_t count) noexcept {
+    writeMemoryBlock(_link, addr, storage, count);
+    return count;
+}
+
+void
+HardwareSerialBackingStore::begin(uint32_t baud, bool waitUntilAvailable, int waitBetween) noexcept {
+    _link.begin(baud);
+    if (waitUntilAvailable) {
+        while (!_link) {
+            delay(waitBetween);
+        }
+    }
+}
+
+void
+HardwareSerialBackingStore::connect(int waitBetween) noexcept {
+    while (_link.available() <= 0) {
+        _link.write(MemoryCodes::InitializeSystemSetupCode);
+        delay(waitBetween);
+    }
+}
+bool
+HardwareSerialBackingStore::tryConnect(int attempts, int waitBetween) noexcept {
+    if (attempts <= 0) {
+        connect(waitBetween);
+        return true;
+    } else {
+        int numAttempts = 0;
+        while (_link.available() <= 0) {
+            if (numAttempts == attempts) {
+                return false;
+            }
+            _link.write(MemoryCodes::InitializeSystemSetupCode);
+            delay(waitBetween);
+            ++numAttempts;
+        }
+        return true;
+    }
+}
+
+void
+HardwareSerialBackingStore::clearInputBuffer() noexcept {
+    while (_link.available() > 0) {
+        (void)_link.read();
+    }
 }
 
 } // end namespace Deception

@@ -66,10 +66,6 @@ setupRandomNumberGeneration() {
 }
 void
 establishContact() {
-    Deception::establishContact(PCLink, [](auto& value) {
-            (void)value.read();
-            return true;
-            });
 }
 void
 setupCaches() {

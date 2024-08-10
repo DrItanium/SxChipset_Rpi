@@ -34,16 +34,6 @@ namespace Deception {
         constexpr uint8_t InitializeSystemSetupCode = 0xFE;
         constexpr uint8_t BeginInstructionCode = 0xFF;
     } // end namespace MemoryCodes
-    using OnConnectionEstablishedCallback = bool(*)(HardwareSerial&);
-    /**
-     * @brief establish a connection on a hardware serial connection; will wait until a response
-     * @param connection The hardware serial device to establish the connection across
-     * @param callback The function to call after the connection has been established
-     * @param waitBetween The number of milliseconds to wait between connection attempts (default 300)
-     * @return the result from invoking the callback
-     */
-    bool establishContact(HardwareSerial& connection, OnConnectionEstablishedCallback callback, int waitBetween = 300) noexcept;
-    
     /**
      * @brief An abstract representation of backing storage (memory, disk, etc)
      */
@@ -52,7 +42,6 @@ namespace Deception {
             virtual ~BackingStore() = default;
             virtual size_t read(Address targetAddress, uint8_t* storage, size_t count) noexcept = 0;
             virtual size_t write(Address targetAddress, uint8_t* storage, size_t count) noexcept = 0;
-            virtual bool begin() noexcept = 0;
     };
 
     /**
@@ -62,7 +51,6 @@ namespace Deception {
     class DummyBackingStore final : public BackingStore {
         public:
             ~DummyBackingStore() override = default;
-            bool begin() noexcept override { return true; }
             size_t read(Address, uint8_t* storage, size_t count) noexcept override {
                 // clear the memory
                 for (size_t i = 0; i < count; ++i) {
@@ -74,6 +62,23 @@ namespace Deception {
                 // do nothing
                 return count;
             }
+    };
+
+    /**
+     * @brief A connection to a pool of memory over serial
+     */
+    class HardwareSerialBackingStore : public BackingStore {
+        public:
+            HardwareSerialBackingStore(HardwareSerial& link) : _link(link) { }
+            ~HardwareSerialBackingStore() override = default;
+            void begin(uint32_t baud, bool waitUntilAvailable = false, int waitBetween = 10) noexcept;
+            void connect(int waitBetween = 300) noexcept;
+            bool tryConnect(int attempts, int waitBetween = 300) noexcept;
+            void clearInputBuffer() noexcept;
+            size_t read(Address addr, uint8_t* storage, size_t count) noexcept override;
+            size_t write(Address addr, uint8_t* storage, size_t count) noexcept override;
+        private:
+            HardwareSerial& _link;
     };
     constexpr bool isPowerOfTwo(uint16_t value) noexcept {
         switch (value) {

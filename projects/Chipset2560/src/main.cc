@@ -35,57 +35,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Setup.h"
 
 #define PCLink Serial3
-void writeCacheLine(Address address, uint8_t* data, uint8_t size) noexcept;
-void readCacheLine(Address address, uint8_t* data, uint8_t size) noexcept;
-struct CacheLine {
-    static constexpr uint8_t NumDataElements = 16;
-    static constexpr uint8_t DataMask = 0xF;
-    static constexpr Address AddressMask = 0xFFFF'FFF0;
-private:
-    Address _key = 0;
-    bool _valid = false;
-    bool _dirty = false;
-    uint8_t _data[NumDataElements] = { 0 };
-public:
-    constexpr auto getAddress() const noexcept { return _key; }
-    constexpr auto isDirty() const noexcept { return _dirty; }
-    constexpr auto isValid() const noexcept { return _valid; }
-    constexpr auto getData(uint8_t index) const noexcept { return _data[index & DataMask]; }
-    void markDirty() noexcept { _dirty = true; }
-    void setData(uint8_t index, uint8_t value) noexcept {
-        markDirty();
-        _data[index & DataMask] = value;
-    }
-    void sync() noexcept {
-        if (_valid) {
-            if (_dirty) {
-                writeCacheLine(_key, _data, NumDataElements);
-                _dirty = false;
-            }
-        }
-    }
-    void clear() noexcept {
-        _key = 0;
-        _valid = false;
-        _dirty = false;
-        for (int i = 0; i < NumDataElements; ++i) {
-            _data[i] = 0;
-        }
-    }
-    static constexpr auto maskAddress(Address targetAddress) noexcept {
-        return targetAddress & AddressMask;
-    }
-    constexpr auto matches(Address targetAddress) const noexcept {
-        return _valid & (_key == maskAddress(targetAddress));
-    }
-    void reuse(Address newKey) {
-        sync();
-        _valid = true;
-        _dirty = false;
-        _key = maskAddress(newKey);
-        readCacheLine(_key, _data, NumDataElements);
-    }
-};
 static inline constexpr bool ActivateSDCard = false;
 static inline constexpr int32_t SDCardInitializationAttempts = 1000;
 volatile i960Interface interface960 [[gnu::address(0x7F00)]];
@@ -320,30 +269,5 @@ i960Interface::begin() volatile {
     controlLines.hold = 0;
     controlLines.reset = 0;
     dataLines.full = 0;
-}
-void
-sendCommandHeader(uint8_t size, uint8_t code) noexcept {
-    PCLink.write(MemoryCodes::BeginInstructionCode);
-    PCLink.write(size);
-    PCLink.write(code);
-}
-void
-send32BitNumber(uint32_t number) {
-    PCLink.write(reinterpret_cast<char*>(&number), sizeof(number));
-}
-
-void 
-writeCacheLine(Address address, uint8_t* data, uint8_t size) noexcept {
-    sendCommandHeader(1 + sizeof(address) + size + 1, MemoryCodes::WriteMemoryCode);
-    send32BitNumber(address);
-    PCLink.write(size);
-    PCLink.write(data, size);
-}
-void 
-readCacheLine(Address address, uint8_t* data, uint8_t size) noexcept {
-    sendCommandHeader(1 + sizeof(address) + 1, MemoryCodes::WriteMemoryCode);
-    send32BitNumber(address);
-    PCLink.write(size);
-    PCLink.readBytes(reinterpret_cast<char*>(data), size);
 }
 
