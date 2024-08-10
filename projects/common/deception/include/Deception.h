@@ -160,6 +160,11 @@ namespace Deception {
             void begin() noexcept {
                 clear();
             }
+            void sync() noexcept {
+                for (auto& line : lines) {
+                    line.sync();
+                }
+            }
         private:
             Line_t lines[NumLines];
     };
