@@ -41,6 +41,6 @@ namespace Deception {
      * @param waitBetween The number of milliseconds to wait between connection attempts (default 300)
      * @return the result from invoking the callback
      */
-    bool establishContact(HardwareSerial& connection, OnConnectionEstablishedCallback callback, HardwareSerialint waitBetween = 300) noexcept;
+    bool establishContact(HardwareSerial& connection, OnConnectionEstablishedCallback callback, int waitBetween = 300) noexcept;
 } // end namespace Deception
 #endif // end DECEPTION_H__

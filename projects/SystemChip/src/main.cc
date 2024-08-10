@@ -66,12 +66,10 @@ setupRandomNumberGeneration() {
 }
 void
 establishContact() {
-    while (PCLink.available() <= 0) {
-        PCLink.write(MemoryCodes::InitializeSystemSetupCode);
-        delay(300);
-    }
-    // clear the serial cache
-    (void)PCLink.read();
+    Deception::establishContact(PCLink, [](auto& value) {
+            (void)value.read();
+            return true;
+            });
 }
 void
 setupCaches() {
