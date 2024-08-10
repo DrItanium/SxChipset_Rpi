@@ -121,11 +121,23 @@ class HardwareSerialServer {
         HardwareSerialServer(HardwareSerial& link) : _link(link) { }
         auto& getBackingStore() noexcept { return _link; }
         void begin(uint32_t baud) noexcept { _link.begin(baud); }
+        void handleReadRequest(const Packet& packet) noexcept {
+            for (uint32_t a = packet.address, i = 0; i < packet.size; ++i, ++a) {
+                _link.write(a < 0x0100'0000 ? memory960[a] : 0);
+            }
+        }
+        void handleWriteRequest(const Packet& packet) noexcept {
+            for (uint32_t a = packet.address, i = 0; i < packet.size; ++i, ++a) {
+                if (a < 0x0100'0000) {
+                    memory960[a] = packet.data[i];
+                }
+            }
+        }
         void processPacket() noexcept {
             Packet& packet = *reinterpret_cast<Packet*>(_data);
-            switch (_data[0]) {
+            switch (packet.typeCode) {
                 case Deception::MemoryCodes::ReadMemoryCode:
-
+                    handleReadRequest(packet);
                     break;
                 case Deception::MemoryCodes::WriteMemoryCode:
                     break;
