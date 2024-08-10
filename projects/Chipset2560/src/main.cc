@@ -123,24 +123,10 @@ setup() {
     onboardCache.begin();
     Serial.begin(115200);
     Serial2.begin(115200);
-    Serial.println("Waiting for connection!");
     PCLink.connect();
     (void)PCLink.getBackingStore().read();
-    auto& line = onboardCache.find(PCLink, 0);
-    for (int i = 0; i < 16; ++i) {
-        Serial.println(line.getByte(i), HEX);
-    }
-    auto& line2 = onboardCache.find(PCLink, 16);
-    for (int i = 0; i < 16; ++i) {
-        Serial.println(line2.getByte(i), HEX);
-    }
     delay(1000);
     interface960.pullI960OutOfReset();
-}
-void handleI960();
-void 
-loop() {
-    handleI960();
 }
 [[gnu::always_inline]] inline bool isReadOperation() noexcept {
     return interface960.isReadOperation();
@@ -216,6 +202,213 @@ genericExecutionBody() noexcept {
     }
     signalReady();
 }
+void
+send32BitConstant(uint32_t value) noexcept {
+    interface960.dataLines.full = static_cast<uint16_t>(value);
+    if (isLastWordOfTransaction()) {
+        clearBLASTInterrupt();
+        signalReady();
+        return;
+    }
+    signalReady();
+    interface960.dataLines.full = static_cast<uint16_t>(value>> 16);
+    if (isLastWordOfTransaction()) {
+        clearBLASTInterrupt();
+        signalReady();
+        return;
+    }
+    signalReady();
+    doNothingOperation<true>();
+}
+
+void
+send16BitValue(uint16_t value) noexcept {
+    interface960.dataLines.full = value;
+    if (isLastWordOfTransaction()) {
+        clearBLASTInterrupt();
+        signalReady();
+        return;
+    }
+    signalReady();
+    doNothingOperation<true>();
+}
+void
+send16BitValue(uint8_t lo, uint8_t hi) noexcept {
+    interface960.dataLines.bytes[0] = lo;
+    interface960.dataLines.bytes[1] = hi;
+    if (isLastWordOfTransaction()) {
+        clearBLASTInterrupt();
+        signalReady();
+        return;
+    }
+    signalReady();
+    doNothingOperation<true>();
+}
+void
+doIOReadTransaction(uint32_t address) noexcept {
+    switch (address & 0x00FFFFFF) {
+        case 0x0:
+            send32BitConstant(F_CPU);
+            break;
+        case 0x4:
+            send32BitConstant(F_CPU/2);
+            break;
+        case 0x8:
+            send16BitValue(Serial.read());
+            break;
+        case 0x40:
+            send32BitConstant(millis());
+            break;
+        case 0x44:
+            send32BitConstant(micros());
+            break;
+        /// @todo implement disk operations?
+        default:
+            doNothingOperation<true>();
+            break;
+    }
+}
+void
+doIOWriteTransaction(uint32_t address) noexcept {
+    switch (address & 0x00FFFFFF) {
+        case 0x8: 
+            Serial.write(interface960.dataLines.bytes[0]);
+            doNothingOperation<false>();
+            break;
+        case 0xC:
+            Serial.flush();
+            doNothingOperation<false>();
+            break;
+        /// @todo implement disk operations eventually
+        default:
+            doNothingOperation<false>();
+            break;
+    }
+}
+void
+doMemoryReadTransaction(uint32_t address) noexcept {
+    auto offset = address & 0xF;
+    auto& line = onboardCache.find(PCLink, address);
+#define X(index) interface960.dataLines.bytes[0] = line.getByte(offset + index)
+    X(0);
+    X(1);
+    if (isLastWordOfTransaction()) {
+        clearBLASTInterrupt();
+        signalReady();
+        return;
+    }
+    signalReady();
+    X(2);
+    X(3);
+    if (isLastWordOfTransaction()) {
+        clearBLASTInterrupt();
+        signalReady();
+        return;
+    }
+    signalReady();
+    X(4);
+    X(5);
+    if (isLastWordOfTransaction()) {
+        clearBLASTInterrupt();
+        signalReady();
+        return;
+    }
+    signalReady();
+    X(6);
+    X(7);
+    if (isLastWordOfTransaction()) {
+        clearBLASTInterrupt();
+        signalReady();
+        return;
+    }
+    signalReady();
+    X(8);
+    X(9);
+    if (isLastWordOfTransaction()) {
+        clearBLASTInterrupt();
+        signalReady();
+        return;
+    }
+    signalReady();
+    X(10);
+    X(11);
+    if (isLastWordOfTransaction()) {
+        clearBLASTInterrupt();
+        signalReady();
+        return;
+    }
+    signalReady();
+    X(12);
+    X(13);
+    if (isLastWordOfTransaction()) {
+        clearBLASTInterrupt();
+        signalReady();
+        return;
+    }
+    signalReady();
+    X(14);
+    X(15);
+    if (isLastWordOfTransaction()) {
+        clearBLASTInterrupt();
+        signalReady();
+        return;
+    }
+    signalReady();
+#undef X
+}
+void 
+doMemoryWriteTransaction(uint32_t address) noexcept {
+    auto offset = address & 0xF;
+    auto& line = onboardCache.find(PCLink, address);
+    if (isLastWordOfTransaction()) {
+        clearBLASTInterrupt();
+        signalReady();
+        return;
+    }
+    signalReady();
+    if (isLastWordOfTransaction()) {
+        clearBLASTInterrupt();
+        signalReady();
+        return;
+    }
+    signalReady();
+    if (isLastWordOfTransaction()) {
+        clearBLASTInterrupt();
+        signalReady();
+        return;
+    }
+    signalReady();
+    if (isLastWordOfTransaction()) {
+        clearBLASTInterrupt();
+        signalReady();
+        return;
+    }
+    signalReady();
+    if (isLastWordOfTransaction()) {
+        clearBLASTInterrupt();
+        signalReady();
+        return;
+    }
+    signalReady();
+    if (isLastWordOfTransaction()) {
+        clearBLASTInterrupt();
+        signalReady();
+        return;
+    }
+    signalReady();
+    if (isLastWordOfTransaction()) {
+        clearBLASTInterrupt();
+        signalReady();
+        return;
+    }
+    signalReady();
+    if (isLastWordOfTransaction()) {
+        clearBLASTInterrupt();
+        signalReady();
+        return;
+    }
+    signalReady();
+}
 [[gnu::always_inline]] inline bool isIOOperation(uint32_t address) noexcept {
     return (static_cast<uint8_t>(address >> 24)) == 0xFE;
 }
@@ -225,29 +418,22 @@ genericExecutionBody() noexcept {
 void 
 doReadTransaction(uint32_t address) noexcept {
     interface960.dataLinesDirection = 0xFFFF;
-#if 0
-    if (interface960.isIOOperation(address)) {
+    if (interface960.isIOOperation()) {
         doIOReadTransaction(address);
     } else {
         doMemoryReadTransaction(address);
     }
-#else 
-    doNothingOperation<true>();
-#endif
 }
+
+
 void
 doWriteTransaction(uint32_t address) noexcept {
     interface960.dataLinesDirection = 0;
-#if 0
-    if (isIOOperation(address)) {
+    if (interface960.isIOOperation()) {
         doIOWriteTransaction(address);
     } else {
         doMemoryWriteTransaction(address);
     }
-#else
-    doNothingOperation<false>();
-#endif
-
 }
 
 template<bool isReadOperation>
@@ -257,17 +443,6 @@ doTransaction(uint32_t address) noexcept {
         doReadTransaction(address);
     } else {
         doWriteTransaction(address);
-    }
-}
-void
-handleI960() noexcept {
-    waitForTransaction();
-    auto address = interface960.getAddress();
-    Serial.printf(F("address lines: 0x%lx\n"), address);
-    if (isReadOperation()) {
-        doTransaction<true>(address);
-    } else {
-        doTransaction<false>(address);
     }
 }
 
@@ -286,3 +461,15 @@ i960Interface::begin() volatile {
     dataLines.full = 0;
 }
 
+
+void 
+loop() {
+    waitForTransaction();
+    auto address = interface960.getAddress();
+    Serial.printf(F("address lines: 0x%lx\n"), address);
+    if (isReadOperation()) {
+        doTransaction<true>(address);
+    } else {
+        doTransaction<false>(address);
+    }
+}
