@@ -1,0 +1,6 @@
+{
+	"name": "deception",
+	"version" : "1",
+	"description" : "Serial communication protocol constants",
+	"keywords" : "deception"
+}
