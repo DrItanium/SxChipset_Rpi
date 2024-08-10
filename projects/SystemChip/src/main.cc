@@ -34,7 +34,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Ethernet.h>
 #include <Deception.h>
 
-//#define CACHE_MEMORY_SECTION DMAMEM
+#define CACHE_MEMORY_SECTION DMAMEM
 #define MEMORY_POOL_SECTION EXTMEM
 #define DebugPort Serial
 #define PCLink Serial4
@@ -53,6 +53,7 @@ constexpr size_t MinimumPoolSize = 1_MB; // we don't want this to go any smaller
 constexpr auto MemoryPoolSize = 16_MB; 
 
 MEMORY_POOL_SECTION uint8_t memory960[MemoryPoolSize];
+CACHE_MEMORY_SECTION Deception::DirectMappedCache_CacheLine16<0x1000> externalCache;
 static_assert(MemoryPoolSize <= MaxMemoryPoolSize, "Requested memory capacity is too large!");
 static_assert(MemoryPoolSize >= MinimumPoolSize, "Requested memory capacity will not fit a default boot image!");
 bool sdcardInstalled = false;
@@ -69,6 +70,7 @@ establishContact() {
 }
 void
 setupCaches() {
+    externalCache.begin();
 }
 void 
 setupMemoryPool() {
