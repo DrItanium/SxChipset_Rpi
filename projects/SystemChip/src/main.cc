@@ -177,6 +177,7 @@ class HardwareSerialServer {
         void handleFirstContact() noexcept {
             _firstContact = true;
             _link.write(Deception::MemoryCodes::InitializeSystemSetupCode);
+            Serial.println("FIRST CONTACT MADE!");
         }
         void processEvent() noexcept {
             if (auto inByte = _link.read(); !_firstContact) {

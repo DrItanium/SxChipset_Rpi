@@ -116,13 +116,13 @@ configurePins() noexcept {
 
 void
 setup() {
+    Serial.begin(115200);
+    Serial2.begin(115200);
     configureEBI();
     interface960.begin();
     configurePins();
     configureInterrupts();
     onboardCache.begin();
-    Serial.begin(115200);
-    Serial2.begin(115200);
     PCLink.connect();
     (void)PCLink.getBackingStore().read();
     delay(1000);
@@ -149,57 +149,6 @@ doNothingOperation() noexcept {
         signalReady();
     }
     clearBLASTInterrupt();
-    signalReady();
-}
-void 
-genericExecutionBody() noexcept {
-    if (isLastWordOfTransaction()) {
-        clearBLASTInterrupt();
-        signalReady();
-        return;
-    }
-    signalReady();
-    if (isLastWordOfTransaction()) {
-        clearBLASTInterrupt();
-        signalReady();
-        return;
-    }
-    signalReady();
-    if (isLastWordOfTransaction()) {
-        clearBLASTInterrupt();
-        signalReady();
-        return;
-    }
-    signalReady();
-    if (isLastWordOfTransaction()) {
-        clearBLASTInterrupt();
-        signalReady();
-        return;
-    }
-    signalReady();
-    if (isLastWordOfTransaction()) {
-        clearBLASTInterrupt();
-        signalReady();
-        return;
-    }
-    signalReady();
-    if (isLastWordOfTransaction()) {
-        clearBLASTInterrupt();
-        signalReady();
-        return;
-    }
-    signalReady();
-    if (isLastWordOfTransaction()) {
-        clearBLASTInterrupt();
-        signalReady();
-        return;
-    }
-    signalReady();
-    if (isLastWordOfTransaction()) {
-        clearBLASTInterrupt();
-        signalReady();
-        return;
-    }
     signalReady();
 }
 void
@@ -289,65 +238,81 @@ void
 doMemoryReadTransaction(uint32_t address) noexcept {
     auto offset = address & 0xF;
     auto& line = onboardCache.find(PCLink, address);
-#define X(index) interface960.dataLines.bytes[0] = line.getByte(offset + index)
-    X(0);
-    X(1);
+#define X(x, index) interface960.dataLines.bytes[x] = line.getByte(offset + index)
+    {
+    X(0, 0);
+    X(1, 1);
+    }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
         signalReady();
         return;
     }
     signalReady();
-    X(2);
-    X(3);
+    {
+    X(0, 2);
+    X(1, 3);
+    }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
         signalReady();
         return;
     }
     signalReady();
-    X(4);
-    X(5);
+    {
+    X(0,4);
+    X(1,5);
+    }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
         signalReady();
         return;
     }
     signalReady();
-    X(6);
-    X(7);
+    {
+    X(0,6);
+    X(1,7);
+    }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
         signalReady();
         return;
     }
     signalReady();
-    X(8);
-    X(9);
+    {
+    X(0,8);
+    X(1,9);
+    }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
         signalReady();
         return;
     }
     signalReady();
-    X(10);
-    X(11);
+    {
+    X(0,10);
+    X(1,11);
+    }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
         signalReady();
         return;
     }
     signalReady();
-    X(12);
-    X(13);
+    {
+    X(0,12);
+    X(1,13);
+    }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
         signalReady();
         return;
     }
     signalReady();
-    X(14);
-    X(15);
+    {
+    X(0,14);
+    X(1,15);
+    }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
         signalReady();
@@ -480,9 +445,10 @@ i960Interface::begin() volatile {
 
 void 
 loop() {
+    //Serial.println(F("Waiting for ADS"));
     waitForTransaction();
     auto address = interface960.getAddress();
-    Serial.printf(F("address lines: 0x%lx\n"), address);
+    //Serial.printf(F("address lines: 0x%lx\n"), address);
     if (isReadOperation()) {
         doTransaction<true>(address);
     } else {
