@@ -56,12 +56,57 @@ namespace Deception {
     };
 
     /**
+     * @brief A backing store that is really just a sink that acts as a
+     * fallback in the cases where we are not mapped to anything
+     */
+    class DummyBackingStore final : public BackingStore {
+        public:
+            ~DummyBackingStore() override = default;
+            bool begin() noexcept override { return true; }
+            size_t read(Address, uint8_t* storage, size_t count) noexcept override {
+                // clear the memory
+                for (size_t i = 0; i < count; ++i) {
+                    storage[i] = 0;
+                }
+                return count;
+            }
+            size_t write(Address, uint8_t*, size_t count) noexcept override {
+                // do nothing
+                return count;
+            }
+    };
+    constexpr bool isPowerOfTwo(uint16_t value) noexcept {
+        switch (value) {
+            case 0b0000000000000001:
+            case 0b0000000000000010:
+            case 0b0000000000000100:
+            case 0b0000000000001000:
+            case 0b0000000000010000:
+            case 0b0000000000100000:
+            case 0b0000000001000000:
+            case 0b0000000010000000:
+            case 0b0000000100000000:
+            case 0b0000001000000000:
+            case 0b0000010000000000:
+            case 0b0000100000000000:
+            case 0b0001000000000000:
+            case 0b0010000000000000:
+            case 0b0100000000000000:
+            case 0b1000000000000000:
+                return true;
+            default:
+                return false;
+        }
+    }
+    /**
      * @brief A simple 16-byte cache line
      */
     class CacheLine {
         public:
             static constexpr uint8_t NumBytes = 16;
-            static constexpr uint32_t AddressMask = 0xFFFFFFF0;
+            static constexpr auto ShiftAmount = 4;
+            static_assert(isPowerOfTwo(NumBytes), "Cache Line size must be a power of two");
+            static constexpr Address AddressMask = 0xFFFFFFF0;
             static constexpr Address normalizeAddress(Address input) noexcept {
                 return input & AddressMask;
             }
@@ -89,20 +134,36 @@ namespace Deception {
             bool _dirty = false;
             BackingStore* _backingStore = nullptr;
     };
-
     template<uint16_t C, typename L = CacheLine>
     class DirectMappedCache {
         public:
             static_assert(C > 0, "Must have at least one cache line!");
+            static_assert(isPowerOfTwo(C), "The given line size is not a power of two!");
             static constexpr auto NumLines = C;
+            static constexpr auto LineMask = NumLines - 1;
             using Line_t = L;
+            static constexpr Address computeIndex(Address input) noexcept {
+                return (input >> Line_t::ShiftAmount) & LineMask;
+            }
             void clear() noexcept {
                 for (auto& line : lines) {
                     line.clear();
                 }
             }
+            Line_t& find(BackingStore& store, Address address) noexcept {
+                auto& line = lines[computeIndex(address)];
+                if (!line.matches(address)) {
+                    line.replace(store, address);
+                }
+                return line;
+            }
+            void begin() noexcept {
+                clear();
+            }
         private:
-            CacheLine lines[NumLines];
+            Line_t lines[NumLines];
     };
+    using DirectMappedCache4K = DirectMappedCache<256>;
+    static_assert(DirectMappedCache4K::computeIndex(0xFFFF'FFFF) == 0xFF);
 } // end namespace Deception
 #endif // end DECEPTION_H__
