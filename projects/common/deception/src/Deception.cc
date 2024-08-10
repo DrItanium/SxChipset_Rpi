@@ -128,12 +128,4 @@ StreamBackingStore::tryConnect(int attempts, int waitBetween) noexcept {
     }
 }
 
-void
-StreamBackingStore::clearInputBuffer() noexcept {
-    while (_link.available() > 0) {
-        (void)_link.read();
-    }
-}
-
-
 } // end namespace Deception

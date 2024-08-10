@@ -72,7 +72,6 @@ namespace Deception {
         public:
             StreamBackingStore(Stream& link) : _link(link) { }
             ~StreamBackingStore() override = default;
-            void clearInputBuffer() noexcept;
             size_t read(Address addr, uint8_t* storage, size_t count) noexcept override;
             size_t write(Address addr, uint8_t* storage, size_t count) noexcept override;
             auto& getBackingStore() noexcept { return _link; }
