@@ -29,6 +29,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Detect.h"
 
 using uint24_t = __uint24;
+using Address = uint32_t;
 
 template<typename W, typename E>
 constexpr auto ElementCount = sizeof(W) / sizeof(E);
@@ -107,6 +108,12 @@ struct [[gnu::packed]] i960Interface {
 };
 static_assert(sizeof(i960Interface) == (4*sizeof(uint32_t)));
 
+namespace MemoryCodes {
+constexpr uint8_t ReadMemoryCode = 0xFC;
+constexpr uint8_t WriteMemoryCode = 0xFD;
+constexpr uint8_t InitializeSystemSetupCode = 0xFE;
+constexpr uint8_t BeginInstructionCode = 0xFF;
+} // end namespace MemoryCodes
 
 
 #endif //CHIPSET2560_TYPES_H__
