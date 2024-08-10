@@ -145,12 +145,15 @@ class HardwareSerialServer {
                     break;
             }
         }
+        void handleFirstContact() noexcept {
+            clearInput();
+            _firstContact = true;
+            _link.write(Deception::MemoryCodes::InitializeSystemSetupCode);
+        }
         void processEvent() noexcept {
             if (auto inByte = _link.read(); !_firstContact) {
                 if (inByte == Deception::MemoryCodes::InitializeSystemSetupCode) {
-                    _firstContact = true;
-                    _link.write(Deception::MemoryCodes::InitializeSystemSetupCode);
-                    clearInput();
+                    handleFirstContact();
                 }
             } else {
                 if (_serialCapacity == 0) {
@@ -160,9 +163,7 @@ class HardwareSerialServer {
                             _serialCount = 0;
                             break;
                         case Deception::MemoryCodes::InitializeSystemSetupCode:
-                            clearInput();
-                            _firstContact = true;
-                            _link.write(Deception::MemoryCodes::InitializeSystemSetupCode);
+                            handleFirstContact();
                             break;
                         default:
                             break;
