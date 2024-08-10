@@ -360,48 +360,64 @@ void
 doMemoryWriteTransaction(uint32_t address) noexcept {
     auto offset = address & 0xF;
     auto& line = onboardCache.find(PCLink, address);
+    if (interface960.controlLines.be0) { line.setByte(offset + 0, interface960.dataLines.bytes[0]); }
+    if (interface960.controlLines.be1) { line.setByte(offset + 1, interface960.dataLines.bytes[1]); }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
         signalReady();
         return;
     }
     signalReady();
+    if (interface960.controlLines.be0) { line.setByte(offset + 2, interface960.dataLines.bytes[0]); }
+    if (interface960.controlLines.be1) { line.setByte(offset + 3, interface960.dataLines.bytes[1]); }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
         signalReady();
         return;
     }
     signalReady();
+    if (interface960.controlLines.be0) { line.setByte(offset + 4, interface960.dataLines.bytes[0]); }
+    if (interface960.controlLines.be1) { line.setByte(offset + 5, interface960.dataLines.bytes[1]); }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
         signalReady();
         return;
     }
     signalReady();
+    if (interface960.controlLines.be0) { line.setByte(offset + 6, interface960.dataLines.bytes[0]); }
+    if (interface960.controlLines.be1) { line.setByte(offset + 7, interface960.dataLines.bytes[1]); }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
         signalReady();
         return;
     }
     signalReady();
+    if (interface960.controlLines.be0) { line.setByte(offset + 8, interface960.dataLines.bytes[0]); }
+    if (interface960.controlLines.be1) { line.setByte(offset + 9, interface960.dataLines.bytes[1]); }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
         signalReady();
         return;
     }
     signalReady();
+    if (interface960.controlLines.be0) { line.setByte(offset + 10, interface960.dataLines.bytes[0]); }
+    if (interface960.controlLines.be1) { line.setByte(offset + 11, interface960.dataLines.bytes[1]); }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
         signalReady();
         return;
     }
     signalReady();
+    if (interface960.controlLines.be0) { line.setByte(offset + 12, interface960.dataLines.bytes[0]); }
+    if (interface960.controlLines.be1) { line.setByte(offset + 13, interface960.dataLines.bytes[1]); }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
         signalReady();
         return;
     }
     signalReady();
+    if (interface960.controlLines.be0) { line.setByte(offset + 14, interface960.dataLines.bytes[0]); }
+    if (interface960.controlLines.be1) { line.setByte(offset + 15, interface960.dataLines.bytes[1]); }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
         signalReady();
