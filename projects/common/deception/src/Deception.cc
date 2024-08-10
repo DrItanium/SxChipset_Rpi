@@ -44,27 +44,27 @@ establishContact(HardwareSerial& connection, OnConnectionEstablishedCallback cal
 void
 CacheLine::clear() noexcept {
     _dirty = false;
-    _valid = false;
+    _backingStore = nullptr;
     _key = 0;
     for (auto i = 0u; i < NumBytes; ++i) {
         _bytes[i] = 0;
     }
 }
 void
-CacheLine::sync(BackingStore& store) noexcept {
-    if (_valid) {
+CacheLine::sync() noexcept {
+    if (valid()) {
         if (_dirty) {
             _dirty = false;
-            (void)store.write(_key, _bytes, NumBytes);
+            (void)_backingStore->write(_key, _bytes, NumBytes);
         }
     }
 }
 void
 CacheLine::replace(BackingStore& store, Address newAddress) noexcept {
-    sync(store);
-    _valid = true;
+    sync();
+    _backingStore = &store;
     _key = normalizeAddress(newAddress);
-    (void)store.read(_key, _bytes, NumBytes);
+    (void)_backingStore->read(_key, _bytes, NumBytes);
 }
 
 void

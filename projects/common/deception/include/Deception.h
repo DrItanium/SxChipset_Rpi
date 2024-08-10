@@ -49,9 +49,12 @@ namespace Deception {
      */
     class BackingStore {
         public:
-            virtual size_t read(Address targetAddress, uint8_t* storage, size_t count) = 0;
-            virtual size_t write(Address targetAddress, uint8_t* storage, size_t count) = 0;
+            virtual ~BackingStore() = default;
+            virtual size_t read(Address targetAddress, uint8_t* storage, size_t count) noexcept = 0;
+            virtual size_t write(Address targetAddress, uint8_t* storage, size_t count) noexcept = 0;
+            virtual bool begin() noexcept = 0;
     };
+
     /**
      * @brief A simple 16-byte cache line
      */
@@ -66,22 +69,40 @@ namespace Deception {
                 return input & 0xF;
             }
             constexpr bool dirty() const noexcept { return _dirty; }
-            constexpr bool valid() const noexcept { return _valid; }
+            constexpr bool valid() const noexcept { return _backingStore != nullptr; }
             constexpr bool matches(Address other) const noexcept {
                 return valid() && (_key == normalizeAddress(other));
             }
-            void sync(BackingStore& store) noexcept;
+            void sync() noexcept;
             void replace(BackingStore& store, Address newAddress) noexcept;
             void setByte(uint8_t offset, uint8_t value) noexcept;
             constexpr uint8_t getByte(uint8_t offset) const noexcept {
                 return _bytes[computeByteOffset(offset)];
             }
+            /**
+             * @brief Clear the contents of the line without syncing or anything like that
+             */
             void clear() noexcept;
         private:
             uint8_t _bytes[NumBytes] = { 0 };
             uint32_t _key = 0;
             bool _dirty = false;
-            bool _valid = false;
+            BackingStore* _backingStore = nullptr;
+    };
+
+    template<uint16_t C, typename L = CacheLine>
+    class DirectMappedCache {
+        public:
+            static_assert(C > 0, "Must have at least one cache line!");
+            static constexpr auto NumLines = C;
+            using Line_t = L;
+            void clear() noexcept {
+                for (auto& line : lines) {
+                    line.clear();
+                }
+            }
+        private:
+            CacheLine lines[NumLines];
     };
 } // end namespace Deception
 #endif // end DECEPTION_H__
