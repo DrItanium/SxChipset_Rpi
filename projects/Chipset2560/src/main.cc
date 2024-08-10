@@ -35,6 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Setup.h"
 
 #define PCLink Serial3
+Deception::DirectMappedCache4K onboardCache;
 static inline constexpr bool ActivateSDCard = false;
 static inline constexpr int32_t SDCardInitializationAttempts = 1000;
 volatile i960Interface interface960 [[gnu::address(0x7F00)]];
@@ -122,6 +123,7 @@ setup() {
     interface960.begin();
     configurePins();
     configureInterrupts();
+    onboardCache.begin();
     Serial.begin(115200);
     PCLink.begin(115200);
     delay(1000);
