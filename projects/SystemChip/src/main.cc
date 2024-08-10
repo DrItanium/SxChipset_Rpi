@@ -45,6 +45,19 @@ constexpr uint8_t ReadMemoryCode = 0xFC;
 constexpr uint8_t WriteMemoryCode = 0xFD;
 constexpr uint8_t InitializeSystemSetupCode = 0xFE;
 constexpr uint8_t BeginInstructionCode = 0xFF;
+constexpr unsigned long long int operator ""_KB(unsigned long long int value) noexcept {
+    return value * 1024;
+}
+constexpr unsigned long long int operator ""_MB(unsigned long long int value) noexcept {
+    return value * 1024 * 1024;
+}
+constexpr size_t MaxMemoryPoolSize = 16_MB; // PSRAM Pool Maximum Size
+constexpr size_t MinimumPoolSize = 1_MB; // we don't want this to go any smaller than this
+constexpr auto MemoryPoolSize = 16_MB; 
+
+MEMORY_POOL_SECTION uint8_t memory960[MemoryPoolSize];
+static_assert(MemoryPoolSize <= MaxMemoryPoolSize, "Requested memory capacity is too large!");
+static_assert(MemoryPoolSize >= MinimumPoolSize, "Requested memory capacity will not fit a default boot image!");
 bool sdcardInstalled = false;
 void writeCacheLine(Address address, uint8_t* data, uint8_t size) noexcept;
 void readCacheLine(Address address, uint8_t* data, uint8_t size) noexcept;
@@ -125,16 +138,18 @@ establishContact() {
     (void)PCLink.read();
 }
 void
-setupHardware() {
-#define X(item, baud) item . begin (baud ) ; \
-    while (! item ) { \
-        delay(10) ; \
+setupCaches() {
+}
+void 
+setupMemoryPool() {
+    // clear out the actual memory pool ahead of setting up the memory pool
+    // itself
+    for (auto i = 0u; i < MemoryPoolSize; ++i) {
+        memory960[i] = 0;
     }
-    X(DebugPort, 9600);
-    X(PCLink, 500000);
-    X(SodiumLink0, 500000);
-    X(SodiumLink1, 500000);
-#undef X
+}
+void
+setupSDCard() {
     sdcardInstalled = SD.begin();
     DebugPort.print("SDCARD ");
     if (!sdcardInstalled) {
@@ -143,14 +158,27 @@ setupHardware() {
     DebugPort.println("FOUND");
 }
 void
-setupCaches() {
-
+setupHardware() {
+#define X(item, baud, wait) item . begin (baud ) ; \
+    if constexpr (wait) { \
+        while (! item ) { \
+            delay(10) ; \
+        } \
+    }
+    X(DebugPort, 9600, false);
+    X(PCLink, 500000, false);
+    X(SodiumLink0, 500000, false);
+    X(SodiumLink1, 500000, false);
+#undef X
+    setupSDCard();
+    setupMemoryPool();
+    setupCaches();
 }
+
 void 
 setup() {
     setupRandomNumberGeneration();
     setupHardware();
-    setupCaches();
     establishContact();
 }
 
