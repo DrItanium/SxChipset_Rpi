@@ -76,7 +76,7 @@ setupMemoryPool() {
 }
 void
 setupSDCard() {
-    sdcardInstalled = SD.begin();
+    sdcardInstalled = SD.begin(BUILTIN_SDCARD);
     Serial.print("SDCARD ");
     if (!sdcardInstalled) {
         Serial.print("NOT ");
