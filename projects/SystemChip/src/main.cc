@@ -32,6 +32,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <IntervalTimer.h>
 #include <Bounce.h>
 #include <Ethernet.h>
+#include <Deception.h>
 
 //#define CACHE_MEMORY_SECTION DMAMEM
 #define MEMORY_POOL_SECTION EXTMEM
