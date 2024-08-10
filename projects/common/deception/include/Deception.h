@@ -168,7 +168,9 @@ namespace Deception {
         private:
             Line_t lines[NumLines];
     };
-    using DirectMappedCache4K = DirectMappedCache<256, CacheLine16>;
+    template<uint16_t C>
+    using DirectMappedCache_CacheLine16 = DirectMappedCache<C, CacheLine16>;
+    using DirectMappedCache4K = DirectMappedCache_CacheLine16<256>; 
     static_assert(DirectMappedCache4K::computeIndex(0xFFFF'FFFF) == 0xFF);
     static_assert(DirectMappedCache4K::computeIndex(0xFFFF'FFDF) == 0xFD);
 } // end namespace Deception
