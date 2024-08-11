@@ -177,7 +177,8 @@ class HardwareSerialServer {
         void handleFirstContact() noexcept {
             _firstContact = true;
             _link.write(Deception::MemoryCodes::InitializeSystemSetupCode);
-            Serial.println("FIRST CONTACT MADE!");
+            _serialCapacity = 0;
+            _serialCount = 0;
         }
         void processEvent() noexcept {
             if (auto inByte = _link.read(); !_firstContact) {
@@ -188,7 +189,6 @@ class HardwareSerialServer {
                 if (_serialCapacity == 0) {
                     switch (inByte) {
                         case Deception::MemoryCodes::BeginInstructionCode:
-                            Serial.println("New Instruction!");
                             _serialCapacity = -1;
                             _serialCount = 0;
                             break;
@@ -199,8 +199,6 @@ class HardwareSerialServer {
                             break;
                     }
                 } else if (_serialCapacity == -1) {
-                    Serial.print("Length: 0x");
-                    Serial.println(inByte, HEX);
                     _serialCapacity = inByte;
                 } else {
                    _data[_serialCount] = inByte;

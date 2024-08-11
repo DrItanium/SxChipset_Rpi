@@ -86,6 +86,7 @@ configureEBI() noexcept {
     toggle<Pin::READY>();
     do { } while (bit_is_clear(EIFR, READYFLAG));
     clearREADYInterrupt();
+    Serial.println(F("NEXT"));
 }
 void
 configureInterrupts() noexcept {
@@ -238,10 +239,14 @@ void
 doMemoryReadTransaction(uint32_t address) noexcept {
     auto offset = address & 0xF;
     auto& line = onboardCache.find(PCLink, address);
-#define X(x, index) interface960.dataLines.bytes[x] = line.getByte(offset + index)
+#define X(x, index) { \
+    auto value = line.getByte(offset + index); \
+    interface960.dataLines.bytes[x] = value; \
+    Serial.println(value, HEX); \
+}
     {
-    X(0, 0);
-    X(1, 1);
+        X(0, 0);
+        X(1, 1);
     }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
