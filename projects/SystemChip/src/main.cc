@@ -36,6 +36,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define CACHE_MEMORY_SECTION DMAMEM
 #define MEMORY_POOL_SECTION EXTMEM
+constexpr auto ClearCurrentSystem = 31;
+constexpr auto Reset2560_Pin = 33;
 using Address = uint32_t;
 using RawCacheLineData = uint8_t*;
 constexpr unsigned long long int operator ""_KB(unsigned long long int value) noexcept {
@@ -101,6 +103,9 @@ setupSDCard() {
 void setupServers();
 void
 setupHardware() {
+    pinMode(Reset2560_Pin, OUTPUT);
+    pinMode(ClearCurrentSystem, INPUT);
+    digitalWrite(Reset2560_Pin, HIGH);
 #define X(item, baud, wait) item . begin (baud ) ; \
     if constexpr (wait) { \
         while (! item ) { \
