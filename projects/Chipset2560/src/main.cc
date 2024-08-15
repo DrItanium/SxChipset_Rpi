@@ -290,9 +290,10 @@ void
 doMemoryReadTransaction(uint32_t address) noexcept {
     auto offset = static_cast<uint8_t>(address & 0xF);
     auto& line = onboardCache.find(PCLink, address);
+    auto* ptr = line.getLineData(offset);
     {
-        setLowerData(line.getByte(offset + 0));
-        setUpperData(line.getByte(offset + 1));
+        setLowerData(ptr[0]);
+        setUpperData(ptr[1]);
     }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
@@ -301,8 +302,8 @@ doMemoryReadTransaction(uint32_t address) noexcept {
     }
     signalReady();
     {
-        setLowerData(line.getByte(offset + 2));
-        setUpperData(line.getByte(offset + 3));
+        setLowerData(ptr[2]);
+        setUpperData(ptr[3]);
     }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
@@ -311,8 +312,8 @@ doMemoryReadTransaction(uint32_t address) noexcept {
     }
     signalReady();
     {
-        setLowerData(line.getByte(offset + 4));
-        setUpperData(line.getByte(offset + 5));
+        setLowerData(ptr[4]);
+        setUpperData(ptr[5]);
     }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
@@ -321,8 +322,8 @@ doMemoryReadTransaction(uint32_t address) noexcept {
     }
     signalReady();
     {
-        setLowerData(line.getByte(offset + 6));
-        setUpperData(line.getByte(offset + 7));
+        setLowerData(ptr[6]);
+        setUpperData(ptr[7]);
     }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
@@ -331,8 +332,8 @@ doMemoryReadTransaction(uint32_t address) noexcept {
     }
     signalReady();
     {
-        setLowerData(line.getByte(offset + 8));
-        setUpperData(line.getByte(offset + 9));
+        setLowerData(ptr[8]);
+        setUpperData(ptr[9]);
     }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
@@ -341,8 +342,8 @@ doMemoryReadTransaction(uint32_t address) noexcept {
     }
     signalReady();
     {
-        setLowerData(line.getByte(offset + 10));
-        setUpperData(line.getByte(offset + 11));
+        setLowerData(ptr[10]);
+        setUpperData(ptr[11]);
     }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
@@ -351,8 +352,8 @@ doMemoryReadTransaction(uint32_t address) noexcept {
     }
     signalReady();
     {
-        setLowerData(line.getByte(offset + 12));
-        setUpperData(line.getByte(offset + 13));
+        setLowerData(ptr[12]);
+        setUpperData(ptr[13]);
     }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
@@ -361,8 +362,8 @@ doMemoryReadTransaction(uint32_t address) noexcept {
     }
     signalReady();
     {
-        setLowerData(line.getByte(offset + 14));
-        setUpperData(line.getByte(offset + 15));
+        setLowerData(ptr[14]);
+        setUpperData(ptr[15]);
     }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
