@@ -33,7 +33,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Pinout.h"
 #include "Setup.h"
 
-Deception::HardwareSerialBackingStore PCLink(Serial2);
+Deception::HardwareSerialBackingStore PCLink(Serial1);
 Deception::DirectMappedCache4K onboardCache;
 // With the way that the 2560 and CH351s are connected to the i960, I have to
 // transfer data through the 2560 to the i960. This is due to the fact that the
@@ -172,7 +172,8 @@ setup() {
     configurePins();
     Serial.begin(115200);
     Serial1.begin(115200);
-    Serial2.begin(115200);
+    Wire.begin();
+    SPI.begin();
     configureInterrupts();
     onboardCache.begin();
     PCLink.connect();
