@@ -56,8 +56,13 @@ CacheLine16::replace(BackingStore& store, Address newAddress) noexcept {
 
 void
 CacheLine16::setByte(uint8_t offset, uint8_t value) noexcept {
-    _dirty = true;
+    markDirty();
     _bytes[computeByteOffset(offset)] = value;
+}
+
+void
+CacheLine16::markDirty() noexcept {
+    _dirty = true;
 }
 
 template<typename T>

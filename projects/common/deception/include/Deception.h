@@ -141,6 +141,7 @@ namespace Deception {
             uint8_t* getLineData(uint8_t offset = 0) noexcept {
                 return &_bytes[offset];
             }
+            void markDirty() noexcept;
         private:
             uint8_t _bytes[NumBytes] = { 0 };
             uint32_t _key = 0;

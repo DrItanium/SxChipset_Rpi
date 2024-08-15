@@ -376,64 +376,66 @@ void
 doMemoryWriteTransaction(uint32_t address) noexcept {
     auto offset = address & 0xF;
     auto& line = onboardCache.find(PCLink, address);
-    if (lowerByteEnabled()) { line.setByte(offset + 0, lowerData()); }
-    if (upperByteEnabled()) { line.setByte(offset + 1, upperData()); }
+    auto* ptr = line.getLineData(offset);
+    line.markDirty();
+    if (lowerByteEnabled()) { ptr[0] = lowerData(); }
+    if (upperByteEnabled()) { ptr[1] = upperData(); }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
         signalReady();
         return;
     }
     signalReady();
-    if (lowerByteEnabled()) { line.setByte(offset + 2, lowerData()); }
-    if (upperByteEnabled()) { line.setByte(offset + 3, upperData()); }
+    if (lowerByteEnabled()) { ptr[2] = lowerData(); }
+    if (upperByteEnabled()) { ptr[3] = upperData(); }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
         signalReady();
         return;
     }
     signalReady();
-    if (lowerByteEnabled()) { line.setByte(offset + 4, lowerData()); }
-    if (upperByteEnabled()) { line.setByte(offset + 5, upperData()); }
+    if (lowerByteEnabled()) { ptr[4] = lowerData(); }
+    if (upperByteEnabled()) { ptr[5] = upperData(); }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
         signalReady();
         return;
     }
     signalReady();
-    if (lowerByteEnabled()) { line.setByte(offset + 6, lowerData()); }
-    if (upperByteEnabled()) { line.setByte(offset + 7, upperData()); }
+    if (lowerByteEnabled()) { ptr[6] = lowerData(); }
+    if (upperByteEnabled()) { ptr[7] = upperData(); }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
         signalReady();
         return;
     }
     signalReady();
-    if (lowerByteEnabled()) { line.setByte(offset + 8, lowerData()); }
-    if (upperByteEnabled()) { line.setByte(offset + 9, upperData()); }
+    if (lowerByteEnabled()) { ptr[8] = lowerData(); }
+    if (upperByteEnabled()) { ptr[9] = upperData(); }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
         signalReady();
         return;
     }
     signalReady();
-    if (lowerByteEnabled()) { line.setByte(offset + 10, lowerData()); }
-    if (upperByteEnabled()) { line.setByte(offset + 11, upperData()); }
+    if (lowerByteEnabled()) { ptr[10] = lowerData(); }
+    if (upperByteEnabled()) { ptr[11] = upperData(); }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
         signalReady();
         return;
     }
     signalReady();
-    if (lowerByteEnabled()) { line.setByte(offset + 12, lowerData()); }
-    if (upperByteEnabled()) { line.setByte(offset + 13, upperData()); }
+    if (lowerByteEnabled()) { ptr[12] = lowerData(); }
+    if (upperByteEnabled()) { ptr[13] = upperData(); }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
         signalReady();
         return;
     }
     signalReady();
-    if (lowerByteEnabled()) { line.setByte(offset + 14, lowerData()); }
-    if (upperByteEnabled()) { line.setByte(offset + 15, upperData()); }
+    if (lowerByteEnabled()) { ptr[14] = lowerData(); }
+    if (upperByteEnabled()) { ptr[15] = upperData(); }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
         signalReady();
