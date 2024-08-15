@@ -59,15 +59,37 @@ Count = NUM_DIGITAL_PINS,
 #ifdef LED_BUILTIN
     LED = LED_BUILTIN,
 #endif
+    ADR0 = PortA0,
+    ADR1 = PortA1,
+    ADR2 = PortA2,
+    ADR3 = PortA3,
+    ADR4 = PortA4,
+    ADR5 = PortA5,
+    ADR6 = PortA6,
+    ADR7 = PortA7,
+
     SD_EN = PortB0,
+    // SCK = PortB1,
+    // MOSI = PortB2,
+    // MISO = PortB3,
+
+    DATA0 = PortC0,
+    DATA1 = PortC1,
+    DATA2 = PortC2,
+    DATA3 = PortC3,
+    DATA4 = PortC4,
+    DATA5 = PortC5,
+    DATA6 = PortC6,
+    DATA7 = PortC7,
+
+    // SCL = PortD0,
+    // SDA = PortD1,
+    RXD1 = PortD2,
+    TXD1 = PortD3,
+
 
     RXD0 = PortE0,
     TXD0 = PortE1,
-    RXD1 = PortD2,
-    TXD1 = PortD3,
-    RXD2 = PortH0,
-    TXD2 = PortH1,
-
     BE0 = PortE2,
     BE1 = PortE3,
     HLDA = PortE4,
@@ -75,7 +97,51 @@ Count = NUM_DIGITAL_PINS,
     READY_SYNC_IN = PortE6,
     ADS = PortE7,
 
-    READY = PortG3,
+    DATA8 = PortF0,
+    DATA9 = PortF1,
+    DATA10 = PortF2,
+    DATA11 = PortF3,
+    DATA12 = PortF4,
+    DATA13 = PortF5,
+    DATA14 = PortF6,
+    DATA15 = PortF7,
+
+    FAIL = PortG0,
+    LOCK = PortG1,
+    HOLD = PortG2,
+    WR = PortG3,
+    READY = PortG4,
+    RESET = PortG5,
+
+    RXD2 = PortH0,
+    TXD2 = PortH1,
+
+    ADR16 = PortJ0,
+    ADR17 = PortJ1,
+    ADR18 = PortJ2,
+    ADR19 = PortJ3,
+    ADR20 = PortJ4,
+    ADR21 = PortJ5,
+    ADR22 = PortJ6,
+    ADR23 = PortJ7,
+
+    ADR8 = PortK0,
+    ADR9 = PortK1,
+    ADR10 = PortK2,
+    ADR11 = PortK3,
+    ADR12 = PortK4,
+    ADR13 = PortK5,
+    ADR14 = PortK6,
+    ADR15 = PortK7,
+
+    ADR24 = PortL0,
+    ADR25 = PortL1,
+    ADR26 = PortL2,
+    ADR27 = PortL3,
+    ADR28 = PortL4,
+    ADR29 = PortL5,
+    ADR30 = PortL6,
+    ADR31 = PortL7,
 };
 enum class Port : byte {
     // stop at mega2560 tier
@@ -84,12 +150,12 @@ enum class Port : byte {
 #undef X
     None,
 
-    DataUpper = C,
-    DataLower = F,
+    DataUpper = F,
+    DataLower = C,
     AddressHighest = L,
     AddressHigher = J,
-    AddressLower = A,
-    AddressLowest = K,
+    AddressLower = K,
+    AddressLowest = A,
 };
 constexpr auto numberOfAvailablePins() noexcept {
     return 0 

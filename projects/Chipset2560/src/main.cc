@@ -100,6 +100,12 @@ uint8_t
 upperData() noexcept {
     return getInputRegister<Port::DataUpper>();
 }
+uint16_t 
+data() noexcept {
+    uint16_t lo = lowerData();
+    uint16_t hi = upperData();
+    return (lo | (hi << 8));
+}
 void
 setUpperData(uint8_t value) noexcept {
     getOutputRegister<Port::DataUpper>() = value;
@@ -107,6 +113,11 @@ setUpperData(uint8_t value) noexcept {
 void
 setLowerData(uint8_t value) noexcept {
     getOutputRegister<Port::DataLower>() = value;
+}
+void
+setDataValue(uint16_t value) noexcept {
+    setLowerData(value);
+    setUpperData(value >> 8);
 }
 void
 setDataDirection(uint16_t value) noexcept {
@@ -144,31 +155,26 @@ void
 setup() {
     Serial.begin(115200);
     Serial2.begin(115200);
-    interface960.begin();
     configurePins();
     configureInterrupts();
     onboardCache.begin();
     PCLink.connect();
     (void)PCLink.getBackingStore().read();
     delay(1000);
-    interface960.pullI960OutOfReset();
+    //interface960.pullI960OutOfReset();
 }
 [[gnu::always_inline]] inline bool isReadOperation() noexcept {
-    return interface960.isReadOperation();
+    return digitalRead<Pin::WR>() == LOW;
 }
-template<bool useIOExpander = false>
 [[gnu::always_inline]] inline bool isLastWordOfTransaction() noexcept {
-    if constexpr (useIOExpander) {
-        return interface960.lastWordOfTransaction();
-    } else {
-        return bit_is_set(EIFR, BLASTFLAG);
-    }
+    return bit_is_set(EIFR, BLASTFLAG);
 }
 template<bool isReadOperation>
 void
 doNothingOperation() noexcept {
     if constexpr(isReadOperation) {
-        interface960.dataLines.full = 0;
+        setLowerData(0);
+        setUpperData(0);
     }
     while (!isLastWordOfTransaction()) {
         signalReady();
@@ -178,14 +184,14 @@ doNothingOperation() noexcept {
 }
 void
 send32BitConstant(uint32_t value) noexcept {
-    interface960.dataLines.full = static_cast<uint16_t>(value);
+    setDataValue(value);
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
         signalReady();
         return;
     }
     signalReady();
-    interface960.dataLines.full = static_cast<uint16_t>(value>> 16);
+    setDataValue(value >> 16);
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
         signalReady();
@@ -197,7 +203,7 @@ send32BitConstant(uint32_t value) noexcept {
 
 void
 send16BitValue(uint16_t value) noexcept {
-    interface960.dataLines.full = value;
+    setDataValue(value);
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
         signalReady();
@@ -208,8 +214,8 @@ send16BitValue(uint16_t value) noexcept {
 }
 void
 send16BitValue(uint8_t lo, uint8_t hi) noexcept {
-    interface960.dataLines.bytes[0] = lo;
-    interface960.dataLines.bytes[1] = hi;
+    setLowerData(lo);
+    setUpperData(hi);
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
         signalReady();
@@ -246,7 +252,7 @@ void
 doIOWriteTransaction(uint32_t address) noexcept {
     switch (address & 0x00FFFFFF) {
         case 0x8: 
-            Serial.write(interface960.dataLines.bytes[0]);
+            Serial.write(lowerData());
             doNothingOperation<false>();
             break;
         case 0xC:
