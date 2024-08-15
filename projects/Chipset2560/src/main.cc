@@ -35,7 +35,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 Deception::HardwareSerialBackingStore PCLink(Serial2);
 Deception::DirectMappedCache4K onboardCache;
-volatile i960Interface interface960 [[gnu::address(0x7F00)]];
 // With the way that the 2560 and CH351s are connected to the i960, I have to
 // transfer data through the 2560 to the i960. This is due to the fact that the
 // CH351s are not buffered to prevent this. However, there is nothing stopping
@@ -57,13 +56,6 @@ volatile i960Interface interface960 [[gnu::address(0x7F00)]];
 // serial device that we cache on chip (eventually over the EBI as well to
 // increase the availability of data as well)
 
-void
-configureEBI() noexcept {
-    // for now enable a simple 256 byte space
-    XMCRB = 0b0'0000'111; // no high bits, no bus keeper
-    XMCRA = 0b1'100'01'01; // Enable the EBI, divide the memory space in half,
-                           // wait states are necessary too
-}
 #define ADSFLAG INTF7
 #define READYFLAG INTF6
 #define BLASTFLAG INTF5
@@ -76,7 +68,9 @@ configureEBI() noexcept {
 [[gnu::always_inline]] inline void waitForTransaction() noexcept {
     // clear the READY signal interrupt ahead of waiting for the last
     clearREADYInterrupt();
-    do{ } while (bit_is_clear(EIFR, ADSFLAG));
+    do{ 
+        yield();
+    } while (bit_is_clear(EIFR, ADSFLAG));
     clearADSInterrupt();
 }
 
@@ -84,9 +78,40 @@ configureEBI() noexcept {
 
 [[gnu::always_inline]] inline void signalReady() noexcept {
     toggle<Pin::READY>();
-    do { } while (bit_is_clear(EIFR, READYFLAG));
+    do { 
+        yield();
+    } while (bit_is_clear(EIFR, READYFLAG));
     clearREADYInterrupt();
     Serial.println(F("NEXT"));
+}
+bool 
+lowerByteEnabled() noexcept {
+    return digitalRead<Pin::BE0>() == LOW;
+}
+bool 
+upperByteEnabled() noexcept {
+    return digitalRead<Pin::BE1>() == LOW;
+}
+uint8_t 
+lowerData() noexcept {
+    return getInputRegister<Port::DataLower>();
+}
+uint8_t 
+upperData() noexcept {
+    return getInputRegister<Port::DataUpper>();
+}
+void
+setUpperData(uint8_t value) noexcept {
+    getOutputRegister<Port::DataUpper>() = value;
+}
+void
+setLowerData(uint8_t value) noexcept {
+    getOutputRegister<Port::DataLower>() = value;
+}
+void
+setDataDirection(uint16_t value) noexcept {
+    getDirectionRegister<Port::DataLower>() = static_cast<uint8_t>(value);
+    getDirectionRegister<Port::DataUpper>() = static_cast<uint8_t>(value >> 8);
 }
 void
 configureInterrupts() noexcept {
@@ -119,7 +144,6 @@ void
 setup() {
     Serial.begin(115200);
     Serial2.begin(115200);
-    configureEBI();
     interface960.begin();
     configurePins();
     configureInterrupts();
@@ -239,14 +263,9 @@ void
 doMemoryReadTransaction(uint32_t address) noexcept {
     auto offset = address & 0xF;
     auto& line = onboardCache.find(PCLink, address);
-#define X(x, index) { \
-    auto value = line.getByte(offset + index); \
-    interface960.dataLines.bytes[x] = value; \
-    Serial.println(value, HEX); \
-}
     {
-        X(0, 0);
-        X(1, 1);
+        setLowerData(line.getByte(offset + 0));
+        setUpperData(line.getByte(offset + 1));
     }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
@@ -255,8 +274,8 @@ doMemoryReadTransaction(uint32_t address) noexcept {
     }
     signalReady();
     {
-    X(0, 2);
-    X(1, 3);
+        setLowerData(line.getByte(offset + 2));
+        setUpperData(line.getByte(offset + 3));
     }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
@@ -265,8 +284,8 @@ doMemoryReadTransaction(uint32_t address) noexcept {
     }
     signalReady();
     {
-    X(0,4);
-    X(1,5);
+        setLowerData(line.getByte(offset + 4));
+        setUpperData(line.getByte(offset + 5));
     }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
@@ -275,8 +294,8 @@ doMemoryReadTransaction(uint32_t address) noexcept {
     }
     signalReady();
     {
-    X(0,6);
-    X(1,7);
+        setLowerData(line.getByte(offset + 6));
+        setUpperData(line.getByte(offset + 7));
     }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
@@ -285,8 +304,8 @@ doMemoryReadTransaction(uint32_t address) noexcept {
     }
     signalReady();
     {
-    X(0,8);
-    X(1,9);
+        setLowerData(line.getByte(offset + 8));
+        setUpperData(line.getByte(offset + 9));
     }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
@@ -295,8 +314,8 @@ doMemoryReadTransaction(uint32_t address) noexcept {
     }
     signalReady();
     {
-    X(0,10);
-    X(1,11);
+        setLowerData(line.getByte(offset + 10));
+        setUpperData(line.getByte(offset + 11));
     }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
@@ -305,8 +324,8 @@ doMemoryReadTransaction(uint32_t address) noexcept {
     }
     signalReady();
     {
-    X(0,12);
-    X(1,13);
+        setLowerData(line.getByte(offset + 12));
+        setUpperData(line.getByte(offset + 13));
     }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
@@ -315,8 +334,8 @@ doMemoryReadTransaction(uint32_t address) noexcept {
     }
     signalReady();
     {
-    X(0,14);
-    X(1,15);
+        setLowerData(line.getByte(offset + 14));
+        setUpperData(line.getByte(offset + 15));
     }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
@@ -324,70 +343,69 @@ doMemoryReadTransaction(uint32_t address) noexcept {
         return;
     }
     signalReady();
-#undef X
 }
 void 
 doMemoryWriteTransaction(uint32_t address) noexcept {
     auto offset = address & 0xF;
     auto& line = onboardCache.find(PCLink, address);
-    if (interface960.controlLines.be0) { line.setByte(offset + 0, interface960.dataLines.bytes[0]); }
-    if (interface960.controlLines.be1) { line.setByte(offset + 1, interface960.dataLines.bytes[1]); }
+    if (lowerByteEnabled()) { line.setByte(offset + 0, lowerData()); }
+    if (upperByteEnabled()) { line.setByte(offset + 1, upperData()); }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
         signalReady();
         return;
     }
     signalReady();
-    if (interface960.controlLines.be0) { line.setByte(offset + 2, interface960.dataLines.bytes[0]); }
-    if (interface960.controlLines.be1) { line.setByte(offset + 3, interface960.dataLines.bytes[1]); }
+    if (lowerByteEnabled()) { line.setByte(offset + 2, lowerData()); }
+    if (upperByteEnabled()) { line.setByte(offset + 3, upperData()); }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
         signalReady();
         return;
     }
     signalReady();
-    if (interface960.controlLines.be0) { line.setByte(offset + 4, interface960.dataLines.bytes[0]); }
-    if (interface960.controlLines.be1) { line.setByte(offset + 5, interface960.dataLines.bytes[1]); }
+    if (lowerByteEnabled()) { line.setByte(offset + 4, lowerData()); }
+    if (upperByteEnabled()) { line.setByte(offset + 5, upperData()); }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
         signalReady();
         return;
     }
     signalReady();
-    if (interface960.controlLines.be0) { line.setByte(offset + 6, interface960.dataLines.bytes[0]); }
-    if (interface960.controlLines.be1) { line.setByte(offset + 7, interface960.dataLines.bytes[1]); }
+    if (lowerByteEnabled()) { line.setByte(offset + 6, lowerData()); }
+    if (upperByteEnabled()) { line.setByte(offset + 7, upperData()); }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
         signalReady();
         return;
     }
     signalReady();
-    if (interface960.controlLines.be0) { line.setByte(offset + 8, interface960.dataLines.bytes[0]); }
-    if (interface960.controlLines.be1) { line.setByte(offset + 9, interface960.dataLines.bytes[1]); }
+    if (lowerByteEnabled()) { line.setByte(offset + 8, lowerData()); }
+    if (upperByteEnabled()) { line.setByte(offset + 9, upperData()); }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
         signalReady();
         return;
     }
     signalReady();
-    if (interface960.controlLines.be0) { line.setByte(offset + 10, interface960.dataLines.bytes[0]); }
-    if (interface960.controlLines.be1) { line.setByte(offset + 11, interface960.dataLines.bytes[1]); }
+    if (lowerByteEnabled()) { line.setByte(offset + 10, lowerData()); }
+    if (upperByteEnabled()) { line.setByte(offset + 11, upperData()); }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
         signalReady();
         return;
     }
     signalReady();
-    if (interface960.controlLines.be0) { line.setByte(offset + 12, interface960.dataLines.bytes[0]); }
-    if (interface960.controlLines.be1) { line.setByte(offset + 13, interface960.dataLines.bytes[1]); }
+    if (lowerByteEnabled()) { line.setByte(offset + 12, lowerData()); }
+    if (upperByteEnabled()) { line.setByte(offset + 13, upperData()); }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
         signalReady();
         return;
     }
     signalReady();
-    if (interface960.controlLines.be0) { line.setByte(offset + 14, interface960.dataLines.bytes[0]); }
-    if (interface960.controlLines.be1) { line.setByte(offset + 15, interface960.dataLines.bytes[1]); }
+    if (lowerByteEnabled()) { line.setByte(offset + 14, lowerData()); }
+    if (upperByteEnabled()) { line.setByte(offset + 15, upperData()); }
     if (isLastWordOfTransaction()) {
         clearBLASTInterrupt();
         signalReady();
@@ -399,12 +417,12 @@ doMemoryWriteTransaction(uint32_t address) noexcept {
     return (static_cast<uint8_t>(address >> 24)) == 0xFE;
 }
 [[gnu::always_inline]] inline bool isIOOperation() noexcept {
-    return interface960.isIOOperation();
+    return getInputRegister<Port::AddressHighest>() == 0xFE;
 }
 void 
 doReadTransaction(uint32_t address) noexcept {
-    interface960.dataLinesDirection = 0xFFFF;
-    if (interface960.isIOOperation()) {
+    setDataDirection(0xFFFF);
+    if (isIOOperation()) {
         doIOReadTransaction(address);
     } else {
         doMemoryReadTransaction(address);
@@ -414,8 +432,8 @@ doReadTransaction(uint32_t address) noexcept {
 
 void
 doWriteTransaction(uint32_t address) noexcept {
-    interface960.dataLinesDirection = 0;
-    if (interface960.isIOOperation()) {
+    setDataDirection(0);
+    if (isIOOperation()) {
         doIOWriteTransaction(address);
     } else {
         doMemoryWriteTransaction(address);
@@ -446,13 +464,20 @@ i960Interface::begin() volatile {
     controlLines.reset = 0;
     dataLines.full = 0;
 }
-
+uint32_t 
+getAddress() noexcept {
+    uint32_t lowest = getInputRegister<Port::AddressLowest>();
+    uint32_t lower = getInputRegister<Port::AddressLower>();
+    uint32_t higher = getInputRegister<Port::AddressHigher>();
+    uint32_t highest = getInputRegister<Port::AddressHighest>();
+    return (lowest | (lower << 8) | (higher << 16) | (highest << 24));
+}
 
 void 
 loop() {
     //Serial.println(F("Waiting for ADS"));
     waitForTransaction();
-    auto address = interface960.getAddress();
+    auto address = getAddress();
     //Serial.printf(F("address lines: 0x%lx\n"), address);
     if (isReadOperation()) {
         doTransaction<true>(address);

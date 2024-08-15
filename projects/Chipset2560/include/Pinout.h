@@ -67,9 +67,9 @@ Count = NUM_DIGITAL_PINS,
     TXD1 = PortD3,
     RXD2 = PortH0,
     TXD2 = PortH1,
-    RXD3 = PortJ0,
-    TXD3 = PortJ1,
 
+    BE0 = PortE2,
+    BE1 = PortE3,
     HLDA = PortE4,
     BLAST = PortE5,
     READY_SYNC_IN = PortE6,
@@ -83,6 +83,13 @@ enum class Port : byte {
 #include "AVRPorts.def"
 #undef X
     None,
+
+    DataUpper = C,
+    DataLower = F,
+    AddressHighest = L,
+    AddressHigher = J,
+    AddressLower = A,
+    AddressLowest = K,
 };
 constexpr auto numberOfAvailablePins() noexcept {
     return 0 
