@@ -102,9 +102,14 @@ upperData() noexcept {
 }
 uint16_t 
 data() noexcept {
-    uint16_t lo = lowerData();
-    uint16_t hi = upperData();
-    return (lo | (hi << 8));
+    union {
+        uint8_t bytes[sizeof(uint16_t)];
+        uint16_t full;
+    } storage;
+
+    storage.bytes[0] = lowerData();
+    storage.bytes[1] = upperData();
+    return storage.full;
 }
 void
 setUpperData(uint8_t value) noexcept {
@@ -163,8 +168,6 @@ configurePins() noexcept {
     digitalWrite<Pin::HOLD, LOW>();
     digitalWrite<Pin::READY, HIGH>();
 
-    // configure ADS to trigger on rising edge (the address operation is
-    // complete)
 }
 
 void
@@ -192,8 +195,7 @@ template<bool isReadOperation>
 void
 doNothingOperation() noexcept {
     if constexpr(isReadOperation) {
-        setLowerData(0);
-        setUpperData(0);
+        setDataValue(0);
     }
     while (!isLastWordOfTransaction()) {
         signalReady();
