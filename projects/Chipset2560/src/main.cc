@@ -180,6 +180,7 @@ setup() {
     (void)PCLink.getBackingStore().read();
     delay(1000);
     //interface960.pullI960OutOfReset();
+    digitalWrite<Pin::RESET, HIGH>();
 }
 [[gnu::always_inline]] inline bool isReadOperation() noexcept {
     return digitalRead<Pin::WR>() == LOW;
@@ -285,7 +286,7 @@ doIOWriteTransaction(uint32_t address) noexcept {
 }
 void
 doMemoryReadTransaction(uint32_t address) noexcept {
-    auto offset = address & 0xF;
+    auto offset = static_cast<uint8_t>(address & 0xF);
     auto& line = onboardCache.find(PCLink, address);
     {
         setLowerData(line.getByte(offset + 0));
@@ -437,9 +438,6 @@ doMemoryWriteTransaction(uint32_t address) noexcept {
     }
     signalReady();
 }
-[[gnu::always_inline]] inline bool isIOOperation(uint32_t address) noexcept {
-    return (static_cast<uint8_t>(address >> 24)) == 0xFE;
-}
 [[gnu::always_inline]] inline bool isIOOperation() noexcept {
     return getInputRegister<Port::AddressHighest>() == 0xFE;
 }
@@ -464,23 +462,17 @@ doWriteTransaction(uint32_t address) noexcept {
     }
 }
 
-template<bool isReadOperation>
-void
-doTransaction(uint32_t address) noexcept {
-    if constexpr (isReadOperation) {
-        doReadTransaction(address);
-    } else {
-        doWriteTransaction(address);
-    }
-}
-
 uint32_t 
 getAddress() noexcept {
-    uint32_t lowest = getInputRegister<Port::AddressLowest>();
-    uint32_t lower = getInputRegister<Port::AddressLower>();
-    uint32_t higher = getInputRegister<Port::AddressHigher>();
-    uint32_t highest = getInputRegister<Port::AddressHighest>();
-    return (lowest | (lower << 8) | (higher << 16) | (highest << 24));
+    union {
+        uint8_t bytes[sizeof(uint32_t)];
+        uint32_t value;
+    } storage;
+    storage.bytes[0] = getInputRegister<Port::AddressLowest>();
+    storage.bytes[1] = getInputRegister<Port::AddressLower>();
+    storage.bytes[2] = getInputRegister<Port::AddressHigher>();
+    storage.bytes[3] = getInputRegister<Port::AddressHighest>();
+    return storage.value;
 }
 
 void 
@@ -490,8 +482,8 @@ loop() {
     auto address = getAddress();
     //Serial.printf(F("address lines: 0x%lx\n"), address);
     if (isReadOperation()) {
-        doTransaction<true>(address);
+        doReadTransaction(address);
     } else {
-        doTransaction<false>(address);
+        doWriteTransaction(address);
     }
 }

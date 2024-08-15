@@ -343,11 +343,8 @@ template<Pin pin>
 [[gnu::always_inline]] 
 inline PinState
 digitalRead() noexcept { 
-    if constexpr (isPhysicalPin(pin)) {
-        return (getInputRegister<pin>() & getPinMask<pin>()) ? HIGH : LOW;
-    } else {
-        return ::digitalRead(pin);
-    }
+    static_assert(isPhysicalPin(pin));
+    return (getInputRegister<pin>() & getPinMask<pin>()) ? HIGH : LOW;
 }
 [[gnu::always_inline]] inline 
 void pinMode(Pin pin, PinDirection direction) noexcept {
@@ -360,9 +357,8 @@ void pinMode(Pin pin, PinDirection direction) noexcept {
 template<Pin pin>
 [[gnu::always_inline]] inline 
 void pinMode(PinDirection direction) noexcept {
-    if constexpr (isPhysicalPin(pin)) {
-        pinMode(static_cast<int>(pin), direction);
-    } 
+    static_assert(isPhysicalPin(pin));
+    pinMode(static_cast<int>(pin), direction);
     // if the pin is not a physical one then don't expand it
 }
 
