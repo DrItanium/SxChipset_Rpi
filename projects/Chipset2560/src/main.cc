@@ -140,22 +140,39 @@ configureInterrupts() noexcept {
 }
 void 
 configurePins() noexcept {
+    pinMode(Pin::RESET, OUTPUT);
+    digitalWrite<Pin::RESET, LOW>();
+    pinMode(Pin::HOLD , OUTPUT);
     pinMode(Pin::READY, OUTPUT);
-    digitalWrite<Pin::READY, HIGH>();
-
-    // configure ADS to trigger on rising edge (the address operation is
-    // complete)
     pinMode(Pin::ADS, INPUT);
     pinMode(Pin::READY_SYNC_IN, INPUT);
     pinMode(Pin::BLAST, INPUT);
     pinMode(Pin::HLDA, INPUT);
+    pinMode(Pin::READY, OUTPUT);
+    pinMode(Pin::BE0, INPUT);
+    pinMode(Pin::BE1, INPUT);
+    pinMode(Pin::FAIL, INPUT);
+    pinMode(Pin::LOCK, INPUT);
+    pinMode(Pin::WR, INPUT);
+    getDirectionRegister<Port::DataLower>() = 0xFF;
+    getDirectionRegister<Port::DataUpper>() = 0xFF;
+    getDirectionRegister<Port::AddressLowest>() = 0;
+    getDirectionRegister<Port::AddressLower>() = 0;
+    getDirectionRegister<Port::AddressHigher>() = 0;
+    getDirectionRegister<Port::AddressHighest>() = 0;
+    digitalWrite<Pin::HOLD, LOW>();
+    digitalWrite<Pin::READY, HIGH>();
+
+    // configure ADS to trigger on rising edge (the address operation is
+    // complete)
 }
 
 void
 setup() {
-    Serial.begin(115200);
-    Serial2.begin(115200);
     configurePins();
+    Serial.begin(115200);
+    Serial1.begin(115200);
+    Serial2.begin(115200);
     configureInterrupts();
     onboardCache.begin();
     PCLink.connect();
@@ -456,20 +473,6 @@ doTransaction(uint32_t address) noexcept {
     }
 }
 
-void 
-i960Interface::begin() volatile {
-    addressDirection = 0x0000'0000; 
-    dataLinesDirection = 0xFFFF;
-    // turn ready into an input
-    controlDirection = 0b0001'1111'1000'0000;
-    controlLines.int3 = 1;
-    controlLines.int2 = 0;
-    controlLines.int1 = 0;
-    controlLines.int0 = 1;
-    controlLines.hold = 0;
-    controlLines.reset = 0;
-    dataLines.full = 0;
-}
 uint32_t 
 getAddress() noexcept {
     uint32_t lowest = getInputRegister<Port::AddressLowest>();

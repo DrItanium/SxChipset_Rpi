@@ -86,6 +86,7 @@ Count = NUM_DIGITAL_PINS,
     // SDA = PortD1,
     RXD1 = PortD2,
     TXD1 = PortD3,
+    
 
 
     RXD0 = PortE0,
