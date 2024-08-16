@@ -26,9 +26,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef CHIPSET2560_TYPES_H__
 #define CHIPSET2560_TYPES_H__
 #include <Arduino.h>
-#include "Detect.h"
 
-using uint24_t = __uint24;
 using Address = uint32_t;
 
 template<typename W, typename E>

@@ -26,7 +26,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef CHIPSET2560_SETUP_H__
 #define CHIPSET2560_SETUP_H__
 #include <Arduino.h>
-#include "Detect.h"
 #include "Types.h"
 #include "Pinout.h"
 
