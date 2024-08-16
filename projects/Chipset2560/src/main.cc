@@ -26,6 +26,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <SPI.h>
 #include <Wire.h>
 #include <Deception.h>
+#include <SD.h>
 
 
 #include "Types.h"
@@ -43,6 +44,7 @@ union [[gnu::packed]] SplitWord32 {
 static_assert(sizeof(SplitWord32) == sizeof(uint32_t));
 Deception::HardwareSerialBackingStore PCLink(Serial1);
 Deception::DirectMappedCache4K onboardCache;
+volatile bool sdAvailable = false;
 // With the way that the 2560 and CH351s are connected to the i960, I have to
 // transfer data through the 2560 to the i960. This is due to the fact that the
 // CH351s are not buffered to prevent this. However, there is nothing stopping
