@@ -129,22 +129,9 @@ setDataDirection(uint16_t value) noexcept {
     getDirectionRegister<Port::DataLower>() = static_cast<uint8_t>(value);
     getDirectionRegister<Port::DataUpper>() = static_cast<uint8_t>(value >> 8);
 }
-void
-configureInterrupts() noexcept {
-    // Configure INT7 on rising edge of ADS
-    // Configure INT6 on rising edge of READY
-    // Configure INT5 on falling edge of BLAST
-    // Configure INT4 on rising edge of HLDA (the hold request is acknowledged)
-    EICRB = 0b11'11'10'11;
-    // clear the interrupt flags to be on the safe side
-    clearHLDAInterrupt();
-    clearBLASTInterrupt();
-    clearREADYInterrupt();
-    clearADSInterrupt();
 
-}
-void 
-configurePins() noexcept {
+void
+setup() {
     pinMode(Pin::RESET, OUTPUT);
     digitalWrite<Pin::RESET, LOW>();
     pinMode(Pin::HOLD , OUTPUT);
@@ -159,30 +146,31 @@ configurePins() noexcept {
     pinMode(Pin::FAIL, INPUT);
     pinMode(Pin::LOCK, INPUT);
     pinMode(Pin::WR, INPUT);
-    getDirectionRegister<Port::DataLower>() = 0xFF;
-    getDirectionRegister<Port::DataUpper>() = 0xFF;
+    setDataDirection(0xFFFF);
     getDirectionRegister<Port::AddressLowest>() = 0;
     getDirectionRegister<Port::AddressLower>() = 0;
     getDirectionRegister<Port::AddressHigher>() = 0;
     getDirectionRegister<Port::AddressHighest>() = 0;
     digitalWrite<Pin::HOLD, LOW>();
     digitalWrite<Pin::READY, HIGH>();
-
-}
-
-void
-setup() {
-    configurePins();
+    // Configure INT7 on rising edge of ADS
+    // Configure INT6 on rising edge of READY
+    // Configure INT5 on falling edge of BLAST
+    // Configure INT4 on rising edge of HLDA (the hold request is acknowledged)
+    EICRB = 0b11'11'10'11;
+    // clear the interrupt flags to be on the safe side
+    clearHLDAInterrupt();
+    clearBLASTInterrupt();
+    clearREADYInterrupt();
+    clearADSInterrupt();
     Serial.begin(115200);
     Serial1.begin(115200);
     Wire.begin();
     SPI.begin();
-    configureInterrupts();
     onboardCache.begin();
     PCLink.connect();
     (void)PCLink.getBackingStore().read();
     delay(1000);
-    //interface960.pullI960OutOfReset();
     digitalWrite<Pin::RESET, HIGH>();
 }
 [[gnu::always_inline]] inline bool isReadOperation() noexcept {
