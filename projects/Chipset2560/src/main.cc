@@ -233,44 +233,54 @@ send16BitValue(uint8_t lo, uint8_t hi) noexcept {
     signalReady();
     doNothingOperation<true>();
 }
+template<bool readOperation>
 void
-doIOReadTransaction(uint32_t address) noexcept {
-    switch (address & 0x00FFFFFF) {
+doIOTransaction(uint32_t address) noexcept {
+    switch (address & 0x00FF'FFFF) {
         case 0x0:
-            send32BitConstant(F_CPU);
+            if constexpr (readOperation) {
+                send32BitConstant(F_CPU);
+            } else {
+                doNothingOperation<readOperation>();
+            }
             break;
         case 0x4:
-            send32BitConstant(F_CPU/2);
+            if constexpr (readOperation) {
+                send32BitConstant(F_CPU/2);
+            } else {
+                doNothingOperation<readOperation>();
+            }
             break;
         case 0x8:
-            send16BitValue(Serial.read());
-            break;
-        case 0x40:
-            send32BitConstant(millis());
-            break;
-        case 0x44:
-            send32BitConstant(micros());
-            break;
-        /// @todo implement disk operations?
-        default:
-            doNothingOperation<true>();
-            break;
-    }
-}
-void
-doIOWriteTransaction(uint32_t address) noexcept {
-    switch (address & 0x00FFFFFF) {
-        case 0x8: 
-            Serial.write(lowerData());
-            doNothingOperation<false>();
+            if constexpr (readOperation) {
+                send16BitValue(Serial.read());
+            } else {
+                Serial.write(lowerData());
+                doNothingOperation<readOperation>();
+            }
             break;
         case 0xC:
-            Serial.flush();
-            doNothingOperation<false>();
+            if constexpr (!readOperation) {
+                Serial.flush();
+            }
+            doNothingOperation<readOperation>();
             break;
-        /// @todo implement disk operations eventually
+        case 0x40:
+            if constexpr (readOperation)  {
+                send32BitConstant(millis());
+            } else {
+                doNothingOperation<readOperation>();
+            }
+            break;
+        case 0x44:
+            if constexpr (readOperation) {
+                send32BitConstant(micros());
+            } else {
+                doNothingOperation<readOperation>();
+            }
+            break;
         default:
-            doNothingOperation<false>();
+            doNothingOperation<readOperation>();
             break;
     }
 }
@@ -315,7 +325,7 @@ void
 doReadTransaction(uint32_t address) noexcept {
     setDataDirection(0xFFFF);
     if (isIOOperation()) {
-        doIOReadTransaction(address);
+        doIOTransaction<true>(address);
     } else {
         doMemoryTransaction<true>(address);
     }
@@ -326,7 +336,7 @@ void
 doWriteTransaction(uint32_t address) noexcept {
     setDataDirection(0);
     if (isIOOperation()) {
-        doIOWriteTransaction(address);
+        doIOTransaction<false>(address);
     } else {
         doMemoryTransaction<false>(address);
     }
