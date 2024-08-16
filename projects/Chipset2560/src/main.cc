@@ -65,24 +65,24 @@ Deception::DirectMappedCache4K onboardCache;
 [[gnu::always_inline]] inline void clearBLASTInterrupt() noexcept { bitSet(EIFR, BLASTFLAG); }
 [[gnu::always_inline]] inline void clearHLDAInterrupt() noexcept { bitSet(EIFR, HLDAFLAG); }
 
-[[gnu::always_inline]] inline void waitForTransaction() noexcept {
+[[gnu::always_inline]] 
+inline void 
+waitForTransaction() noexcept {
     // clear the READY signal interrupt ahead of waiting for the last
     clearREADYInterrupt();
-    do{ 
-        yield();
-    } while (bit_is_clear(EIFR, ADSFLAG));
+    do{ } while (bit_is_clear(EIFR, ADSFLAG));
     clearADSInterrupt();
 }
 
 
 
-[[gnu::always_inline]] inline void signalReady() noexcept {
+[[gnu::always_inline]] 
+inline void 
+signalReady() noexcept {
     toggle<Pin::READY>();
-    do { 
-        yield();
-    } while (bit_is_clear(EIFR, READYFLAG));
+    do { } while (bit_is_clear(EIFR, READYFLAG));
     clearREADYInterrupt();
-    Serial.println(F("NEXT"));
+    //Serial.println(F("NEXT"));
 }
 bool 
 lowerByteEnabled() noexcept {
@@ -233,6 +233,7 @@ send16BitValue(uint8_t lo, uint8_t hi) noexcept {
     signalReady();
     doNothingOperation<true>();
 }
+
 template<bool readOperation>
 void
 doIOTransaction(uint32_t address) noexcept {
@@ -357,7 +358,6 @@ getAddress() noexcept {
 
 void 
 loop() {
-    //Serial.println(F("Waiting for ADS"));
     waitForTransaction();
     auto address = getAddress();
     //Serial.printf(F("address lines: 0x%lx\n"), address);
