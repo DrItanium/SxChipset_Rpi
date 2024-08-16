@@ -265,7 +265,6 @@ getDirectionRegister() noexcept {
     return getDirectionRegister(port);
 }
 [[gnu::always_inline]]
-//[[gnu::noinline]]
 inline void
 digitalWrite(Pin pin, PinState value) noexcept { 
     if (isPhysicalPin(pin)) {

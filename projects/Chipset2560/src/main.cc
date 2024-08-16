@@ -286,162 +286,39 @@ doIOWriteTransaction(uint32_t address) noexcept {
             break;
     }
 }
+template<bool readOperation>
 void
-doMemoryReadTransaction(uint32_t address) noexcept {
+doMemoryTransaction(uint32_t address) noexcept {
     auto offset = static_cast<uint8_t>(address & 0xF);
     auto& line = onboardCache.find(PCLink, address);
     auto* ptr = line.getLineData(offset);
-    {
-        setLowerData(ptr[0]);
-        setUpperData(ptr[1]);
+    if constexpr (!readOperation) {
+        line.markDirty();
     }
-    if (isLastWordOfTransaction()) {
-        clearBLASTInterrupt();
-        signalReady();
-        return;
-    }
-    signalReady();
-    {
-        setLowerData(ptr[2]);
-        setUpperData(ptr[3]);
-    }
-    if (isLastWordOfTransaction()) {
-        clearBLASTInterrupt();
-        signalReady();
-        return;
-    }
-    signalReady();
-    {
-        setLowerData(ptr[4]);
-        setUpperData(ptr[5]);
-    }
-    if (isLastWordOfTransaction()) {
-        clearBLASTInterrupt();
-        signalReady();
-        return;
-    }
-    signalReady();
-    {
-        setLowerData(ptr[6]);
-        setUpperData(ptr[7]);
-    }
-    if (isLastWordOfTransaction()) {
-        clearBLASTInterrupt();
-        signalReady();
-        return;
-    }
-    signalReady();
-    {
-        setLowerData(ptr[8]);
-        setUpperData(ptr[9]);
-    }
-    if (isLastWordOfTransaction()) {
-        clearBLASTInterrupt();
-        signalReady();
-        return;
-    }
-    signalReady();
-    {
-        setLowerData(ptr[10]);
-        setUpperData(ptr[11]);
-    }
-    if (isLastWordOfTransaction()) {
-        clearBLASTInterrupt();
-        signalReady();
-        return;
-    }
-    signalReady();
-    {
-        setLowerData(ptr[12]);
-        setUpperData(ptr[13]);
-    }
-    if (isLastWordOfTransaction()) {
-        clearBLASTInterrupt();
-        signalReady();
-        return;
-    }
-    signalReady();
-    {
-        setLowerData(ptr[14]);
-        setUpperData(ptr[15]);
-    }
-    if (isLastWordOfTransaction()) {
-        clearBLASTInterrupt();
-        signalReady();
-        return;
-    }
-    signalReady();
+#define X(base) { \
+    if constexpr (readOperation) { \
+        setLowerData(ptr[base + 0]); \
+        setUpperData(ptr[base + 1]); \
+    } else { \
+        if (lowerByteEnabled()) { ptr[base + 0] = lowerData(); } \
+        if (upperByteEnabled()) { ptr[base + 1] = upperData(); } \
+    } \
+    if (isLastWordOfTransaction()) { \
+        clearBLASTInterrupt(); \
+        signalReady(); \
+        return; \
+    } \
+    signalReady(); \
 }
-void 
-doMemoryWriteTransaction(uint32_t address) noexcept {
-    auto offset = address & 0xF;
-    auto& line = onboardCache.find(PCLink, address);
-    auto* ptr = line.getLineData(offset);
-    line.markDirty();
-    if (lowerByteEnabled()) { ptr[0] = lowerData(); }
-    if (upperByteEnabled()) { ptr[1] = upperData(); }
-    if (isLastWordOfTransaction()) {
-        clearBLASTInterrupt();
-        signalReady();
-        return;
-    }
-    signalReady();
-    if (lowerByteEnabled()) { ptr[2] = lowerData(); }
-    if (upperByteEnabled()) { ptr[3] = upperData(); }
-    if (isLastWordOfTransaction()) {
-        clearBLASTInterrupt();
-        signalReady();
-        return;
-    }
-    signalReady();
-    if (lowerByteEnabled()) { ptr[4] = lowerData(); }
-    if (upperByteEnabled()) { ptr[5] = upperData(); }
-    if (isLastWordOfTransaction()) {
-        clearBLASTInterrupt();
-        signalReady();
-        return;
-    }
-    signalReady();
-    if (lowerByteEnabled()) { ptr[6] = lowerData(); }
-    if (upperByteEnabled()) { ptr[7] = upperData(); }
-    if (isLastWordOfTransaction()) {
-        clearBLASTInterrupt();
-        signalReady();
-        return;
-    }
-    signalReady();
-    if (lowerByteEnabled()) { ptr[8] = lowerData(); }
-    if (upperByteEnabled()) { ptr[9] = upperData(); }
-    if (isLastWordOfTransaction()) {
-        clearBLASTInterrupt();
-        signalReady();
-        return;
-    }
-    signalReady();
-    if (lowerByteEnabled()) { ptr[10] = lowerData(); }
-    if (upperByteEnabled()) { ptr[11] = upperData(); }
-    if (isLastWordOfTransaction()) {
-        clearBLASTInterrupt();
-        signalReady();
-        return;
-    }
-    signalReady();
-    if (lowerByteEnabled()) { ptr[12] = lowerData(); }
-    if (upperByteEnabled()) { ptr[13] = upperData(); }
-    if (isLastWordOfTransaction()) {
-        clearBLASTInterrupt();
-        signalReady();
-        return;
-    }
-    signalReady();
-    if (lowerByteEnabled()) { ptr[14] = lowerData(); }
-    if (upperByteEnabled()) { ptr[15] = upperData(); }
-    if (isLastWordOfTransaction()) {
-        clearBLASTInterrupt();
-        signalReady();
-        return;
-    }
-    signalReady();
+    X(0);
+    X(2);
+    X(4);
+    X(6);
+    X(8);
+    X(10);
+    X(12);
+    X(14);
+#undef X
 }
 [[gnu::always_inline]] inline bool isIOOperation() noexcept {
     return getInputRegister<Port::AddressHighest>() == 0xFE;
@@ -452,7 +329,7 @@ doReadTransaction(uint32_t address) noexcept {
     if (isIOOperation()) {
         doIOReadTransaction(address);
     } else {
-        doMemoryReadTransaction(address);
+        doMemoryTransaction<true>(address);
     }
 }
 
@@ -463,7 +340,7 @@ doWriteTransaction(uint32_t address) noexcept {
     if (isIOOperation()) {
         doIOWriteTransaction(address);
     } else {
-        doMemoryWriteTransaction(address);
+        doMemoryTransaction<false>(address);
     }
 }
 
