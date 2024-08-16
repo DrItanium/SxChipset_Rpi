@@ -28,7 +28,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Deception.h>
 
 
-//#include "Detect.h"
 #include "Types.h"
 #include "Pinout.h"
 #include "Setup.h"
@@ -64,17 +63,6 @@ Deception::DirectMappedCache4K onboardCache;
 [[gnu::always_inline]] inline void clearREADYInterrupt() noexcept { bitSet(EIFR, READYFLAG); }
 [[gnu::always_inline]] inline void clearBLASTInterrupt() noexcept { bitSet(EIFR, BLASTFLAG); }
 [[gnu::always_inline]] inline void clearHLDAInterrupt() noexcept { bitSet(EIFR, HLDAFLAG); }
-
-[[gnu::always_inline]] 
-inline void 
-waitForTransaction() noexcept {
-    // clear the READY signal interrupt ahead of waiting for the last
-    clearREADYInterrupt();
-    do{ } while (bit_is_clear(EIFR, ADSFLAG));
-    clearADSInterrupt();
-}
-
-
 
 [[gnu::always_inline]] 
 inline void 
@@ -141,11 +129,25 @@ setDataValue(uint16_t value) noexcept {
     setLowerData(value);
     setUpperData(value >> 8);
 }
+
+template<uint16_t value>
 [[gnu::always_inline]]
 inline void
-setDataDirection(uint16_t value) noexcept {
+setDataDirection() noexcept {
     getDirectionRegister<Port::DataLower>() = static_cast<uint8_t>(value);
     getDirectionRegister<Port::DataUpper>() = static_cast<uint8_t>(value >> 8);
+}
+
+[[gnu::always_inline]]
+inline void
+configureDataLinesForRead() noexcept {
+    setDataDirection<0xFFFF>();
+}
+
+[[gnu::always_inline]]
+inline void
+configureDataLinesForWrite() noexcept {
+    setDataDirection<0>();
 }
 
 void
@@ -164,7 +166,7 @@ setup() {
     pinMode(Pin::FAIL, INPUT);
     pinMode(Pin::LOCK, INPUT);
     pinMode(Pin::WR, INPUT);
-    setDataDirection(0xFFFF);
+    configureDataLinesForRead();
     getDirectionRegister<Port::AddressLowest>() = 0;
     getDirectionRegister<Port::AddressLower>() = 0;
     getDirectionRegister<Port::AddressHigher>() = 0;
@@ -340,26 +342,6 @@ doMemoryTransaction(uint32_t address) noexcept {
 [[gnu::always_inline]] inline bool isIOOperation() noexcept {
     return getInputRegister<Port::AddressHighest>() == 0xFE;
 }
-void 
-doReadTransaction(uint32_t address) noexcept {
-    setDataDirection(0xFFFF);
-    if (isIOOperation()) {
-        doIOTransaction<true>(address);
-    } else {
-        doMemoryTransaction<true>(address);
-    }
-}
-
-
-void
-doWriteTransaction(uint32_t address) noexcept {
-    setDataDirection(0);
-    if (isIOOperation()) {
-        doIOTransaction<false>(address);
-    } else {
-        doMemoryTransaction<false>(address);
-    }
-}
 
 uint32_t 
 getAddress() noexcept {
@@ -376,12 +358,23 @@ getAddress() noexcept {
 
 void 
 loop() {
-    waitForTransaction();
-    auto address = getAddress();
-    //Serial.printf(F("address lines: 0x%lx\n"), address);
-    if (isReadOperation()) {
-        doReadTransaction(address);
+    // clear the READY signal interrupt ahead of waiting for the last
+    clearREADYInterrupt();
+    do{ } while (bit_is_clear(EIFR, ADSFLAG));
+    clearADSInterrupt();
+    if (auto address = getAddress(); isReadOperation()) {
+        configureDataLinesForRead();
+        if (isIOOperation()) {
+            doIOTransaction<true>(address);
+        } else {
+            doMemoryTransaction<true>(address);
+        }
     } else {
-        doWriteTransaction(address);
+        configureDataLinesForWrite();
+        if (isIOOperation()) {
+            doIOTransaction<false>(address);
+        } else {
+            doMemoryTransaction<false>(address);
+        }
     }
 }
