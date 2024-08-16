@@ -82,25 +82,39 @@ signalReady() noexcept {
     toggle<Pin::READY>();
     do { } while (bit_is_clear(EIFR, READYFLAG));
     clearREADYInterrupt();
-    //Serial.println(F("NEXT"));
 }
-bool 
+
+[[gnu::always_inline]]
+[[nodiscard]]
+inline bool 
 lowerByteEnabled() noexcept {
     return digitalRead<Pin::BE0>() == LOW;
 }
-bool 
+
+[[gnu::always_inline]]
+[[nodiscard]]
+inline bool 
 upperByteEnabled() noexcept {
     return digitalRead<Pin::BE1>() == LOW;
 }
-uint8_t 
+
+[[gnu::always_inline]]
+[[nodiscard]]
+inline uint8_t 
 lowerData() noexcept {
     return getInputRegister<Port::DataLower>();
 }
-uint8_t 
+
+[[gnu::always_inline]]
+[[nodiscard]]
+inline uint8_t 
 upperData() noexcept {
     return getInputRegister<Port::DataUpper>();
 }
-uint16_t 
+
+[[gnu::always_inline]]
+[[nodiscard]]
+inline uint16_t 
 data() noexcept {
     union {
         uint8_t bytes[sizeof(uint16_t)];
@@ -111,20 +125,24 @@ data() noexcept {
     storage.bytes[1] = upperData();
     return storage.full;
 }
-void
+[[gnu::always_inline]]
+inline void
 setUpperData(uint8_t value) noexcept {
     getOutputRegister<Port::DataUpper>() = value;
 }
-void
+[[gnu::always_inline]]
+inline void
 setLowerData(uint8_t value) noexcept {
     getOutputRegister<Port::DataLower>() = value;
 }
-void
+[[gnu::always_inline]]
+inline void
 setDataValue(uint16_t value) noexcept {
     setLowerData(value);
     setUpperData(value >> 8);
 }
-void
+[[gnu::always_inline]]
+inline void
 setDataDirection(uint16_t value) noexcept {
     getDirectionRegister<Port::DataLower>() = static_cast<uint8_t>(value);
     getDirectionRegister<Port::DataUpper>() = static_cast<uint8_t>(value >> 8);
