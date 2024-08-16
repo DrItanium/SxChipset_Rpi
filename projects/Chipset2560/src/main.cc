@@ -32,6 +32,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Pinout.h"
 #include "Setup.h"
 
+union [[gnu::packed]] SplitWord32 {
+    uint8_t cacheOffset : 4;
+    uint8_t bytes[sizeof(uint32_t) / sizeof(uint8_t)];
+    uint16_t halves[sizeof(uint32_t) / sizeof(uint16_t)];
+    __uint24 lo24;
+    uint32_t full;
+    constexpr bool isIOOperation() const noexcept { return bytes[3] == 0xFE; }
+};
+static_assert(sizeof(SplitWord32) == sizeof(uint32_t));
 Deception::HardwareSerialBackingStore PCLink(Serial1);
 Deception::DirectMappedCache4K onboardCache;
 // With the way that the 2560 and CH351s are connected to the i960, I have to
@@ -256,8 +265,8 @@ send16BitValue(uint8_t lo, uint8_t hi) noexcept {
 
 template<bool readOperation>
 void
-doIOTransaction(uint32_t address) noexcept {
-    switch (address & 0x00FF'FFFF) {
+doIOTransaction(SplitWord32 address) noexcept {
+    switch (address.lo24) {
         case 0x0:
             if constexpr (readOperation) {
                 send32BitConstant(F_CPU);
@@ -307,9 +316,9 @@ doIOTransaction(uint32_t address) noexcept {
 }
 template<bool readOperation>
 void
-doMemoryTransaction(uint32_t address) noexcept {
-    auto offset = static_cast<uint8_t>(address & 0xF);
-    auto& line = onboardCache.find(PCLink, address);
+doMemoryTransaction(SplitWord32 address) noexcept {
+    auto offset = address.cacheOffset;
+    auto& line = onboardCache.find(PCLink, address.full);
     auto* ptr = line.getLineData(offset);
     if constexpr (!readOperation) {
         line.markDirty();
@@ -339,21 +348,14 @@ doMemoryTransaction(uint32_t address) noexcept {
     X(14);
 #undef X
 }
-[[gnu::always_inline]] inline bool isIOOperation() noexcept {
-    return getInputRegister<Port::AddressHighest>() == 0xFE;
-}
-
-uint32_t 
+SplitWord32
 getAddress() noexcept {
-    union {
-        uint8_t bytes[sizeof(uint32_t)];
-        uint32_t value;
-    } storage;
+    SplitWord32 storage;
     storage.bytes[0] = getInputRegister<Port::AddressLowest>();
     storage.bytes[1] = getInputRegister<Port::AddressLower>();
     storage.bytes[2] = getInputRegister<Port::AddressHigher>();
     storage.bytes[3] = getInputRegister<Port::AddressHighest>();
-    return storage.value;
+    return storage;
 }
 
 void 
@@ -364,14 +366,14 @@ loop() {
     clearADSInterrupt();
     if (auto address = getAddress(); isReadOperation()) {
         configureDataLinesForRead();
-        if (isIOOperation()) {
+        if (address.isIOOperation()) {
             doIOTransaction<true>(address);
         } else {
             doMemoryTransaction<true>(address);
         }
     } else {
         configureDataLinesForWrite();
-        if (isIOOperation()) {
+        if (address.isIOOperation()) {
             doIOTransaction<false>(address);
         } else {
             doMemoryTransaction<false>(address);
