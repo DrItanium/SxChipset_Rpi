@@ -85,7 +85,8 @@ volatile bool sdAvailable = false;
 [[gnu::always_inline]]
 inline void 
 configureInterruptSources() noexcept {
-    EIMSK = 0;
+    EIMSK = 0x00;
+    EICRB = 0x00;
     // Configure rising edge of HLDA (the hold request is acknowledged)
     bitSet(EICRB, HLDA_ISC0);
     bitSet(EICRB, HLDA_ISC1);
@@ -98,10 +99,6 @@ configureInterruptSources() noexcept {
     bitSet(EICRB, READY_ISC0);
     bitSet(EICRB, READY_ISC1);
     clearREADYInterrupt();
-    // Configure falling edge of BLAST
-    bitClear(EICRB, BLAST_ISC0);
-    bitSet(EICRB, BLAST_ISC1);
-    clearBLASTInterrupt();
 }
 
 [[gnu::always_inline]] 
@@ -194,11 +191,7 @@ configureDataLinesForWrite() noexcept {
     return digitalRead<Pin::WR>() == LOW;
 }
 [[gnu::always_inline]] inline bool isLastWordOfTransaction() noexcept {
-#if 0
-    return bit_is_set(EIFR, BLASTFLAG);
-#else
     return digitalRead<Pin::BLAST>() == LOW;
-#endif
 }
 template<bool isReadOperation>
 void
@@ -310,19 +303,20 @@ doMemoryTransaction(SplitWord32 address) noexcept {
     if constexpr (!readOperation) {
         line.markDirty();
     }
-#if 1
 #define X(base) { \
     if constexpr (readOperation) { \
         setLowerData(ptr[base + 0]); \
         setUpperData(ptr[base + 1]); \
     } else { \
-        if (lowerByteEnabled()) { ptr[base + 0] = lowerData(); } \
-        if (upperByteEnabled()) { ptr[base + 1] = upperData(); } \
+        if (lowerByteEnabled()) ptr[base + 0] = lowerData(); \
+        if (upperByteEnabled()) ptr[base + 1] = upperData(); \
     } \
     { \
-        if (isLastWordOfTransaction()) { \
+        if constexpr (base != 14) { \
+            if (isLastWordOfTransaction()) { \
                 signalReady(); \
                 return; \
+            } \
         } \
         signalReady(); \
     } \
@@ -336,26 +330,6 @@ doMemoryTransaction(SplitWord32 address) noexcept {
     X(12);
     X(14);
 #undef X
-#else
-    for (int index = 0; index < 16; index += 2) {
-        if constexpr (readOperation) {
-            setLowerData(ptr[index + 0]);
-            setUpperData(ptr[index + 1]);
-        } else {
-            if (lowerByteEnabled()) {
-                ptr[index + 0] = lowerData();
-            }
-            if (upperByteEnabled()) {
-                ptr[index + 1] = upperData();
-            }
-        }
-        if (isLastWordOfTransaction()) {
-            signalReady();
-            return;
-        }
-        signalReady();
-    }
-#endif
 }
 SplitWord32
 getAddress() noexcept {
@@ -403,12 +377,17 @@ setup() {
 
     configureDataLinesForRead();
     getDirectionRegister<Port::AddressLowest>() = 0;
+    getOutputRegister<Port::AddressLowest>() = 0xFF;
     getDirectionRegister<Port::AddressLower>() = 0;
+    getOutputRegister<Port::AddressLower>() = 0xFF;
     getDirectionRegister<Port::AddressHigher>() = 0;
+    getOutputRegister<Port::AddressHigher>() = 0xFF;
     getDirectionRegister<Port::AddressHighest>() = 0;
+    getOutputRegister<Port::AddressHighest>() = 0xFF;
     configureInterruptSources();
     Serial.begin(115200);
     Serial1.begin(115200);
+    Serial2.begin(115200);
     Wire.begin();
     SPI.begin();
     onboardCache.begin();
@@ -428,7 +407,7 @@ loop() {
     do { } while (bit_is_clear(EIFR, ADSFLAG));
     clearADSInterrupt();
     auto address = getAddress(); 
-    //Serial.printf(F("address: 0x%lx\n"), address.full);
+    Serial2.printf(F("address: 0x%lx\n"), address.full);
     if (isReadOperation()) {
         configureDataLinesForRead();
         if (address.isIOOperation()) {
@@ -444,6 +423,5 @@ loop() {
             doMemoryTransaction<false>(address);
         }
     }
-    clearBLASTInterrupt();
 }
 
