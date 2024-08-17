@@ -386,7 +386,7 @@ setup() {
     getOutputRegister<Port::AddressHighest>() = 0xFF;
     configureInterruptSources();
     Serial.begin(115200);
-    Serial1.begin(115200);
+    Serial1.begin(250000);
     Serial2.begin(115200);
     Wire.begin();
     SPI.begin();
@@ -394,7 +394,7 @@ setup() {
     {
         digitalWrite<Pin::RCONN_OUT, LOW>();
         while (digitalRead<Pin::RCONN_IN>() == HIGH);
-        Serial.println(F("Connection Established!"));
+        Serial2.println(F("Connection Established!"));
     }
     delay(1000);
     digitalWrite<Pin::RESET, HIGH>();
@@ -406,9 +406,7 @@ loop() {
     clearREADYInterrupt();
     do { } while (bit_is_clear(EIFR, ADSFLAG));
     clearADSInterrupt();
-    auto address = getAddress(); 
-    Serial2.printf(F("address: 0x%lx\n"), address.full);
-    if (isReadOperation()) {
+    if (auto address = getAddress(); isReadOperation()) {
         configureDataLinesForRead();
         if (address.isIOOperation()) {
             doIOTransaction<true>(address);
