@@ -379,17 +379,11 @@ setup() {
     GPIOR1 = 0;
     GPIOR2 = 0;
 
-    //configureDataLinesForRead();
-    DDRC = 0xFF;
-    DDRF = 0xFF;
-    DDRA = 0;
-    DDRK = 0;
-    DDRJ = 0;
-    DDRL = 0;
-    //getDirectionRegister<Port::AddressLowest>() = 0;
-    //getDirectionRegister<Port::AddressLower>() = 0;
-    //getDirectionRegister<Port::AddressHigher>() = 0;
-    //getDirectionRegister<Port::AddressHighest>() = 0;
+    configureDataLinesForRead();
+    getDirectionRegister<Port::AddressLowest>() = 0;
+    getDirectionRegister<Port::AddressLower>() = 0;
+    getDirectionRegister<Port::AddressHigher>() = 0;
+    getDirectionRegister<Port::AddressHighest>() = 0;
     digitalWrite<Pin::HOLD, LOW>();
     digitalWrite<Pin::READY, HIGH>();
     configureInterruptSources();
@@ -414,7 +408,6 @@ loop() {
     do{ } while (bit_is_clear(EIFR, ADSFLAG));
     clearADSInterrupt();
     auto address = getAddress(); 
-    //Serial.printf(F("Address: 0x%lx\n"), address.full);
     if (isReadOperation()) {
         configureDataLinesForRead();
         if (address.isIOOperation()) {
@@ -429,8 +422,5 @@ loop() {
         } else {
             doMemoryTransaction<false>(address);
         }
-    }
-    if (digitalRead<Pin::FAIL>() == LOW) {
-        Serial.println(F("SYSTEM FAIL!"));
     }
 }
