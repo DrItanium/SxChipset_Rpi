@@ -219,11 +219,17 @@ setup() {
     GPIOR1 = 0;
     GPIOR2 = 0;
 
-    configureDataLinesForRead();
-    getDirectionRegister<Port::AddressLowest>() = 0;
-    getDirectionRegister<Port::AddressLower>() = 0;
-    getDirectionRegister<Port::AddressHigher>() = 0;
-    getDirectionRegister<Port::AddressHighest>() = 0;
+    //configureDataLinesForRead();
+    DDRC = 0xFF;
+    DDRF = 0xFF;
+    DDRA = 0;
+    DDRK = 0;
+    DDRJ = 0;
+    DDRL = 0;
+    //getDirectionRegister<Port::AddressLowest>() = 0;
+    //getDirectionRegister<Port::AddressLower>() = 0;
+    //getDirectionRegister<Port::AddressHigher>() = 0;
+    //getDirectionRegister<Port::AddressHighest>() = 0;
     digitalWrite<Pin::HOLD, LOW>();
     digitalWrite<Pin::READY, HIGH>();
     configureInterruptSources();

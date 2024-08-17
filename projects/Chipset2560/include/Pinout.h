@@ -106,8 +106,8 @@ enum class Port : byte {
 
     DataLower = C,
     DataUpper = F,
-    AddressLowest = A,
-    AddressLower = K,
+    AddressLowest = K,
+    AddressLower = A,
     AddressHigher = J,
     AddressHighest = L,
 };
