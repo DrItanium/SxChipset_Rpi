@@ -166,7 +166,7 @@ namespace Deception {
                 auto& line = lines[computeIndex(address)];
                 if (!line.matches(address)) {
                     line.replace(store, address);
-                }
+                } 
                 return line;
             }
             void begin() noexcept {
