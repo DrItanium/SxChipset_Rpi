@@ -107,30 +107,4 @@ StreamBackingStore::write(Address addr, uint8_t* storage, size_t count) noexcept
 }
 
 
-void
-StreamBackingStore::connect(int waitBetween) noexcept {
-    while (_link.available() <= 0) {
-        _link.write(MemoryCodes::InitializeSystemSetupCode);
-        delay(waitBetween);
-    }
-}
-bool
-StreamBackingStore::tryConnect(int attempts, int waitBetween) noexcept {
-    if (attempts <= 0) {
-        connect(waitBetween);
-        return true;
-    } else {
-        int numAttempts = 0;
-        while (_link.available() <= 0) {
-            if (numAttempts == attempts) {
-                return false;
-            }
-            _link.write(MemoryCodes::InitializeSystemSetupCode);
-            delay(waitBetween);
-            ++numAttempts;
-        }
-        return true;
-    }
-}
-
 } // end namespace Deception

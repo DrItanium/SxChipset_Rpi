@@ -189,60 +189,6 @@ configureDataLinesForWrite() noexcept {
     setDataDirection<0>();
 }
 
-void
-setup() {
-    pinMode(Pin::RESET, OUTPUT);
-    digitalWrite<Pin::RESET, LOW>();
-    pinMode(Pin::INT960_0, OUTPUT);
-    pinMode(Pin::INT960_1, OUTPUT);
-    pinMode(Pin::INT960_2, OUTPUT);
-    pinMode(Pin::INT960_3, OUTPUT);
-    pinMode(Pin::BE0, INPUT);
-    pinMode(Pin::BE1, INPUT);
-    pinMode(Pin::ADS, INPUT);
-    pinMode(Pin::BLAST, INPUT);
-    pinMode(Pin::HLDA, INPUT);
-    pinMode(Pin::READY_SYNC_IN, INPUT);
-    pinMode(Pin::HOLD, OUTPUT);
-    pinMode(Pin::LOCK, INPUT);
-    pinMode(Pin::FAIL, INPUT);
-    pinMode(Pin::READY, OUTPUT);
-    pinMode(Pin::WR, INPUT);
-    // deactivate interrupts
-    digitalWrite<Pin::INT960_0, HIGH>();
-    digitalWrite<Pin::INT960_1, LOW>();
-    digitalWrite<Pin::INT960_2, LOW>();
-    digitalWrite<Pin::INT960_3, HIGH>();
-    digitalWrite<Pin::HOLD, LOW>();
-    digitalWrite<Pin::READY, HIGH>();
-    GPIOR0 = 0;
-    GPIOR1 = 0;
-    GPIOR2 = 0;
-
-    //configureDataLinesForRead();
-    DDRC = 0xFF;
-    DDRF = 0xFF;
-    DDRA = 0;
-    DDRK = 0;
-    DDRJ = 0;
-    DDRL = 0;
-    //getDirectionRegister<Port::AddressLowest>() = 0;
-    //getDirectionRegister<Port::AddressLower>() = 0;
-    //getDirectionRegister<Port::AddressHigher>() = 0;
-    //getDirectionRegister<Port::AddressHighest>() = 0;
-    digitalWrite<Pin::HOLD, LOW>();
-    digitalWrite<Pin::READY, HIGH>();
-    configureInterruptSources();
-    Serial.begin(115200);
-    Serial1.begin(115200);
-    Wire.begin();
-    SPI.begin();
-    onboardCache.begin();
-    PCLink.connect();
-    (void)PCLink.getBackingStore().read();
-    delay(1000);
-    digitalWrite<Pin::RESET, HIGH>();
-}
 [[gnu::always_inline]] inline bool isReadOperation() noexcept {
     return digitalRead<Pin::WR>() == LOW;
 }
@@ -397,6 +343,67 @@ getAddress() noexcept {
     storage.bytes[2] = getInputRegister<Port::AddressHigher>();
     storage.bytes[3] = getInputRegister<Port::AddressHighest>();
     return storage;
+}
+
+void
+setup() {
+
+    pinMode(Pin::RCONN_OUT, OUTPUT);
+    digitalWrite<Pin::RCONN_OUT, HIGH>();
+    pinMode(Pin::RESET, OUTPUT);
+    digitalWrite<Pin::RESET, LOW>();
+    pinMode(Pin::INT960_0, OUTPUT);
+    pinMode(Pin::INT960_1, OUTPUT);
+    pinMode(Pin::INT960_2, OUTPUT);
+    pinMode(Pin::INT960_3, OUTPUT);
+    pinMode(Pin::BE0, INPUT);
+    pinMode(Pin::BE1, INPUT);
+    pinMode(Pin::ADS, INPUT);
+    pinMode(Pin::BLAST, INPUT);
+    pinMode(Pin::HLDA, INPUT);
+    pinMode(Pin::READY_SYNC_IN, INPUT);
+    pinMode(Pin::HOLD, OUTPUT);
+    pinMode(Pin::LOCK, INPUT);
+    pinMode(Pin::FAIL, INPUT);
+    pinMode(Pin::READY, OUTPUT);
+    pinMode(Pin::WR, INPUT);
+    pinMode(Pin::RCONN_IN, INPUT);
+    // deactivate interrupts
+    digitalWrite<Pin::INT960_0, HIGH>();
+    digitalWrite<Pin::INT960_1, LOW>();
+    digitalWrite<Pin::INT960_2, LOW>();
+    digitalWrite<Pin::INT960_3, HIGH>();
+    digitalWrite<Pin::HOLD, LOW>();
+    digitalWrite<Pin::READY, HIGH>();
+    GPIOR0 = 0;
+    GPIOR1 = 0;
+    GPIOR2 = 0;
+
+    //configureDataLinesForRead();
+    DDRC = 0xFF;
+    DDRF = 0xFF;
+    DDRA = 0;
+    DDRK = 0;
+    DDRJ = 0;
+    DDRL = 0;
+    //getDirectionRegister<Port::AddressLowest>() = 0;
+    //getDirectionRegister<Port::AddressLower>() = 0;
+    //getDirectionRegister<Port::AddressHigher>() = 0;
+    //getDirectionRegister<Port::AddressHighest>() = 0;
+    digitalWrite<Pin::HOLD, LOW>();
+    digitalWrite<Pin::READY, HIGH>();
+    configureInterruptSources();
+    Serial.begin(115200);
+    Serial1.begin(115200);
+    Wire.begin();
+    SPI.begin();
+    onboardCache.begin();
+    digitalWrite<Pin::RCONN_OUT, LOW>();
+    while (digitalRead<Pin::RCONN_IN>() == HIGH) {
+        delay (10);
+    }
+    delay(1000);
+    digitalWrite<Pin::RESET, HIGH>();
 }
 
 void 

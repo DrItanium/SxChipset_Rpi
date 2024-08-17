@@ -36,8 +36,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define CACHE_MEMORY_SECTION DMAMEM
 #define MEMORY_POOL_SECTION EXTMEM
-constexpr auto ClearCurrentSystem = 31;
-constexpr auto Reset2560_Pin = 33;
+constexpr auto Connection2560_Up = 36;
+constexpr auto TeensyUp_Pin = 31;
 using Address = uint32_t;
 using RawCacheLineData = uint8_t*;
 constexpr unsigned long long int operator ""_KB(unsigned long long int value) noexcept {
@@ -101,11 +101,12 @@ setupSDCard() {
     }
 }
 void setupServers();
+void stateChange2560();
 void
 setupHardware() {
-    pinMode(Reset2560_Pin, OUTPUT);
-    pinMode(ClearCurrentSystem, INPUT);
-    digitalWrite(Reset2560_Pin, HIGH);
+    pinMode(TeensyUp_Pin, OUTPUT);
+    pinMode(Connection2560_Up, INPUT_PULLUP);
+    digitalWrite(TeensyUp_Pin, HIGH);
 #define X(item, baud, wait) item . begin (baud ) ; \
     if constexpr (wait) { \
         while (! item ) { \
@@ -121,6 +122,7 @@ setupHardware() {
     setupSDCard();
     // servers should be setup last to prevent race conditions
     setupServers();
+    digitalWrite(TeensyUp_Pin, LOW);
 }
 void 
 setup() {
@@ -143,19 +145,18 @@ class HardwareSerialServer {
         auto& getBackingStore() noexcept { return _link; }
         void begin(uint32_t baud) noexcept { 
             _link.begin(baud); 
-            Serial.println("Server Link Up!");
-            Serial.println("Waiting for first contact!");
+
         }
         void handleReadRequest(const Packet& packet) noexcept {
-            Serial.print("READ REQUEST 0x");
-            Serial.println(packet.address, HEX);
+            //Serial.print("READ REQUEST 0x");
+            //Serial.println(packet.address, HEX);
             for (uint32_t a = packet.address, i = 0; i < packet.size; ++i, ++a) {
                 _link.write(a < 0x0100'0000 ? memory960[a] : 0);
             }
         }
         void handleWriteRequest(const Packet& packet) noexcept {
-            Serial.print("WRITE REQUEST 0x");
-            Serial.println(packet.address, HEX);
+            //Serial.print("WRITE REQUEST 0x");
+            //Serial.println(packet.address, HEX);
             for (uint32_t a = packet.address, i = 0; i < packet.size; ++i, ++a) {
                 if (a < 0x0100'0000) {
                     memory960[a] = packet.data[i];
@@ -164,9 +165,9 @@ class HardwareSerialServer {
         }
         void processPacket() noexcept {
             Packet& packet = *reinterpret_cast<Packet*>(_data);
-            Serial.println("PROCESSING PACKET");
-            Serial.print("\tTYPECODE: 0x");
-            Serial.println(packet.typeCode, HEX);
+            //Serial.println("PROCESSING PACKET");
+            //Serial.print("\tTYPECODE: 0x");
+            //Serial.println(packet.typeCode, HEX);
 
             switch (packet.typeCode) {
                 case Deception::MemoryCodes::ReadMemoryCode:
@@ -180,45 +181,38 @@ class HardwareSerialServer {
             }
         }
         void handleFirstContact() noexcept {
-            _firstContact = true;
             _link.write(Deception::MemoryCodes::InitializeSystemSetupCode);
             _serialCapacity = 0;
             _serialCount = 0;
         }
         void processEvent() noexcept {
-            if (auto inByte = _link.read(); !_firstContact) {
-                if (inByte == Deception::MemoryCodes::InitializeSystemSetupCode) {
-                    handleFirstContact();
-                }
-            } else {
-                if (_serialCapacity == 0) {
-                    switch (inByte) {
-                        case Deception::MemoryCodes::BeginInstructionCode:
-                            _serialCapacity = -1;
-                            _serialCount = 0;
-                            break;
-                        case Deception::MemoryCodes::InitializeSystemSetupCode:
-                            handleFirstContact();
-                            break;
-                        default:
-                            break;
-                    }
-                } else if (_serialCapacity == -1) {
-                    _serialCapacity = inByte;
-                } else {
-                   _data[_serialCount] = inByte;
-                   ++_serialCount;
-                   if (_serialCount == _serialCapacity) {
-                        processPacket();
-                        _serialCapacity = 0;
+            auto inByte = _link.read();
+            if (_serialCapacity == 0) {
+                switch (inByte) {
+                    case Deception::MemoryCodes::BeginInstructionCode:
+                        _serialCapacity = -1;
                         _serialCount = 0;
-                   }
+                        break;
+                    case Deception::MemoryCodes::InitializeSystemSetupCode:
+                        handleFirstContact();
+                        break;
+                    default:
+                        break;
+                }
+            } else if (_serialCapacity == -1) {
+                _serialCapacity = inByte;
+            } else {
+                _data[_serialCount] = inByte;
+                ++_serialCount;
+                if (_serialCount == _serialCapacity) {
+                    processPacket();
+                    _serialCapacity = 0;
+                    _serialCount = 0;
                 }
             }
         }
     private:
         HardwareSerial& _link;
-        bool _firstContact = false;
         int _serialCapacity = 0;
         int _serialCount = 0;
         uint8_t _data[256] = { 0 };

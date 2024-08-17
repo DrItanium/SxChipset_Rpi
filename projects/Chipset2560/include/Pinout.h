@@ -71,10 +71,11 @@ Count = NUM_DIGITAL_PINS,
 
     // SCL = PortD0,
     // SDA = PortD1,
-    RXD1 = PortD2,
-    TXD1 = PortD3,
+    //RXD1 = PortD2,
+    //TXD1 = PortD3,
+    RCONN_OUT = PortD6,
+    RCONN_IN = PortD7,
     
-
 
     //RXD0 = PortE0,
     //TXD0 = PortE1,

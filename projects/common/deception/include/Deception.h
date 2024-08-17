@@ -75,8 +75,6 @@ namespace Deception {
             size_t read(Address addr, uint8_t* storage, size_t count) noexcept override;
             size_t write(Address addr, uint8_t* storage, size_t count) noexcept override;
             auto& getBackingStore() noexcept { return _link; }
-            void connect(int waitBetween = 300) noexcept;
-            bool tryConnect(int attempts, int waitBetween = 300) noexcept;
         private:
             Stream& _link;
     };
