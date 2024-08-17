@@ -37,7 +37,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define CACHE_MEMORY_SECTION DMAMEM
 #define MEMORY_POOL_SECTION EXTMEM
 constexpr auto Connection2560_Up = 36;
-constexpr auto TeensyUp_Pin = 31;
+constexpr auto TeensyUp_Pin = 33;
 using Address = uint32_t;
 using RawCacheLineData = uint8_t*;
 constexpr unsigned long long int operator ""_KB(unsigned long long int value) noexcept {
@@ -105,7 +105,7 @@ void stateChange2560();
 void
 setupHardware() {
     pinMode(TeensyUp_Pin, OUTPUT);
-    pinMode(Connection2560_Up, INPUT_PULLUP);
+    pinMode(Connection2560_Up, INPUT);
     digitalWrite(TeensyUp_Pin, HIGH);
 #define X(item, baud, wait) item . begin (baud ) ; \
     if constexpr (wait) { \
@@ -113,7 +113,7 @@ setupHardware() {
             delay(10) ; \
         } \
     }
-    X(Serial, 9600, true);
+    X(Serial, 9600, false);
 #undef X
     setupMemoryPool();
     setupCaches();
@@ -122,7 +122,10 @@ setupHardware() {
     setupSDCard();
     // servers should be setup last to prevent race conditions
     setupServers();
+    Serial.println("Waiting For 2560 to come up");
+    while (digitalRead(Connection2560_Up) == HIGH);
     digitalWrite(TeensyUp_Pin, LOW);
+    Serial.println("Booted!");
 }
 void 
 setup() {

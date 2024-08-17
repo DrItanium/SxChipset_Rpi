@@ -398,9 +398,10 @@ setup() {
     Wire.begin();
     SPI.begin();
     onboardCache.begin();
-    digitalWrite<Pin::RCONN_OUT, LOW>();
-    while (digitalRead<Pin::RCONN_IN>() == HIGH) {
-        delay (10);
+    {
+        digitalWrite<Pin::RCONN_OUT, LOW>();
+        while (digitalRead<Pin::RCONN_IN>() == HIGH);
+        Serial.println(F("Connection Established!"));
     }
     delay(1000);
     digitalWrite<Pin::RESET, HIGH>();
@@ -413,7 +414,7 @@ loop() {
     do{ } while (bit_is_clear(EIFR, ADSFLAG));
     clearADSInterrupt();
     auto address = getAddress(); 
-    Serial.printf(F("Address: 0x%lx\n"), address.full);
+    //Serial.printf(F("Address: 0x%lx\n"), address.full);
     if (isReadOperation()) {
         configureDataLinesForRead();
         if (address.isIOOperation()) {
@@ -428,5 +429,8 @@ loop() {
         } else {
             doMemoryTransaction<false>(address);
         }
+    }
+    if (digitalRead<Pin::FAIL>() == LOW) {
+        Serial.println(F("SYSTEM FAIL!"));
     }
 }
