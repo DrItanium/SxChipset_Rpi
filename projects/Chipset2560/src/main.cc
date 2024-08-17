@@ -193,18 +193,29 @@ void
 setup() {
     pinMode(Pin::RESET, OUTPUT);
     digitalWrite<Pin::RESET, LOW>();
-    pinMode(Pin::HOLD , OUTPUT);
-    pinMode(Pin::READY, OUTPUT);
-    pinMode(Pin::ADS, INPUT);
-    pinMode(Pin::READY_SYNC_IN, INPUT);
-    pinMode(Pin::BLAST, INPUT);
-    pinMode(Pin::HLDA, INPUT);
-    pinMode(Pin::READY, OUTPUT);
+    pinMode(Pin::INT960_0, OUTPUT);
+    pinMode(Pin::INT960_1, OUTPUT);
+    pinMode(Pin::INT960_2, OUTPUT);
+    pinMode(Pin::INT960_3, OUTPUT);
     pinMode(Pin::BE0, INPUT);
     pinMode(Pin::BE1, INPUT);
-    pinMode(Pin::FAIL, INPUT);
+    pinMode(Pin::ADS, INPUT);
+    pinMode(Pin::BLAST, INPUT);
+    pinMode(Pin::HLDA, INPUT);
+    pinMode(Pin::READY_SYNC_IN, INPUT);
+    pinMode(Pin::HOLD, OUTPUT);
     pinMode(Pin::LOCK, INPUT);
+    pinMode(Pin::FAIL, INPUT);
+    pinMode(Pin::READY, OUTPUT);
     pinMode(Pin::WR, INPUT);
+    // deactivate interrupts
+    digitalWrite<Pin::INT960_0, HIGH>();
+    digitalWrite<Pin::INT960_1, LOW>();
+    digitalWrite<Pin::INT960_2, LOW>();
+    digitalWrite<Pin::INT960_3, HIGH>();
+    digitalWrite<Pin::HOLD, LOW>();
+    digitalWrite<Pin::READY, HIGH>();
+
     configureDataLinesForRead();
     getDirectionRegister<Port::AddressLowest>() = 0;
     getDirectionRegister<Port::AddressLower>() = 0;
