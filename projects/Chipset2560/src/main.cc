@@ -215,6 +215,9 @@ setup() {
     digitalWrite<Pin::INT960_3, HIGH>();
     digitalWrite<Pin::HOLD, LOW>();
     digitalWrite<Pin::READY, HIGH>();
+    GPIOR0 = 0;
+    GPIOR1 = 0;
+    GPIOR2 = 0;
 
     configureDataLinesForRead();
     getDirectionRegister<Port::AddressLowest>() = 0;
@@ -396,7 +399,9 @@ loop() {
     clearREADYInterrupt();
     do{ } while (bit_is_clear(EIFR, ADSFLAG));
     clearADSInterrupt();
-    if (auto address = getAddress(); isReadOperation()) {
+    auto address = getAddress(); 
+    Serial.printf(F("Address: 0x%lx\n"), address.full);
+    if (isReadOperation()) {
         configureDataLinesForRead();
         if (address.isIOOperation()) {
             doIOTransaction<true>(address);
