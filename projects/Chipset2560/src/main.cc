@@ -66,14 +66,42 @@ volatile bool sdAvailable = false;
 // serial device that we cache on chip (eventually over the EBI as well to
 // increase the availability of data as well)
 
-#define ADSFLAG INTF7
-#define READYFLAG INTF6
+#define ADSFLAG INTF4
+#define ADS_ISC0 ISC40
+#define ADS_ISC1 ISC41
 #define BLASTFLAG INTF5
-#define HLDAFLAG INTF4
+#define BLAST_ISC0 ISC50
+#define BLAST_ISC1 ISC51
+#define HLDAFLAG INTF6
+#define HLDA_ISC0 ISC60
+#define HLDA_ISC1 ISC61
+#define READYFLAG INTF7
+#define READY_ISC0 ISC70
+#define READY_ISC1 ISC71
 [[gnu::always_inline]] inline void clearADSInterrupt() noexcept { bitSet(EIFR, ADSFLAG); }
 [[gnu::always_inline]] inline void clearREADYInterrupt() noexcept { bitSet(EIFR, READYFLAG); }
 [[gnu::always_inline]] inline void clearBLASTInterrupt() noexcept { bitSet(EIFR, BLASTFLAG); }
 [[gnu::always_inline]] inline void clearHLDAInterrupt() noexcept { bitSet(EIFR, HLDAFLAG); }
+[[gnu::always_inline]]
+inline void 
+configureInterruptSources() noexcept {
+    // Configure rising edge of HLDA (the hold request is acknowledged)
+    bitSet(EICRB, HLDA_ISC0);
+    bitSet(EICRB, HLDA_ISC1);
+    clearHLDAInterrupt();
+    // Configure rising edge of ADS
+    bitSet(EICRB, ADS_ISC0);
+    bitSet(EICRB, ADS_ISC1);
+    clearADSInterrupt();
+    // Configure rising edge of READY
+    bitSet(EICRB, READY_ISC0);
+    bitSet(EICRB, READY_ISC1);
+    clearREADYInterrupt();
+    // Configure falling edge of BLAST
+    bitClear(EICRB, BLAST_ISC0);
+    bitSet(EICRB, BLAST_ISC1);
+    clearBLASTInterrupt();
+}
 
 [[gnu::always_inline]] 
 inline void 
@@ -184,16 +212,7 @@ setup() {
     getDirectionRegister<Port::AddressHighest>() = 0;
     digitalWrite<Pin::HOLD, LOW>();
     digitalWrite<Pin::READY, HIGH>();
-    // Configure INT7 on rising edge of ADS
-    // Configure INT6 on rising edge of READY
-    // Configure INT5 on falling edge of BLAST
-    // Configure INT4 on rising edge of HLDA (the hold request is acknowledged)
-    EICRB = 0b11'11'10'11;
-    // clear the interrupt flags to be on the safe side
-    clearHLDAInterrupt();
-    clearBLASTInterrupt();
-    clearREADYInterrupt();
-    clearADSInterrupt();
+    configureInterruptSources();
     Serial.begin(115200);
     Serial1.begin(115200);
     Wire.begin();

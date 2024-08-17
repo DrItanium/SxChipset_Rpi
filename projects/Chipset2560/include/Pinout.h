@@ -64,6 +64,10 @@ Count = NUM_DIGITAL_PINS,
     // SCK = PortB1,
     // MOSI = PortB2,
     // MISO = PortB3,
+    INT960_0 = PortB4,
+    INT960_1 = PortB5,
+    INT960_2 = PortB6,
+    INT960_3 = PortB7,
 
     // SCL = PortD0,
     // SDA = PortD1,
@@ -72,25 +76,25 @@ Count = NUM_DIGITAL_PINS,
     
 
 
-    RXD0 = PortE0,
-    TXD0 = PortE1,
+    //RXD0 = PortE0,
+    //TXD0 = PortE1,
     BE0 = PortE2,
     BE1 = PortE3,
-    HLDA = PortE4,
+    ADS = PortE4,
     BLAST = PortE5,
-    READY_SYNC_IN = PortE6,
-    ADS = PortE7,
+    HLDA = PortE6,
+    READY_SYNC_IN = PortE7,
 
 
-    FAIL = PortG0,
+    HOLD = PortG0,
     LOCK = PortG1,
-    HOLD = PortG2,
-    WR = PortG3,
+    RESET = PortG2,
+    FAIL = PortG3,
     READY = PortG4,
-    RESET = PortG5,
+    WR = PortG5,
 
-    RXD2 = PortH0,
-    TXD2 = PortH1,
+    //RXD2 = PortH0,
+    //TXD2 = PortH1,
 
 };
 enum class Port : byte {
@@ -100,12 +104,12 @@ enum class Port : byte {
 #undef X
     None,
 
-    DataUpper = F,
     DataLower = C,
-    AddressHighest = L,
-    AddressHigher = J,
-    AddressLower = K,
+    DataUpper = F,
     AddressLowest = A,
+    AddressLower = K,
+    AddressHigher = J,
+    AddressHighest = L,
 };
 constexpr auto numberOfAvailablePins() noexcept {
     return 0 
