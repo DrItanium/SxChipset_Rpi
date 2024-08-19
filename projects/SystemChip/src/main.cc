@@ -223,7 +223,7 @@ class HardwareSerialServer {
 HardwareSerialServer link0(Serial8);
 void 
 setupServers() {
-    link0.begin(250000);
+    link0.begin(9600);
 }
 void 
 serialEvent8() {

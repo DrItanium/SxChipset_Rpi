@@ -364,6 +364,7 @@ setup() {
     pinMode(Pin::READY, OUTPUT);
     pinMode(Pin::WR, INPUT);
     pinMode(Pin::RCONN_IN, INPUT);
+    pinMode(Pin::EXT_SPI_CS, OUTPUT);
     // deactivate interrupts
     digitalWrite<Pin::INT960_0, HIGH>();
     digitalWrite<Pin::INT960_1, LOW>();
@@ -371,6 +372,7 @@ setup() {
     digitalWrite<Pin::INT960_3, HIGH>();
     digitalWrite<Pin::HOLD, LOW>();
     digitalWrite<Pin::READY, HIGH>();
+    digitalWrite<Pin::EXT_SPI_CS, HIGH>();
     GPIOR0 = 0;
     GPIOR1 = 0;
     GPIOR2 = 0;
@@ -386,15 +388,15 @@ setup() {
     getOutputRegister<Port::AddressHighest>() = 0xFF;
     configureInterruptSources();
     Serial.begin(115200);
-    Serial1.begin(250000);
-    Serial2.begin(115200);
+    Serial1.begin(9600);
+    Serial1.setTimeout(10'000);
     Wire.begin();
     SPI.begin();
     onboardCache.begin();
     {
         digitalWrite<Pin::RCONN_OUT, LOW>();
         while (digitalRead<Pin::RCONN_IN>() == HIGH);
-        Serial2.println(F("Connection Established!"));
+        Serial.println(F("CONNECTION ESTABLISHED"));
     }
     delay(1000);
     digitalWrite<Pin::RESET, HIGH>();
@@ -406,19 +408,21 @@ loop() {
     clearREADYInterrupt();
     do { } while (bit_is_clear(EIFR, ADSFLAG));
     clearADSInterrupt();
-    if (auto address = getAddress(); isReadOperation()) {
-        configureDataLinesForRead();
-        if (address.isIOOperation()) {
-            doIOTransaction<true>(address);
+    {
+        if (auto address = getAddress(); isReadOperation()) {
+            configureDataLinesForRead();
+            if (address.isIOOperation()) {
+                doIOTransaction<true>(address);
+            } else {
+                doMemoryTransaction<true>(address);
+            }
         } else {
-            doMemoryTransaction<true>(address);
-        }
-    } else {
-        configureDataLinesForWrite();
-        if (address.isIOOperation()) {
-            doIOTransaction<false>(address);
-        } else {
-            doMemoryTransaction<false>(address);
+            configureDataLinesForWrite();
+            if (address.isIOOperation()) {
+                doIOTransaction<false>(address);
+            } else {
+                doMemoryTransaction<false>(address);
+            }
         }
     }
 }
