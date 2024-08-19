@@ -192,6 +192,46 @@ namespace Deception {
             bool _dirty = false;
             BackingStore* _backingStore = nullptr;
     };
+    /**
+     * @brief A simple 32-byte cache line
+     */
+    class CacheLine32 {
+        public:
+            static constexpr uint8_t NumBytes = 32;
+            static constexpr auto ShiftAmount = 5;
+            static_assert(isPowerOfTwo(NumBytes), "Cache Line size must be a power of two");
+            static constexpr Address AddressMask = 0xFFFFFFE0;
+            static constexpr Address normalizeAddress(Address input) noexcept {
+                return input & AddressMask;
+            }
+            static constexpr uint8_t computeByteOffset(uint8_t input) noexcept {
+                return input & 0x1F;
+            }
+            constexpr bool dirty() const noexcept { return _dirty; }
+            constexpr bool valid() const noexcept { return _backingStore != nullptr; }
+            constexpr bool matches(Address other) const noexcept {
+                return valid() && (_key == normalizeAddress(other));
+            }
+            void sync() noexcept;
+            void replace(BackingStore& store, Address newAddress) noexcept;
+            void setByte(uint8_t offset, uint8_t value) noexcept;
+            constexpr uint8_t getByte(uint8_t offset) const noexcept {
+                return _bytes[computeByteOffset(offset)];
+            }
+            /**
+             * @brief Clear the contents of the line without syncing or anything like that
+             */
+            void clear() noexcept;
+            uint8_t* getLineData(uint8_t offset = 0) noexcept {
+                return &_bytes[offset];
+            }
+            void markDirty() noexcept;
+        private:
+            uint8_t _bytes[NumBytes] = { 0 };
+            uint32_t _key = 0;
+            bool _dirty = false;
+            BackingStore* _backingStore = nullptr;
+    };
     template<uint16_t C, typename L>
     class DirectMappedCache {
         public:
@@ -228,9 +268,12 @@ namespace Deception {
     };
     template<uint16_t C>
     using DirectMappedCache_CacheLine16 = DirectMappedCache<C, CacheLine16>;
-    using DirectMappedCache4K = DirectMappedCache_CacheLine16<256>; 
-    static_assert(DirectMappedCache4K::computeIndex(0xFFFF'FFFF) == 0xFF);
-    static_assert(DirectMappedCache4K::computeIndex(0xFFFF'FFDF) == 0xFD);
+    using DirectMappedCache4K_CacheLine16 = DirectMappedCache_CacheLine16<256>; 
+    template<uint16_t C>
+    using DirectMappedCache_CacheLine32 = DirectMappedCache<C, CacheLine32>;
+    using DirectMappedCache4K_CacheLine32 = DirectMappedCache_CacheLine32<128>;
+    static_assert(DirectMappedCache4K_CacheLine16::computeIndex(0xFFFF'FFFF) == 0xFF);
+    static_assert(DirectMappedCache4K_CacheLine16::computeIndex(0xFFFF'FFDF) == 0xFD);
 
 } // end namespace Deception
 #endif // end DECEPTION_H__
