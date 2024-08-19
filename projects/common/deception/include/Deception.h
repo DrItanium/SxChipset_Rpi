@@ -274,6 +274,7 @@ namespace Deception {
     using DirectMappedCache4K_CacheLine32 = DirectMappedCache_CacheLine32<128>;
     static_assert(DirectMappedCache4K_CacheLine16::computeIndex(0xFFFF'FFFF) == 0xFF);
     static_assert(DirectMappedCache4K_CacheLine16::computeIndex(0xFFFF'FFDF) == 0xFD);
+    static_assert(DirectMappedCache4K_CacheLine32::computeIndex(0xFFFF'FFFF) == 0x7F);
 
 } // end namespace Deception
 #endif // end DECEPTION_H__
