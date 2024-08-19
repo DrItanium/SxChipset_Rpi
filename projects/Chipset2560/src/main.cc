@@ -42,7 +42,8 @@ union [[gnu::packed]] SplitWord32 {
 };
 static_assert(sizeof(SplitWord32) == sizeof(uint32_t));
 Deception::HardwareSerialBackingStore PCLink(Serial1);
-Deception::DirectMappedCache4K_CacheLine16 onboardCache;
+//Deception::DirectMappedCache4K_CacheLine16 onboardCache;
+Deception::DirectMappedCache4K_CacheLine32 onboardCache;
 volatile bool sdAvailable = false;
 // With the way that the 2560 and CH351s are connected to the i960, I have to
 // transfer data through the 2560 to the i960. This is due to the fact that the
