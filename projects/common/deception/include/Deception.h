@@ -162,7 +162,6 @@ namespace Deception {
                     line.clear();
                 }
             }
-            [[gnu::used]]
             Line_t& find(BackingStore& store, Address address) noexcept {
                 auto& line = lines[computeIndex(address)];
                 if (!line.matches(address)) {
