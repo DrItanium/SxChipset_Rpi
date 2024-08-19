@@ -28,6 +28,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Arduino.h>
 namespace Deception {
     using Address = uint32_t;
+    constexpr uint32_t PCLinkSpeed = 9600;
     namespace MemoryCodes {
         constexpr uint8_t ReadMemoryCode = 0xF0;
         constexpr uint8_t WriteMemoryCode = 0xF1;

@@ -215,7 +215,7 @@ class HardwareSerialServer {
 HardwareSerialServer link0(Serial8);
 void 
 setupServers() {
-    link0.begin(9600);
+    link0.begin(Deception::PCLinkSpeed);
 }
 void 
 serialEvent8() {

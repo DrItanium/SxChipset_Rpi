@@ -411,7 +411,7 @@ setup() {
     configureDataLinesForRead();
     configureInterruptSources();
     Serial.begin(115200);
-    Serial1.begin(9600);
+    Serial1.begin(Deception::PCLinkSpeed);
     Wire.begin();
     SPI.begin();
     onboardCache.begin();
