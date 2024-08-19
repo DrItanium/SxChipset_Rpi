@@ -192,39 +192,77 @@ namespace Deception {
             bool _dirty = false;
             BackingStore* _backingStore = nullptr;
     };
-    template<uint16_t C, typename L>
+    template<uint16_t C, typename L, uint8_t VC = 8>
     class DirectMappedCache {
         public:
             static_assert(C > 0, "Must have at least one cache line!");
             static_assert(isPowerOfTwo(C), "The given line size is not a power of two!");
+            static_assert(VC > 0, "Must have at least one victim cache line!");
             static constexpr auto NumLines = C;
             static constexpr auto LineMask = NumLines - 1;
+            static constexpr auto VictimCacheSize = VC;
             using Line_t = L;
             static constexpr uint8_t computeIndex(Address input) noexcept {
                 return (input >> Line_t::ShiftAmount) & LineMask;
             }
             void clear() noexcept {
-                for (auto& line : lines) {
-                    line.clear();
+                for (auto line : lines) {
+                    line->clear();
+                }
+                for (auto line : victims) {
+                    line->clear();
                 }
             }
             Line_t& find(BackingStore& store, Address address) noexcept {
-                auto& line = lines[computeIndex(address)];
-                if (!line.matches(address)) {
-                    line.replace(store, address);
+                auto index = computeIndex(address);
+                if (!lines[index]->matches(address)) {
+                    // do a lookup in the victim cache
+                    for (uint8_t i = 0; i < VC; ++i ) {
+                        if (victims[i]->matches(address)) {
+                            auto* newIndex = victims[i];
+                            auto* oldIndex = lines[index];
+                            lines[index] = newIndex;
+                            victims[i] = oldIndex;
+                            if (i == victimIndex) {
+                                ++victimIndex;
+                                victimIndex %= VC;
+                            }
+                            return *lines[index];
+                        }
+                    }
+                    // no match so do a swap with the current index
+                    auto* newIndex = victims[victimIndex];
+                    auto* oldIndex = lines[index];
+                    lines[index] = newIndex;
+                    lines[index]->replace(store, address);
+                    // swap complete
+                    victims[victimIndex] = oldIndex;
+                    ++victimIndex;
+                    victimIndex %= VC;
                 } 
-                return line;
+                return *lines[index];
             }
             void begin() noexcept {
+                for (uint16_t i = 0; i < NumLines; ++i) {
+                    lines[i] = new L();
+                }
+                for (uint16_t i = 0; i < VC; ++i) {
+                    victims[i] = new L();
+                }
                 clear();
             }
             void sync() noexcept {
                 for (auto& line : lines) {
-                    line.sync();
+                    line->sync();
+                }
+                for (auto& line : victims) {
+                    line->sync();
                 }
             }
         private:
-            Line_t lines[NumLines];
+            uint8_t victimIndex = 0;
+            Line_t* lines[NumLines];
+            Line_t* victims[VC];
     };
     template<uint16_t C>
     using DirectMappedCache_CacheLine16 = DirectMappedCache<C, CacheLine16>;
