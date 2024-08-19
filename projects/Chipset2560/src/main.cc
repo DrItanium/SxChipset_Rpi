@@ -312,15 +312,13 @@ doMemoryTransaction(SplitWord32 address) noexcept {
         if (lowerByteEnabled()) ptr[base + 0] = lowerData(); \
         if (upperByteEnabled()) ptr[base + 1] = upperData(); \
     } \
-    { \
-        if constexpr (base != 14) { \
-            if (isLastWordOfTransaction()) { \
-                signalReady(); \
-                return; \
-            } \
+    if constexpr (base != 14) { \
+        if (isLastWordOfTransaction()) { \
+            signalReady(); \
+            return; \
         } \
-        signalReady(); \
     } \
+    signalReady(); \
 }
     X(0);
     X(2);

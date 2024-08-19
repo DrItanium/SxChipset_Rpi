@@ -66,6 +66,7 @@ CacheLine16::markDirty() noexcept {
 }
 
 template<typename T>
+inline
 void
 sendCommandHeader(T& link, uint8_t size, uint8_t code) noexcept {
     link.write(MemoryCodes::BeginInstructionCode);
@@ -73,6 +74,7 @@ sendCommandHeader(T& link, uint8_t size, uint8_t code) noexcept {
     link.write(code);
 }
 template<typename T>
+inline
 void
 send32BitNumber(T& link, uint32_t number) {
     link.write(reinterpret_cast<char*>(&number), sizeof(number));
