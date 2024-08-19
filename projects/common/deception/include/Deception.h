@@ -225,7 +225,9 @@ namespace Deception {
                             victims[i] = oldIndex;
                             if (i == victimIndex) {
                                 ++victimIndex;
-                                victimIndex %= VC;
+                                if (victimIndex == VC) {
+                                    victimIndex = 0;
+                                }
                             }
                             return *lines[index];
                         }
@@ -238,7 +240,9 @@ namespace Deception {
                     // swap complete
                     victims[victimIndex] = oldIndex;
                     ++victimIndex;
-                    victimIndex %= VC;
+                    if (victimIndex == VC) {
+                        victimIndex = 0;
+                    }
                 } 
                 return *lines[index];
             }
