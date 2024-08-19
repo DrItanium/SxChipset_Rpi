@@ -154,7 +154,7 @@ namespace Deception {
             static constexpr auto NumLines = C;
             static constexpr auto LineMask = NumLines - 1;
             using Line_t = L;
-            static constexpr Address computeIndex(Address input) noexcept {
+            static constexpr uint8_t computeIndex(Address input) noexcept {
                 return (input >> Line_t::ShiftAmount) & LineMask;
             }
             void clear() noexcept {
@@ -162,6 +162,7 @@ namespace Deception {
                     line.clear();
                 }
             }
+            [[gnu::used]]
             Line_t& find(BackingStore& store, Address address) noexcept {
                 auto& line = lines[computeIndex(address)];
                 if (!line.matches(address)) {

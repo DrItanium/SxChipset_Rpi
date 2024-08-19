@@ -82,24 +82,26 @@ volatile bool sdAvailable = false;
 [[gnu::always_inline]] inline void clearREADYInterrupt() noexcept { bitSet(EIFR, READYFLAG); }
 [[gnu::always_inline]] inline void clearBLASTInterrupt() noexcept { bitSet(EIFR, BLASTFLAG); }
 [[gnu::always_inline]] inline void clearHLDAInterrupt() noexcept { bitSet(EIFR, HLDAFLAG); }
-[[gnu::always_inline]]
-inline void 
+
+void 
 configureInterruptSources() noexcept {
     EIMSK = 0x00;
     EICRB = 0x00;
     // Configure rising edge of HLDA (the hold request is acknowledged)
     bitSet(EICRB, HLDA_ISC0);
     bitSet(EICRB, HLDA_ISC1);
-    clearHLDAInterrupt();
     // Configure rising edge of ADS
     bitSet(EICRB, ADS_ISC0);
     bitSet(EICRB, ADS_ISC1);
-    clearADSInterrupt();
     // Configure rising edge of READY
     bitSet(EICRB, READY_ISC0);
     bitSet(EICRB, READY_ISC1);
+
+    clearHLDAInterrupt();
+    clearADSInterrupt();
     clearREADYInterrupt();
 }
+
 
 [[gnu::always_inline]] 
 inline void 
@@ -331,6 +333,7 @@ doMemoryTransaction(SplitWord32 address) noexcept {
     X(14);
 #undef X
 }
+inline
 SplitWord32
 getAddress() noexcept {
     SplitWord32 storage;
@@ -340,10 +343,8 @@ getAddress() noexcept {
     storage.bytes[3] = getInputRegister<Port::AddressHighest>();
     return storage;
 }
-
 void
-setup() {
-
+configurePins() noexcept {
     pinMode(Pin::RCONN_OUT, OUTPUT);
     digitalWrite<Pin::RCONN_OUT, HIGH>();
     pinMode(Pin::RESET, OUTPUT);
@@ -373,11 +374,7 @@ setup() {
     digitalWrite<Pin::HOLD, LOW>();
     digitalWrite<Pin::READY, HIGH>();
     digitalWrite<Pin::EXT_SPI_CS, HIGH>();
-    GPIOR0 = 0;
-    GPIOR1 = 0;
-    GPIOR2 = 0;
 
-    configureDataLinesForRead();
     getDirectionRegister<Port::AddressLowest>() = 0;
     getOutputRegister<Port::AddressLowest>() = 0xFF;
     getDirectionRegister<Port::AddressLower>() = 0;
@@ -386,6 +383,39 @@ setup() {
     getOutputRegister<Port::AddressHigher>() = 0xFF;
     getDirectionRegister<Port::AddressHighest>() = 0;
     getOutputRegister<Port::AddressHighest>() = 0xFF;
+}
+void
+setupRandomSource() noexcept {
+    uint32_t newSeed = 0;
+#define X(pin) newSeed += static_cast<uint32_t>(analogRead(pin))
+    X(A0);
+    X(A1);
+    X(A2);
+    X(A3);
+    X(A4);
+    X(A5);
+    X(A6);
+    X(A6);
+    X(A7);
+    X(A8);
+    X(A9);
+    X(A10);
+    X(A11);
+    X(A12);
+    X(A13);
+    X(A14);
+    X(A15);
+#undef X
+    randomSeed(newSeed);
+}
+void
+setup() {
+    GPIOR0 = 0;
+    GPIOR1 = 0;
+    GPIOR2 = 0;
+    setupRandomSource();
+    configurePins();
+    configureDataLinesForRead();
     configureInterruptSources();
     Serial.begin(115200);
     Serial1.begin(9600);
@@ -398,7 +428,7 @@ setup() {
         while (digitalRead<Pin::RCONN_IN>() == HIGH);
         Serial.println(F("CONNECTION ESTABLISHED"));
     }
-    delay(1000);
+    delay(100);
     digitalWrite<Pin::RESET, HIGH>();
 }
 

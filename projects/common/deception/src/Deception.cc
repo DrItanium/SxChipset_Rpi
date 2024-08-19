@@ -92,7 +92,12 @@ readMemoryBlock(T& link, Address address, uint8_t* data, uint8_t size) noexcept 
     sendCommandHeader(link, 1 + sizeof(address) + 1, MemoryCodes::ReadMemoryCode);
     send32BitNumber(link, address);
     link.write(size);
-    link.readBytes(reinterpret_cast<char*>(data), size);
+    for (uint8_t i = 0; i < size; ) {
+        if (auto result = link.read(); result != -1) {
+            data[i] = result;
+            ++i;
+        }
+    }
 }
 
 size_t 
