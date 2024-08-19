@@ -371,13 +371,9 @@ configurePins() noexcept {
     digitalWrite<Pin::READY, HIGH>();
 
     getDirectionRegister<Port::AddressLowest>() = 0;
-    getOutputRegister<Port::AddressLowest>() = 0xFF;
     getDirectionRegister<Port::AddressLower>() = 0;
-    getOutputRegister<Port::AddressLower>() = 0xFF;
     getDirectionRegister<Port::AddressHigher>() = 0;
-    getOutputRegister<Port::AddressHigher>() = 0xFF;
     getDirectionRegister<Port::AddressHighest>() = 0;
-    getOutputRegister<Port::AddressHighest>() = 0xFF;
 }
 void
 setupRandomSource() noexcept {
