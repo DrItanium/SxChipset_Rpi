@@ -32,8 +32,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Pinout.h"
 #include "Setup.h"
 
+Deception::HardwareSerialBackingStore PCLink(Serial1);
+Deception::TwoWayCache<128, Deception::CacheLine32> onboardCache;
 union [[gnu::packed]] SplitWord32 {
-    uint8_t cacheOffset : 6;
+    uint8_t cacheOffset : decltype(onboardCache)::Line_t::ShiftAmount;
     uint8_t bytes[sizeof(uint32_t) / sizeof(uint8_t)];
     uint16_t halves[sizeof(uint32_t) / sizeof(uint16_t)];
     __uint24 lo24;
@@ -41,12 +43,6 @@ union [[gnu::packed]] SplitWord32 {
     constexpr bool isIOOperation() const noexcept { return bytes[3] == 0xFE; }
 };
 static_assert(sizeof(SplitWord32) == sizeof(uint32_t));
-Deception::HardwareSerialBackingStore PCLink(Serial1);
-//Deception::DirectMappedCache4K_CacheLine16 onboardCache;
-//Deception::DirectMappedCache4K_CacheLine32 onboardCache;
-//Deception::DirectMappedCache4K_CacheLine64 onboardCache;
-Deception::TwoWayCache4K_CacheLine64 onboardCache;
-volatile bool sdAvailable = false;
 // With the way that the 2560 and CH351s are connected to the i960, I have to
 // transfer data through the 2560 to the i960. This is due to the fact that the
 // CH351s are not buffered to prevent this. However, there is nothing stopping
