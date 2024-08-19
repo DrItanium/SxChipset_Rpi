@@ -183,11 +183,6 @@ class HardwareSerialServer {
                     break;
             }
         }
-        void handleFirstContact() noexcept {
-            _link.write(Deception::MemoryCodes::InitializeSystemSetupCode);
-            _serialCapacity = 0;
-            _serialCount = 0;
-        }
         void processEvent() noexcept {
             auto inByte = _link.read();
             if (_serialCapacity == 0) {
@@ -195,9 +190,6 @@ class HardwareSerialServer {
                     case Deception::MemoryCodes::BeginInstructionCode:
                         _serialCapacity = -1;
                         _serialCount = 0;
-                        break;
-                    case Deception::MemoryCodes::InitializeSystemSetupCode:
-                        handleFirstContact();
                         break;
                     default:
                         break;

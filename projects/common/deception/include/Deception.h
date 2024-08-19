@@ -26,14 +26,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef DECEPTION_H__
 #define DECEPTION_H__
 #include <Arduino.h>
-#include <SD.h>
 namespace Deception {
     using Address = uint32_t;
     namespace MemoryCodes {
-        constexpr uint8_t ReadMemoryCode = 0xFC;
-        constexpr uint8_t WriteMemoryCode = 0xFD;
-        constexpr uint8_t InitializeSystemSetupCode = 0xFE;
-        constexpr uint8_t BeginInstructionCode = 0xFF;
+        constexpr uint8_t ReadMemoryCode = 0xF0;
+        constexpr uint8_t WriteMemoryCode = 0xF1;
+        constexpr uint8_t BeginInstructionCode = 0xF2;
     } // end namespace MemoryCodes
     /**
      * @brief An abstract representation of backing storage (memory, disk, etc)
