@@ -73,7 +73,6 @@ Count = NUM_DIGITAL_PINS,
     // SDA = PortD1,
     //RXD1 = PortD2,
     //TXD1 = PortD3,
-    EXT_SPI_CS = PortD5,
     RCONN_OUT = PortD6,
     RCONN_IN = PortD7,
     

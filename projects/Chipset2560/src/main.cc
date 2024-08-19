@@ -362,7 +362,6 @@ configurePins() noexcept {
     pinMode(Pin::READY, OUTPUT);
     pinMode(Pin::WR, INPUT);
     pinMode(Pin::RCONN_IN, INPUT);
-    pinMode(Pin::EXT_SPI_CS, OUTPUT);
     // deactivate interrupts
     digitalWrite<Pin::INT960_0, HIGH>();
     digitalWrite<Pin::INT960_1, LOW>();
@@ -370,7 +369,6 @@ configurePins() noexcept {
     digitalWrite<Pin::INT960_3, HIGH>();
     digitalWrite<Pin::HOLD, LOW>();
     digitalWrite<Pin::READY, HIGH>();
-    digitalWrite<Pin::EXT_SPI_CS, HIGH>();
 
     getDirectionRegister<Port::AddressLowest>() = 0;
     getOutputRegister<Port::AddressLowest>() = 0xFF;
@@ -424,7 +422,7 @@ setup() {
         while (digitalRead<Pin::RCONN_IN>() == HIGH);
         Serial.println(F("CONNECTION ESTABLISHED"));
     }
-    delay(100);
+    delay(1000);
     digitalWrite<Pin::RESET, HIGH>();
 }
 
