@@ -307,6 +307,67 @@ namespace Deception {
         private:
             Line_t lines[NumLines];
     };
+    template<uint16_t C, typename L>
+    class TwoWayCache {
+        public:
+            static_assert(C > 0, "Must have at least one cache line!");
+            static_assert(isPowerOfTwo(C), "The given line size is not a power of two!");
+            static constexpr auto NumLines = C;
+            static constexpr auto NumSets = NumLines / 2;
+            static constexpr auto LineMask = NumSets - 1;
+            using Line_t = L;
+            struct CacheSet {
+                bool lastElement = false;
+                Line_t lines[2];
+                void clear() noexcept {
+                    lastElement = true;
+                    lines[0].clear();
+                    lines[1].clear();
+                }
+
+                Line_t& find(BackingStore& store, Address address) noexcept {
+                    if (lines[0].matches(address)) {
+                        lastElement = false;
+                        return lines[0];
+                    } else if (lines[1].matches(address)) {
+                        lastElement = true;
+                        return lines[1];
+                    } else {
+                        // no match
+                        auto index = lastElement ? 0 : 1;
+                        lastElement = !lastElement;
+                        lines[index].replace(store, address);
+                        return lines[index];
+                    }
+                }
+                void sync() noexcept {
+                    lines[0].sync();
+                    lines[1].sync();
+                }
+            };
+            using Set_t = CacheSet;
+            static constexpr uint8_t computeIndex(Address input) noexcept {
+                return (input >> Line_t::ShiftAmount) & LineMask;
+            }
+            void clear() noexcept {
+                for (auto set : sets) {
+                    set.clear();
+                }
+            }
+            Line_t& find(BackingStore& store, Address address) noexcept {
+                return sets[computeIndex(address)].find(store, address);
+            }
+            void begin() noexcept {
+                clear();
+            }
+            void sync() noexcept {
+                for (auto& set : sets) {
+                    set.sync();
+                }
+            }
+        private:
+            Set_t sets[NumSets];
+    };
     template<uint16_t C>
     using DirectMappedCache_CacheLine16 = DirectMappedCache<C, CacheLine16>;
     using DirectMappedCache4K_CacheLine16 = DirectMappedCache_CacheLine16<256>; 
@@ -316,6 +377,9 @@ namespace Deception {
     template<uint16_t C>
     using DirectMappedCache_CacheLine64 = DirectMappedCache<C, CacheLine64>;
     using DirectMappedCache4K_CacheLine64 = DirectMappedCache_CacheLine64<64>;
+    template<uint16_t C>
+    using TwoWayCache_CacheLine64 = TwoWayCache<C, CacheLine64>;
+    using TwoWayCache4K_CacheLine64 = TwoWayCache_CacheLine64<64>;
     static_assert(DirectMappedCache4K_CacheLine16::computeIndex(0xFFFF'FFFF) == 0xFF);
     static_assert(DirectMappedCache4K_CacheLine16::computeIndex(0xFFFF'FFDF) == 0xFD);
     static_assert(DirectMappedCache4K_CacheLine32::computeIndex(0xFFFF'FFFF) == 0x7F);
