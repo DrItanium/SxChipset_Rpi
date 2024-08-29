@@ -34,6 +34,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Ethernet.h>
 #include <Deception.h>
 
+constexpr auto TWI_MemoryControllerIndex = 0x2f;
 #define CACHE_MEMORY_SECTION DMAMEM
 #define MEMORY_POOL_SECTION EXTMEM
 constexpr auto Connection2560_Up = 36;
@@ -103,6 +104,14 @@ setupSDCard() {
 void setupServers();
 void stateChange2560();
 void
+handleMemoryReceive(int howMany) {
+    /// @todo implement
+}
+void
+handleMemoryRequest() {
+
+}
+void
 setupHardware() {
     pinMode(TeensyUp_Pin, OUTPUT);
     pinMode(Connection2560_Up, INPUT);
@@ -122,6 +131,9 @@ setupHardware() {
     setupSDCard();
     // servers should be setup last to prevent race conditions
     setupServers();
+    Wire.begin(TWI_MemoryControllerIndex);
+    Wire.onReceive(handleMemoryReceive);
+    Wire.onRequest(handleMemoryRequest);
     Serial.println("Waiting For 2560 to come up");
     while (digitalRead(Connection2560_Up) == HIGH);
     digitalWrite(TeensyUp_Pin, LOW);
