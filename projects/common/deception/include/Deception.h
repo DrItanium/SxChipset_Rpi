@@ -26,6 +26,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef DECEPTION_H__
 #define DECEPTION_H__
 #include <Arduino.h>
+
 namespace Deception {
     using Address = uint32_t;
     constexpr uint32_t PCLinkSpeed = 57600;
@@ -43,7 +44,6 @@ namespace Deception {
             virtual size_t read(Address targetAddress, uint8_t* storage, size_t count) noexcept = 0;
             virtual size_t write(Address targetAddress, uint8_t* storage, size_t count) noexcept = 0;
     };
-
     /**
      * @brief A backing store that is really just a sink that acts as a
      * fallback in the cases where we are not mapped to anything
