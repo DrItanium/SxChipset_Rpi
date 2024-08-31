@@ -127,58 +127,11 @@ CacheLine64::setByte(uint8_t offset, uint8_t value) noexcept {
     markDirty();
     _bytes[computeByteOffset(offset)] = value;
 }
-template<typename T>
-inline
-void
-sendCommandHeader(T& link, uint8_t size, uint8_t code) noexcept {
-    link.write(MemoryCodes::BeginInstructionCode);
-    link.write(size);
-    link.write(code);
-}
-template<typename T>
-inline
-void
-send32BitNumber(T& link, uint32_t number) {
-    link.write(reinterpret_cast<char*>(&number), sizeof(number));
-}
 
-template<typename T>
-void 
-writeMemoryBlock(T& link, Address address, uint8_t* data, uint8_t size) noexcept {
-    sendCommandHeader(link, 1 + sizeof(address) + size + 1, MemoryCodes::WriteMemoryCode);
-    send32BitNumber(link, address);
-    link.write(size);
-    link.write(data, size);
-}
-template<typename T>
-void 
-readMemoryBlock(T& link, Address address, uint8_t* data, uint8_t size) noexcept {
-    sendCommandHeader(link, 1 + sizeof(address) + 1, MemoryCodes::ReadMemoryCode);
-    send32BitNumber(link, address);
-    link.write(size);
-    for (uint8_t i = 0; i < size; ) {
-        if (auto result = link.read(); result != -1) {
-            data[i] = result;
-            ++i;
-        }
-    }
-}
-
-size_t 
-StreamBackingStore::read(Address addr, uint8_t* storage, size_t count) noexcept {
-    readMemoryBlock(_link, addr, storage, count);
-    return count;
-}
-size_t 
-StreamBackingStore::write(Address addr, uint8_t* storage, size_t count) noexcept {
-    writeMemoryBlock(_link, addr, storage, count);
-    return count;
-}
-
-uint8_t
+MemoryCodes
 TwoWireBackingStore::backingStoreStatus(uint8_t size) noexcept {
     _link.requestFrom(_index, size);
-    return _link.read();
+    return static_cast<MemoryCodes>(_link.read());
 }
 
 bool
@@ -214,7 +167,7 @@ size_t
 TwoWireBackingStore::write(Address addr, uint8_t* storage, size_t count) noexcept {
     waitForBackingStoreIdle();
     _link.beginTransmission(_index);
-    _link.write(Deception::MemoryCodes::WriteMemoryCode);
+    _link.write(static_cast<uint8_t>(Deception::MemoryCodes::WriteMemory));
     _link.write(reinterpret_cast<uint8_t*>(&addr), sizeof(Address));
     _link.write(static_cast<uint8_t>(count));
     _link.write(storage, count);
@@ -226,7 +179,7 @@ size_t
 TwoWireBackingStore::read(Address addr, uint8_t* storage, size_t count) noexcept {
     waitForBackingStoreIdle();
     _link.beginTransmission(_index);
-    _link.write(Deception::MemoryCodes::ReadMemoryCode);
+    _link.write(static_cast<uint8_t>(Deception::MemoryCodes::ReadMemory));
     _link.write(reinterpret_cast<uint8_t*>(&addr), sizeof(Address));
     // Just send the lowest 8 bits of data, this could case a strange mismatch
     _link.write(static_cast<uint8_t>(count));

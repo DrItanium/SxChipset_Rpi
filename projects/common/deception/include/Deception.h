@@ -33,15 +33,17 @@ namespace Deception {
     constexpr uint32_t PCLinkSpeed = 9600;
     constexpr uint8_t TWI_MemoryControllerIndex = 0x2f;
     constexpr uint32_t TWI_ClockRate = 400'000;
-    namespace MemoryCodes {
-        constexpr uint8_t ReadMemoryCode = 0xC0;
-        constexpr uint8_t WriteMemoryCode = 0xC1;
-        constexpr uint8_t BeginInstructionCode = 0xC2;
-        constexpr uint8_t CurrentlyProcessingRequest = 0xC3;
-        constexpr uint8_t BootingUp = 0xC4;
-        constexpr uint8_t RequestedData = 0xC6;
-        constexpr uint8_t NothingToProvide = 0xC7;
-    } // end namespace MemoryCodes
+    enum class MemoryCodes : uint8_t {
+        ReadMemory,
+        WriteMemory,
+        SwapMemory,
+        BeginInstruction,
+        CurrentlyProcessingRequest,
+        BootingUp,
+        RequestedData,
+        NothingToProvide,
+        
+    };
     /**
      * @brief An abstract representation of backing storage (memory, disk, etc)
      */
@@ -71,24 +73,6 @@ namespace Deception {
             }
     };
 
-    /**
-     * @brief A connection to another backing store over a Stream
-     */
-    class StreamBackingStore : public BackingStore {
-        public:
-            StreamBackingStore(Stream& link) : _link(link) { }
-            ~StreamBackingStore() override = default;
-            size_t read(Address addr, uint8_t* storage, size_t count) noexcept override;
-            size_t write(Address addr, uint8_t* storage, size_t count) noexcept override;
-            auto& getBackingStore() noexcept { return _link; }
-        private:
-            Stream& _link;
-    };
-    class HardwareSerialBackingStore : public StreamBackingStore {
-        public:
-            HardwareSerialBackingStore(HardwareSerial& link) : StreamBackingStore(link) { }
-            ~HardwareSerialBackingStore() override = default;
-    };
     class TwoWireBackingStore : public BackingStore {
         public:
             TwoWireBackingStore(TwoWire& link, uint8_t index) : _link(link), _index(index) { }
@@ -97,7 +81,7 @@ namespace Deception {
             size_t write(Address addr, uint8_t* storage, size_t count) noexcept override;
             void waitForBackingStoreIdle() noexcept;
         private:
-            [[nodiscard]] uint8_t backingStoreStatus(uint8_t size) noexcept;
+            [[nodiscard]] MemoryCodes backingStoreStatus(uint8_t size) noexcept;
             [[nodiscard]] bool backingStoreBooting() noexcept;
             void waitForMemoryReadSuccess(uint8_t size) noexcept;
         private:

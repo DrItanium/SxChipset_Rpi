@@ -176,23 +176,23 @@ void
 TwoWireServer::handleRequest() {
     if (_systemBooted) {
         if (_processingRequest) {
-            Wire.write(Deception::MemoryCodes::CurrentlyProcessingRequest);
+            _link.write(static_cast<uint8_t>(Deception::MemoryCodes::CurrentlyProcessingRequest));
         } else {
             if (_availableForRead) {
                 if (_size > 0) {
-                    Wire.write(Deception::MemoryCodes::RequestedData);
+                    _link.write(static_cast<uint8_t>(Deception::MemoryCodes::RequestedData));
                     for (uint32_t a = _address, i = 0; i < _size; ++i, ++a) {
-                        Wire.write(a < 0x0100'0000 ? memory960[a] : 0);
+                        _link.write(a < 0x0100'0000 ? memory960[a] : 0);
                     }
                 } else {
-                    Wire.write(Deception::MemoryCodes::NothingToProvide);
+                    _link.write(static_cast<uint8_t>(Deception::MemoryCodes::NothingToProvide));
                 }
             } else {
-                Wire.write(Deception::MemoryCodes::NothingToProvide);
+                _link.write(static_cast<uint8_t>(Deception::MemoryCodes::NothingToProvide));
             }
         }
     } else {
-        Wire.write(Deception::MemoryCodes::BootingUp);
+        _link.write(static_cast<uint8_t>(Deception::MemoryCodes::BootingUp));
     }
 }
 
@@ -220,12 +220,12 @@ TwoWireServer::handleReceive(int howMany) {
 void
 TwoWireServer::process() noexcept {
     if (_processingRequest) {
-        switch (op.typeCode) {
-            case Deception::MemoryCodes::ReadMemoryCode:
+        switch (static_cast<Deception::MemoryCodes>(op.typeCode)) {
+            case Deception::MemoryCodes::ReadMemory:
                 setAddressRegister(op.address);
                 setDataSizeRegister(op.size);
                 break;
-            case Deception::MemoryCodes::WriteMemoryCode:
+            case Deception::MemoryCodes::WriteMemory:
                 setAddressRegister(op.address);
                 setDataSizeRegister(op.size);
                 for (uint32_t a = op.address, i = 0; i < op.size; ++a, ++i) {
