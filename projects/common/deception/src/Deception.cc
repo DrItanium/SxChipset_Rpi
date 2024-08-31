@@ -175,5 +175,69 @@ StreamBackingStore::write(Address addr, uint8_t* storage, size_t count) noexcept
     return count;
 }
 
+uint8_t
+TwoWireBackingStore::backingStoreStatus(uint8_t size) noexcept {
+    _link.requestFrom(_index, size);
+    return _link.read();
+}
+
+bool
+TwoWireBackingStore::backingStoreBooting() noexcept {
+    return backingStoreStatus(17) == MemoryCodes::BootingUp;
+}
+void
+TwoWireBackingStore::waitForBackingStoreIdle() noexcept {
+    while (true) {
+        switch (backingStoreStatus(17)) {
+            case MemoryCodes::CurrentlyProcessingRequest:
+            case MemoryCodes::RequestedData:
+                return;
+            default:
+                break;
+        }
+    }
+}
+void
+TwoWireBackingStore::waitForMemoryReadSuccess(uint8_t amount) noexcept {
+    while (true) {
+        switch (backingStoreStatus(amount)) {
+            case MemoryCodes::RequestedData:
+                return;
+            default:
+                break;
+        }
+    }
+}
+
+size_t 
+TwoWireBackingStore::write(Address addr, uint8_t* storage, size_t count) noexcept {
+    waitForBackingStoreIdle();
+    _link.beginTransmission(_index);
+    _link.write(Deception::MemoryCodes::WriteMemoryCode);
+    _link.write(reinterpret_cast<uint8_t*>(addr), sizeof(Address));
+    _link.write(static_cast<uint8_t>(count));
+    _link.write(storage, count);
+    _link.endTransmission();
+    return count;
+}
+
+size_t 
+TwoWireBackingStore::read(Address addr, uint8_t* storage, size_t count) noexcept {
+    waitForBackingStoreIdle();
+    _link.beginTransmission(_index);
+    _link.write(Deception::MemoryCodes::ReadMemoryCode);
+    _link.write(reinterpret_cast<uint8_t*>(addr), sizeof(Address));
+    // Just send the lowest 8 bits of data, this could case a strange mismatch
+    _link.write(static_cast<uint8_t>(count)); 
+    _link.endTransmission();
+    waitForMemoryReadSuccess(static_cast<uint8_t>(count));
+    size_t i = 0;
+    while (Wire.available()) {
+        storage[i] = Wire.read();
+        ++i;
+    }
+    return i;
+}
+
 
 } // end namespace Deception

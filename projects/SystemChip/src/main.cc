@@ -34,7 +34,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Ethernet.h>
 #include <Deception.h>
 
-constexpr auto TWI_MemoryControllerIndex = 0x2f;
 #define CACHE_MEMORY_SECTION DMAMEM
 #define MEMORY_POOL_SECTION EXTMEM
 constexpr auto Connection2560_Up = 36;
@@ -109,16 +108,6 @@ struct [[gnu::packed]] Packet {
     uint8_t size;
     uint8_t data[];
 };
-void sinkReceive();
-void
-handleMemoryReceive(int howMany) {
-    /// @todo implement
-    sinkReceive();
-}
-void
-handleMemoryRequest() {
-
-}
 void
 setupHardware() {
     pinMode(TeensyUp_Pin, OUTPUT);
@@ -139,8 +128,6 @@ setupHardware() {
     setupSDCard();
     // servers should be setup last to prevent race conditions
     setupServers();
-    Wire.onReceive(handleMemoryReceive);
-    Wire.onRequest(handleMemoryRequest);
     Serial.println("Waiting For 2560 to come up");
     while (digitalRead(Connection2560_Up) == HIGH);
     digitalWrite(TeensyUp_Pin, LOW);
@@ -151,43 +138,6 @@ setup() {
     setupHardware();
 }
 
-void 
-loop() {
-    
-}
-void
-sinkReceive() {
-    while (Wire.available() > 0) {
-        (void)Wire.read();
-    }
-}
-void handleReceiveTop(int howMany);
-void handleRequestTop();
-class TwoWireServer {
-    public:
-        TwoWireServer(TwoWire& link) : _link(link) { }
-        void begin(uint8_t index) {
-            _link.begin(index);
-            _link.onReceive(handleReceiveTop);
-            _link.onRequest(handleRequestTop);
-        }
-        void handleReceive(int howMany);
-        void handleRequest();
-    private:
-        void sink();
-        void setAddressRegister(uint32_t value) noexcept {
-            _address = value;
-        }
-        void setDataSizeRegister(uint8_t value) noexcept {
-            _size = value;
-        }
-    private:
-        TwoWire& _link;
-        uint32_t _address = 0x0000'0000;
-        uint8_t _size = 0;
-        bool _processingRequest = false;
-        uint8_t dataBytes[256];
-};
 class HardwareSerialServer {
     public:
         HardwareSerialServer(HardwareSerial& link) : _link(link) { }
@@ -258,12 +208,115 @@ class HardwareSerialServer {
         int _serialCount = 0;
         uint8_t _data[256] = { 0 };
 };
+
+void handleReceiveTop(int howMany);
+
+void handleRequestTop();
+class TwoWireServer {
+    public:
+        TwoWireServer(TwoWire& link) : _link(link) { }
+        void begin(uint8_t index) {
+            _systemAddress = index;
+            _link.begin(index);
+            _link.onReceive(handleReceiveTop);
+            _link.onRequest(handleRequestTop);
+        }
+        void handleReceive(int howMany);
+        void handleRequest();
+        void process();
+    private:
+        void sink();
+        void setAddressRegister(uint32_t value) noexcept {
+            _address = value;
+        }
+        void setDataSizeRegister(uint8_t value) noexcept {
+            _size = value;
+        }
+    private:
+        TwoWire& _link;
+        uint8_t _systemAddress = 0xFF;
+        uint32_t _address = 0x0000'0000;
+        uint8_t _size = 4;
+        bool _processingRequest = false;
+        bool _availableForRead = true;
+        uint8_t _capacity = 0;
+        uint8_t _index = 0;
+        union {
+            uint8_t _dataBytes[256] = { 0 };
+            Packet op;
+        };
+};
+void
+TwoWireServer::handleRequest() {
+    if (_processingRequest) {
+        Wire.write(Deception::MemoryCodes::CurrentlyProcessingRequest);
+    } else {
+        if (_availableForRead) {
+            Wire.write(Deception::MemoryCodes::RequestedData);
+            for (uint32_t a = _address, i = 0; i < _size; ++i, ++a) {
+                Wire.write(a < 0x10'0000 ? memory960[a] : 0);
+            }
+        }
+    }
+}
+
+void
+TwoWireServer::handleReceive(int howMany) {
+    if (!_processingRequest) {
+        if (howMany >= 1) {
+            _processingRequest = true;
+            _availableForRead = false;
+            _capacity = howMany;
+            _index = 0;
+            while (1 < _link.available()) {
+                uint8_t c = _link.read();
+                _dataBytes[_index] = c;
+                ++_index;
+            }
+        }
+    }
+}
+
+void
+TwoWireServer::process() noexcept {
+    if (_processingRequest) {
+        switch (op.typeCode) {
+            case Deception::MemoryCodes::ReadMemoryCode:
+                setAddressRegister(op.address);
+                setDataSizeRegister(op.size);
+                break;
+            case Deception::MemoryCodes::WriteMemoryCode:
+                setAddressRegister(op.address);
+                setDataSizeRegister(op.size);
+                for (uint32_t a = op.address, i = 0; i < op.size; ++a, ++i) {
+                    if (a < 0x10'0000) {
+                        memory960[a] = op.data[i];
+                    }
+                }
+                break;
+            default:
+                break;
+        }
+        _availableForRead = true;
+        _processingRequest = false;
+    }
+}
+
+void
+TwoWireServer::sink() {
+    while (_link.available() > 0) {
+        (void)_link.read();
+    }
+}
+
+
+
 HardwareSerialServer link0(Serial8);
 TwoWireServer link1(Wire);
 void 
 setupServers() {
     link0.begin(Deception::PCLinkSpeed);
-    link1.begin(TWI_MemoryControllerIndex);
+    link1.begin(Deception::TWI_MemoryControllerIndex);
 }
 void 
 serialEvent8() {
@@ -279,44 +332,7 @@ handleRequestTop() {
     link1.handleRequest();
 }
 
-void
-TwoWireServer::handleRequest() {
-    if (_processingRequest) {
-        Wire.write(Deception::MemoryCodes::CurrentlyProcessingRequest);
-    } else {
-        Wire.write(Deception::MemoryCodes::RequestedData);
-        for (uint32_t a = _address, i = 0; i < _size; ++i, ++a) {
-            Wire.write(a < 0x10'0000 ? memory960[a] : 0);
-        }
-    }
-}
-
-void
-TwoWireServer::handleReceive(int howMany) {
-    if (!_processingRequest) {
-        if (howMany >= 1) {
-            switch (Wire.read()) {
-                case Deception::MemoryCodes::SetAddressRegister: 
-                    setAddressRegister(SplitWord32{ 
-                            static_cast<uint8_t>(Wire.read()), 
-                            static_cast<uint8_t>(Wire.read()), 
-                            static_cast<uint8_t>(Wire.read()), 
-                            static_cast<uint8_t>(Wire.read()) }.value());
-                    break;
-                case Deception::MemoryCodes::SetDataSizeRegister:
-                    setDataSizeRegister(static_cast<uint8_t>(Wire.read()));
-                    break;
-                default:
-                    break;
-            }
-        }
-    }
-    sink();
-}
-
-void
-TwoWireServer::sink() {
-    while (_link.available() > 0) {
-        (void)_link.read();
-    }
+void 
+loop() {
+    link1.process();
 }

@@ -26,20 +26,19 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef DECEPTION_H__
 #define DECEPTION_H__
 #include <Arduino.h>
+#include <Wire.h>
 
 namespace Deception {
     using Address = uint32_t;
     constexpr uint32_t PCLinkSpeed = 9600;
+    constexpr auto TWI_MemoryControllerIndex = 0x2f;
     namespace MemoryCodes {
         constexpr uint8_t ReadMemoryCode = 0xC0;
         constexpr uint8_t WriteMemoryCode = 0xC1;
         constexpr uint8_t BeginInstructionCode = 0xC2;
         constexpr uint8_t CurrentlyProcessingRequest = 0xC3;
         constexpr uint8_t BootingUp = 0xC4;
-        constexpr uint8_t EmptySizeRegister = 0xC5;
         constexpr uint8_t RequestedData = 0xC6;
-        constexpr uint8_t SetAddressRegister = 0xC7;
-        constexpr uint8_t SetDataSizeRegister = 0xC8;
     } // end namespace MemoryCodes
     union SplitWord32 {
         constexpr SplitWord32(uint32_t v = 0) : _value(v) { }
@@ -94,6 +93,21 @@ namespace Deception {
         public:
             HardwareSerialBackingStore(HardwareSerial& link) : StreamBackingStore(link) { }
             ~HardwareSerialBackingStore() override = default;
+    };
+    class TwoWireBackingStore : public BackingStore {
+        public:
+            TwoWireBackingStore(TwoWire& link, uint8_t index) : _link(link), _index(index) { }
+            ~TwoWireBackingStore() override = default;
+            size_t read(Address addr, uint8_t* storage, size_t count) noexcept override;
+            size_t write(Address addr, uint8_t* storage, size_t count) noexcept override;
+        private:
+            [[nodiscard]] uint8_t backingStoreStatus(uint8_t size) noexcept;
+            [[nodiscard]] bool backingStoreBooting() noexcept;
+            void waitForBackingStoreIdle() noexcept;
+            void waitForMemoryReadSuccess(uint8_t size) noexcept;
+        private:
+            TwoWire& _link;
+            uint8_t _index;
     };
     constexpr bool isPowerOfTwo(uint64_t value) noexcept {
         switch (value) {
