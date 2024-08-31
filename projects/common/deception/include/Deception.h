@@ -34,7 +34,7 @@ namespace Deception {
     constexpr uint8_t TWI_MemoryControllerIndex = 0x2f;
     constexpr uint32_t TWI_ClockRate = 400'000;
     enum class MemoryCodes : uint8_t {
-        ReadMemory,
+        ReadMemory = 0xC0,
         WriteMemory,
         SwapMemory,
         BeginInstruction,
