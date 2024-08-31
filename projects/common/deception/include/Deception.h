@@ -42,7 +42,28 @@ namespace Deception {
         BootingUp,
         RequestedData,
         NothingToProvide,
-        
+        SelectDevice,
+        ConfigureCPUClockMode,
+        SetMode = SelectDevice,
+
+    };
+    enum class SelectedDevice : uint8_t {
+        CPUClockConfiguration,
+        CPUClockConfiguration_CLK2,
+        CPUClockConfiguration_CLK1,
+        AnalogSensors,
+        AnalogSensors_Channel0,
+        AnalogSensors_Channel1,
+        AnalogSensors_Channel2,
+        AnalogSensors_Channel3,
+        AnalogSensors_Channel4,
+        AnalogSensors_Channel5,
+        AnalogSensors_Channel6,
+        AnalogSensors_Channel7,
+        AnalogSensors_Channel8,
+        AnalogSensors_Channel9,
+        AnalogSensors_Channel10,
+        TimeSinceStartup,
     };
     /**
      * @brief An abstract representation of backing storage (memory, disk, etc)

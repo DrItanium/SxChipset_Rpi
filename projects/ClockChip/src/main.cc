@@ -203,28 +203,8 @@ sampleAnalogChannels() noexcept {
         CurrentChannelSamples[i] = analogRead(AnalogChannels[i]);
     }
 }
-enum class WireReceiveOpcode : uint8_t {
-    SetMode,
-    ConfigureCPUClockMode,
-};
-enum class WireRequestOpcode : uint8_t {
-    CPUClockConfiguration,
-    CPUClockConfiguration_CLK2,
-    CPUClockConfiguration_CLK1,
-    AnalogSensors,
-    AnalogSensors_Channel0,
-    AnalogSensors_Channel1,
-    AnalogSensors_Channel2,
-    AnalogSensors_Channel3,
-    AnalogSensors_Channel4,
-    AnalogSensors_Channel5,
-    AnalogSensors_Channel6,
-    AnalogSensors_Channel7,
-    AnalogSensors_Channel8,
-    AnalogSensors_Channel9,
-    AnalogSensors_Channel10,
-    TimeSinceStartup,
-};
+using WireReceiveOpcode = Deception::MemoryCodes;
+using WireRequestOpcode = Deception::SelectedDevice;
 constexpr bool valid(WireRequestOpcode code) noexcept {
     using T = WireRequestOpcode;
     switch (code) {
