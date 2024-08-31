@@ -111,7 +111,6 @@ struct [[gnu::packed]] Packet {
 };
 void
 setupHardware() {
-    _systemBooted = false;
 #define X(item, baud, wait) item . begin (baud ) ; \
     if constexpr (wait) { \
         while (! item ) { \
@@ -221,28 +220,16 @@ TwoWireServer::handleReceive(int howMany) {
 void
 TwoWireServer::process() noexcept {
     if (_processingRequest) {
-        //Serial.print("Type Code: 0x");
-        //Serial.println(op.typeCode, HEX);
         switch (op.typeCode) {
             case Deception::MemoryCodes::ReadMemoryCode:
                 setAddressRegister(op.address);
                 setDataSizeRegister(op.size);
-                //Serial.println("Read Memory Operation");
-                //Serial.print("\tAddress: 0x");
-                //Serial.println(_address, HEX);
-                //Serial.print("\tSize: 0x");
-                //Serial.println(_size, HEX);
                 break;
             case Deception::MemoryCodes::WriteMemoryCode:
                 setAddressRegister(op.address);
                 setDataSizeRegister(op.size);
-                //Serial.println("Write Memory Operation");
-                //Serial.print("\tAddress: 0x");
-                //Serial.println(_address, HEX);
-                //Serial.print("\tSize: 0x");
-                //Serial.println(_size, HEX);
                 for (uint32_t a = op.address, i = 0; i < op.size; ++a, ++i) {
-                    if (a < 0x10'0000) {
+                    if (a < 0x0100'0000) {
                         memory960[a] = op.data[i];
                     }
                 }
