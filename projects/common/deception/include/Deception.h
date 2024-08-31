@@ -40,6 +40,7 @@ namespace Deception {
         constexpr uint8_t CurrentlyProcessingRequest = 0xC3;
         constexpr uint8_t BootingUp = 0xC4;
         constexpr uint8_t RequestedData = 0xC6;
+        constexpr uint8_t NothingToProvide = 0xC7;
     } // end namespace MemoryCodes
     /**
      * @brief An abstract representation of backing storage (memory, disk, etc)
@@ -94,10 +95,10 @@ namespace Deception {
             ~TwoWireBackingStore() override = default;
             size_t read(Address addr, uint8_t* storage, size_t count) noexcept override;
             size_t write(Address addr, uint8_t* storage, size_t count) noexcept override;
+            void waitForBackingStoreIdle() noexcept;
         private:
             [[nodiscard]] uint8_t backingStoreStatus(uint8_t size) noexcept;
             [[nodiscard]] bool backingStoreBooting() noexcept;
-            void waitForBackingStoreIdle() noexcept;
             void waitForMemoryReadSuccess(uint8_t size) noexcept;
         private:
             TwoWire& _link;

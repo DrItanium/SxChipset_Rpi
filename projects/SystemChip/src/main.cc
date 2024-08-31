@@ -100,6 +100,7 @@ setupSDCard() {
         }
     }
 }
+volatile bool _systemBooted = false;
 void setupServers();
 void stateChange2560();
 struct [[gnu::packed]] Packet {
@@ -110,9 +111,7 @@ struct [[gnu::packed]] Packet {
 };
 void
 setupHardware() {
-    pinMode(TeensyUp_Pin, OUTPUT);
-    pinMode(Connection2560_Up, INPUT);
-    digitalWrite(TeensyUp_Pin, HIGH);
+    _systemBooted = false;
 #define X(item, baud, wait) item . begin (baud ) ; \
     if constexpr (wait) { \
         while (! item ) { \
@@ -128,86 +127,13 @@ setupHardware() {
     setupSDCard();
     // servers should be setup last to prevent race conditions
     setupServers();
-    Serial.println("Waiting For 2560 to come up");
-    while (digitalRead(Connection2560_Up) == HIGH);
-    digitalWrite(TeensyUp_Pin, LOW);
-    Serial.println("Booted!");
 }
 void 
 setup() {
+    _systemBooted = false;
     setupHardware();
+    _systemBooted = true;
 }
-
-class HardwareSerialServer {
-    public:
-        HardwareSerialServer(HardwareSerial& link) : _link(link) { }
-        auto& getBackingStore() noexcept { return _link; }
-        void begin(uint32_t baud) noexcept { 
-            _link.begin(baud); 
-
-        }
-        void handleReadRequest(const Packet& packet) noexcept {
-            //Serial.print("READ REQUEST 0x");
-            //Serial.println(packet.address, HEX);
-            for (uint32_t a = packet.address, i = 0; i < packet.size; ++i, ++a) {
-                _link.write(a < 0x0100'0000 ? memory960[a] : 0);
-            }
-        }
-        void handleWriteRequest(const Packet& packet) noexcept {
-            //Serial.print("WRITE REQUEST 0x");
-            //Serial.println(packet.address, HEX);
-            for (uint32_t a = packet.address, i = 0; i < packet.size; ++i, ++a) {
-                if (a < 0x0100'0000) {
-                    memory960[a] = packet.data[i];
-                }
-            }
-        }
-        void processPacket() noexcept {
-            Packet& packet = *reinterpret_cast<Packet*>(_data);
-            //Serial.println("PROCESSING PACKET");
-            //Serial.print("\tTYPECODE: 0x");
-            //Serial.println(packet.typeCode, HEX);
-
-            switch (packet.typeCode) {
-                case Deception::MemoryCodes::ReadMemoryCode:
-                    handleReadRequest(packet);
-                    break;
-                case Deception::MemoryCodes::WriteMemoryCode:
-                    handleWriteRequest(packet);
-                    break;
-                default:
-                    break;
-            }
-        }
-        void processEvent() noexcept {
-            auto inByte = _link.read();
-            if (_serialCapacity == 0) {
-                switch (inByte) {
-                    case Deception::MemoryCodes::BeginInstructionCode:
-                        _serialCapacity = -1;
-                        _serialCount = 0;
-                        break;
-                    default:
-                        break;
-                }
-            } else if (_serialCapacity == -1) {
-                _serialCapacity = inByte;
-            } else {
-                _data[_serialCount] = inByte;
-                ++_serialCount;
-                if (_serialCount == _serialCapacity) {
-                    processPacket();
-                    _serialCapacity = 0;
-                    _serialCount = 0;
-                }
-            }
-        }
-    private:
-        HardwareSerial& _link;
-        int _serialCapacity = 0;
-        int _serialCount = 0;
-        uint8_t _data[256] = { 0 };
-};
 
 void handleReceiveTop(int howMany);
 
@@ -235,11 +161,11 @@ class TwoWireServer {
         }
     private:
         TwoWire& _link;
-        uint8_t _systemAddress = 0xFF;
+        uint8_t _systemAddress = Deception::TWI_MemoryControllerIndex;
         uint32_t _address = 0x0000'0000;
-        uint8_t _size = 4;
+        uint8_t _size = 0;
         bool _processingRequest = false;
-        bool _availableForRead = true;
+        bool _availableForRead = false;
         uint8_t _capacity = 0;
         uint8_t _index = 0;
         union {
@@ -249,23 +175,25 @@ class TwoWireServer {
 };
 void
 TwoWireServer::handleRequest() {
-    //Serial.println("Incoming Request");
-    if (_processingRequest) {
-        //Serial.println("\tCurrently Processing");
-        Wire.write(Deception::MemoryCodes::CurrentlyProcessingRequest);
-    } else {
-        if (_availableForRead) {
-            //Serial.println("\tDo Read Request");
-            Wire.write(Deception::MemoryCodes::RequestedData);
-            for (uint32_t a = _address, i = 0; i < _size; ++i, ++a) {
-                auto value = a < 0x0100'0000 ? memory960[a] : 0;
-             //   Serial.printf("0x%lx: 0x%x\n", a, value);
-                Wire.write(value);
-            }
-        } else {
-            //Serial.println("\tNot Currently Processing");
+    if (_systemBooted) {
+        if (_processingRequest) {
             Wire.write(Deception::MemoryCodes::CurrentlyProcessingRequest);
+        } else {
+            if (_availableForRead) {
+                if (_size > 0) {
+                    Wire.write(Deception::MemoryCodes::RequestedData);
+                    for (uint32_t a = _address, i = 0; i < _size; ++i, ++a) {
+                        Wire.write(a < 0x0100'0000 ? memory960[a] : 0);
+                    }
+                } else {
+                    Wire.write(Deception::MemoryCodes::NothingToProvide);
+                }
+            } else {
+                Wire.write(Deception::MemoryCodes::NothingToProvide);
+            }
         }
+    } else {
+        Wire.write(Deception::MemoryCodes::BootingUp);
     }
 }
 
@@ -336,28 +264,22 @@ TwoWireServer::sink() {
 
 
 
-HardwareSerialServer link0(Serial8);
-TwoWireServer link1(Wire);
+TwoWireServer link0(Wire);
 void 
 setupServers() {
-    link0.begin(Deception::PCLinkSpeed);
-    link1.begin(Deception::TWI_MemoryControllerIndex);
-}
-void 
-serialEvent8() {
-    link0.processEvent();
+    link0.begin(Deception::TWI_MemoryControllerIndex);
 }
 void
 handleReceiveTop(int howMany) {
-    link1.handleReceive(howMany);
+    link0.handleReceive(howMany);
 }
 
 void
 handleRequestTop() {
-    link1.handleRequest();
+    link0.handleRequest();
 }
 
 void 
 loop() {
-    link1.process();
+    link0.process();
 }

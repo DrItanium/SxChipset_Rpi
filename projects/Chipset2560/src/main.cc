@@ -415,11 +415,8 @@ setup() {
     Wire.setClock(Deception::TWI_ClockRate);
     SPI.begin();
     onboardCache.begin();
-    {
-        digitalWrite<Pin::RCONN_OUT, LOW>();
-        while (digitalRead<Pin::RCONN_IN>() == HIGH);
-        Serial.println(F("CONNECTION ESTABLISHED"));
-    }
+    PCLink2.waitForBackingStoreIdle();
+    Serial.println(F("CONNECTION ESTABLISHED"));
     delay(1000);
     digitalWrite<Pin::RESET, HIGH>();
 }
