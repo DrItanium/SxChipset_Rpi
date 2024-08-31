@@ -218,6 +218,7 @@ class TwoWireServer {
         void begin(uint8_t index) {
             _systemAddress = index;
             _link.begin(index);
+            _link.setClock(Deception::TWI_ClockRate);
             _link.onReceive(handleReceiveTop);
             _link.onRequest(handleRequestTop);
         }

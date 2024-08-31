@@ -27,6 +27,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Logic.h>
 #include <Wire.h>
 #include <EEPROM.h>
+#include <Deception.h>
 //#include <SPI.h>
 // The goal of this program is to be a deeply embeded atmega808 responsible
 // for generating the 20MHz, 10MHz, and 5MHz clocks used by the i960 system.
@@ -185,6 +186,7 @@ setup() {
     configureCCLs();
     EEPROM.begin();
     Wire.begin(0x08); 
+    Wire.setClock(Deception::TWI_ClockRate);
     Wire.onReceive(wireReceiveEvent);
     Wire.onRequest(wireRequestEvent);
     //SPI.begin();

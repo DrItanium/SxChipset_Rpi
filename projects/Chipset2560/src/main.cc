@@ -412,6 +412,7 @@ setup() {
     Serial.begin(115200);
     Serial1.begin(Deception::PCLinkSpeed);
     Wire.begin();
+    Wire.setClock(Deception::TWI_ClockRate);
     SPI.begin();
     onboardCache.begin();
     {
