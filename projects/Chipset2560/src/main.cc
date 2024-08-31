@@ -32,7 +32,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Pinout.h"
 #include "Setup.h"
 
-Deception::HardwareSerialBackingStore PCLink(Serial1);
 Deception::TwoWireBackingStore PCLink2(Wire, Deception::TWI_MemoryControllerIndex);
 Deception::TwoWayCache<128, Deception::CacheLine32> onboardCache;
 union [[gnu::packed]] SplitWord32 {
