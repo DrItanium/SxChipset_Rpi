@@ -103,9 +103,17 @@ setupSDCard() {
 }
 void setupServers();
 void stateChange2560();
+struct [[gnu::packed]] Packet {
+    uint8_t typeCode;
+    uint32_t address;
+    uint8_t size;
+    uint8_t data[];
+};
+void sinkReceive();
 void
 handleMemoryReceive(int howMany) {
     /// @todo implement
+    sinkReceive();
 }
 void
 handleMemoryRequest() {
@@ -131,7 +139,6 @@ setupHardware() {
     setupSDCard();
     // servers should be setup last to prevent race conditions
     setupServers();
-    Wire.begin(TWI_MemoryControllerIndex);
     Wire.onReceive(handleMemoryReceive);
     Wire.onRequest(handleMemoryRequest);
     Serial.println("Waiting For 2560 to come up");
@@ -148,11 +155,30 @@ void
 loop() {
     
 }
-struct [[gnu::packed]] Packet {
-    uint8_t typeCode;
-    uint32_t address;
-    uint8_t size;
-    uint8_t data[];
+void
+sinkReceive() {
+    while (Wire.available() > 0) {
+        (void)Wire.read();
+    }
+}
+void handleReceiveTop(int howMany);
+void handleRequestTop();
+class TwoWireServer {
+    public:
+        TwoWireServer(TwoWire& link) : _link(link) { }
+        void begin(uint8_t index) {
+            _link.begin(index);
+            _link.onReceive(handleReceiveTop);
+            _link.onRequest(handleRequestTop);
+        }
+        void handleReceive(int howMany);
+        void handleRequest();
+    protected:
+        void sink();
+    private:
+        TwoWire& _link;
+        uint32_t address = 0x0000'0000;
+        uint8_t size = 16;
 };
 class HardwareSerialServer {
     public:
@@ -225,11 +251,41 @@ class HardwareSerialServer {
         uint8_t _data[256] = { 0 };
 };
 HardwareSerialServer link0(Serial8);
+TwoWireServer link1(Wire);
 void 
 setupServers() {
     link0.begin(Deception::PCLinkSpeed);
+    link1.begin(TWI_MemoryControllerIndex);
 }
 void 
 serialEvent8() {
     link0.processEvent();
+}
+void
+handleReceiveTop(int howMany) {
+    link1.handleReceive(howMany);
+}
+
+void
+handleRequestTop() {
+    link1.handleRequest();
+}
+
+void
+TwoWireServer::handleRequest() {
+
+}
+
+void
+TwoWireServer::handleReceive(int howMany) {
+    Serial.print("Number Of Bytes: ");
+    Serial.println(howMany);
+    sink();
+}
+
+void
+TwoWireServer::sink() {
+    while (_link.available() > 0) {
+        (void)_link.read();
+    }
 }
