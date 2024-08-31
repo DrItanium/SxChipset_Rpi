@@ -117,7 +117,7 @@ setupHardware() {
             delay(10) ; \
         } \
     }
-    X(Serial, 9600, true);
+    X(Serial, 9600, false);
 #undef X
     setupMemoryPool();
     setupCaches();
