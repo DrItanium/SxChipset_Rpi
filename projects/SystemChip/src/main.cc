@@ -248,20 +248,21 @@ class TwoWireServer {
 };
 void
 TwoWireServer::handleRequest() {
-    Serial.println("Incoming Request");
+    //Serial.println("Incoming Request");
     if (_processingRequest) {
-        Serial.println("\tCurrently Processing");
+        //Serial.println("\tCurrently Processing");
         Wire.write(Deception::MemoryCodes::CurrentlyProcessingRequest);
     } else {
         if (_availableForRead) {
-            Serial.println("\tDo Read Request");
+            //Serial.println("\tDo Read Request");
             Wire.write(Deception::MemoryCodes::RequestedData);
             for (uint32_t a = _address, i = 0; i < _size; ++i, ++a) {
                 auto value = a < 0x0100'0000 ? memory960[a] : 0;
+             //   Serial.printf("0x%lx: 0x%x\n", a, value);
                 Wire.write(value);
             }
         } else {
-            Serial.println("\tNot Currently Processing");
+            //Serial.println("\tNot Currently Processing");
             Wire.write(Deception::MemoryCodes::CurrentlyProcessingRequest);
         }
     }
@@ -269,9 +270,9 @@ TwoWireServer::handleRequest() {
 
 void
 TwoWireServer::handleReceive(int howMany) {
-    Serial.println("New Recieve");
+    //Serial.println("New Recieve");
+    //Serial.printf("\tHow Many: %i\n", howMany);
     if (!_processingRequest) {
-        Serial.println("No New Request");
         if (howMany >= 1) {
             _processingRequest = true;
             _availableForRead = false;
@@ -291,26 +292,26 @@ TwoWireServer::handleReceive(int howMany) {
 void
 TwoWireServer::process() noexcept {
     if (_processingRequest) {
-        Serial.print("Type Code: 0x");
-        Serial.println(op.typeCode, HEX);
+        //Serial.print("Type Code: 0x");
+        //Serial.println(op.typeCode, HEX);
         switch (op.typeCode) {
             case Deception::MemoryCodes::ReadMemoryCode:
                 setAddressRegister(op.address);
                 setDataSizeRegister(op.size);
-                Serial.println("Read Memory Operation");
-                Serial.print("\tAddress: 0x");
-                Serial.println(_address, HEX);
-                Serial.print("\tSize: 0x");
-                Serial.println(_size, HEX);
+                //Serial.println("Read Memory Operation");
+                //Serial.print("\tAddress: 0x");
+                //Serial.println(_address, HEX);
+                //Serial.print("\tSize: 0x");
+                //Serial.println(_size, HEX);
                 break;
             case Deception::MemoryCodes::WriteMemoryCode:
                 setAddressRegister(op.address);
                 setDataSizeRegister(op.size);
-                Serial.println("Write Memory Operation");
-                Serial.print("\tAddress: 0x");
-                Serial.println(_address, HEX);
-                Serial.print("\tSize: 0x");
-                Serial.println(_size, HEX);
+                //Serial.println("Write Memory Operation");
+                //Serial.print("\tAddress: 0x");
+                //Serial.println(_address, HEX);
+                //Serial.print("\tSize: 0x");
+                //Serial.println(_size, HEX);
                 for (uint32_t a = op.address, i = 0; i < op.size; ++a, ++i) {
                     if (a < 0x10'0000) {
                         memory960[a] = op.data[i];

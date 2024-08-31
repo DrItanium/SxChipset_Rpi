@@ -299,7 +299,7 @@ template<bool readOperation>
 void
 doMemoryTransaction(SplitWord32 address) noexcept {
     auto offset = address.cacheOffset;
-    Serial.printf(F("Address: 0x%lx\n"), address.full);
+    //Serial.printf(F("Address: 0x%lx\n"), address.full);
     auto& line = onboardCache.find(PCLink2, address.full);
     auto* ptr = line.getLineData(offset);
     if constexpr (!readOperation) {
