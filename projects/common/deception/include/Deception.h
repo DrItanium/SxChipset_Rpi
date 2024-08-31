@@ -32,7 +32,7 @@ namespace Deception {
     using Address = uint32_t;
     constexpr uint32_t PCLinkSpeed = 9600;
     constexpr uint8_t TWI_MemoryControllerIndex = 0x2f;
-    constexpr uint32_t TWI_ClockRate = 100'000;
+    constexpr uint32_t TWI_ClockRate = 400'000;
     namespace MemoryCodes {
         constexpr uint8_t ReadMemoryCode = 0xC0;
         constexpr uint8_t WriteMemoryCode = 0xC1;
