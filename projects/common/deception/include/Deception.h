@@ -31,10 +31,23 @@ namespace Deception {
     using Address = uint32_t;
     constexpr uint32_t PCLinkSpeed = 9600;
     namespace MemoryCodes {
-        constexpr uint8_t ReadMemoryCode = 0xF0;
-        constexpr uint8_t WriteMemoryCode = 0xF1;
-        constexpr uint8_t BeginInstructionCode = 0xF2;
+        constexpr uint8_t ReadMemoryCode = 0xC0;
+        constexpr uint8_t WriteMemoryCode = 0xC1;
+        constexpr uint8_t BeginInstructionCode = 0xC2;
+        constexpr uint8_t CurrentlyProcessingRequest = 0xC3;
+        constexpr uint8_t BootingUp = 0xC4;
+        constexpr uint8_t EmptySizeRegister = 0xC5;
+        constexpr uint8_t RequestedData = 0xC6;
+        constexpr uint8_t SetAddressRegister = 0xC7;
+        constexpr uint8_t SetDataSizeRegister = 0xC8;
     } // end namespace MemoryCodes
+    union SplitWord32 {
+        constexpr SplitWord32(uint32_t v = 0) : _value(v) { }
+        constexpr SplitWord32(uint8_t a, uint8_t b, uint8_t c, uint8_t d) : _bytes{a, b, c, d } { }
+        constexpr auto value() const noexcept { return _value; }
+        uint32_t _value;
+        uint8_t _bytes[4];
+    };
     /**
      * @brief An abstract representation of backing storage (memory, disk, etc)
      */
@@ -385,4 +398,5 @@ namespace Deception {
     static_assert(DirectMappedCache4K_CacheLine32::computeIndex(0xFFFF'FFFF) == 0x7F);
 
 } // end namespace Deception
+using SplitWord32 = Deception::SplitWord32;
 #endif // end DECEPTION_H__

@@ -173,12 +173,20 @@ class TwoWireServer {
         }
         void handleReceive(int howMany);
         void handleRequest();
-    protected:
+    private:
         void sink();
+        void setAddressRegister(uint32_t value) noexcept {
+            _address = value;
+        }
+        void setDataSizeRegister(uint8_t value) noexcept {
+            _size = value;
+        }
     private:
         TwoWire& _link;
-        uint32_t address = 0x0000'0000;
-        uint8_t size = 16;
+        uint32_t _address = 0x0000'0000;
+        uint8_t _size = 0;
+        bool _processingRequest = false;
+        uint8_t dataBytes[256];
 };
 class HardwareSerialServer {
     public:
@@ -273,13 +281,36 @@ handleRequestTop() {
 
 void
 TwoWireServer::handleRequest() {
-
+    if (_processingRequest) {
+        Wire.write(Deception::MemoryCodes::CurrentlyProcessingRequest);
+    } else {
+        Wire.write(Deception::MemoryCodes::RequestedData);
+        for (uint32_t a = _address, i = 0; i < _size; ++i, ++a) {
+            Wire.write(a < 0x10'0000 ? memory960[a] : 0);
+        }
+    }
 }
 
 void
 TwoWireServer::handleReceive(int howMany) {
-    Serial.print("Number Of Bytes: ");
-    Serial.println(howMany);
+    if (!_processingRequest) {
+        if (howMany >= 1) {
+            switch (Wire.read()) {
+                case Deception::MemoryCodes::SetAddressRegister: 
+                    setAddressRegister(SplitWord32{ 
+                            static_cast<uint8_t>(Wire.read()), 
+                            static_cast<uint8_t>(Wire.read()), 
+                            static_cast<uint8_t>(Wire.read()), 
+                            static_cast<uint8_t>(Wire.read()) }.value());
+                    break;
+                case Deception::MemoryCodes::SetDataSizeRegister:
+                    setDataSizeRegister(static_cast<uint8_t>(Wire.read()));
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
     sink();
 }
 
