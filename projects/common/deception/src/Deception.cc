@@ -214,7 +214,7 @@ TwoWireBackingStore::write(Address addr, uint8_t* storage, size_t count) noexcep
     waitForBackingStoreIdle();
     _link.beginTransmission(_index);
     _link.write(Deception::MemoryCodes::WriteMemoryCode);
-    _link.write(reinterpret_cast<uint8_t*>(addr), sizeof(Address));
+    _link.write(reinterpret_cast<uint8_t*>(&addr), sizeof(Address));
     _link.write(static_cast<uint8_t>(count));
     _link.write(storage, count);
     _link.endTransmission();
@@ -226,7 +226,7 @@ TwoWireBackingStore::read(Address addr, uint8_t* storage, size_t count) noexcept
     waitForBackingStoreIdle();
     _link.beginTransmission(_index);
     _link.write(Deception::MemoryCodes::ReadMemoryCode);
-    _link.write(reinterpret_cast<uint8_t*>(addr), sizeof(Address));
+    _link.write(reinterpret_cast<uint8_t*>(&addr), sizeof(Address));
     // Just send the lowest 8 bits of data, this could case a strange mismatch
     _link.write(static_cast<uint8_t>(count)); 
     _link.endTransmission();

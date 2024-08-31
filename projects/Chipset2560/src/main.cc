@@ -33,6 +33,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Setup.h"
 
 Deception::HardwareSerialBackingStore PCLink(Serial1);
+Deception::TwoWireBackingStore PCLink2(Wire, Deception::TWI_MemoryControllerIndex);
 Deception::TwoWayCache<128, Deception::CacheLine32> onboardCache;
 union [[gnu::packed]] SplitWord32 {
     uint8_t cacheOffset : decltype(onboardCache)::Line_t::ShiftAmount;
@@ -298,7 +299,8 @@ template<bool readOperation>
 void
 doMemoryTransaction(SplitWord32 address) noexcept {
     auto offset = address.cacheOffset;
-    auto& line = onboardCache.find(PCLink, address.full);
+    Serial.printf(F("Address: 0x%lx\n"), address.full);
+    auto& line = onboardCache.find(PCLink2, address.full);
     auto* ptr = line.getLineData(offset);
     if constexpr (!readOperation) {
         line.markDirty();

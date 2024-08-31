@@ -40,13 +40,6 @@ namespace Deception {
         constexpr uint8_t BootingUp = 0xC4;
         constexpr uint8_t RequestedData = 0xC6;
     } // end namespace MemoryCodes
-    union SplitWord32 {
-        constexpr SplitWord32(uint32_t v = 0) : _value(v) { }
-        constexpr SplitWord32(uint8_t a, uint8_t b, uint8_t c, uint8_t d) : _bytes{a, b, c, d } { }
-        constexpr auto value() const noexcept { return _value; }
-        uint32_t _value;
-        uint8_t _bytes[4];
-    };
     /**
      * @brief An abstract representation of backing storage (memory, disk, etc)
      */
@@ -412,5 +405,4 @@ namespace Deception {
     static_assert(DirectMappedCache4K_CacheLine32::computeIndex(0xFFFF'FFFF) == 0x7F);
 
 } // end namespace Deception
-using SplitWord32 = Deception::SplitWord32;
 #endif // end DECEPTION_H__
