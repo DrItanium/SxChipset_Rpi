@@ -418,25 +418,46 @@ setup() {
     delay(1000);
     digitalWrite<Pin::RESET, HIGH>();
 }
-
-void 
-loop() {
+[[gnu::always_inline]]
+inline void 
+waitForNewTransaction() noexcept {
     // clear the READY signal interrupt ahead of waiting for the last
     clearREADYInterrupt();
     do { } while (bit_is_clear(EIFR, ADSFLAG));
     clearADSInterrupt();
+}
+void 
+loop() {
+ReadTransactionEnter:
+    waitForNewTransaction();
+ReadBodyEnter:
     {
         digitalWrite<Pin::TransactionStatus, LOW>();
         {
-            if (auto address = getAddress(); isReadOperation()) {
-                configureDataLinesForRead();
+            if (auto address = getAddress(); !isReadOperation()) {
+                configureDataLinesForWrite();
+                goto WriteBodyEnter;
+            } else {
                 if (address.isIOOperation()) {
                     doIOTransaction<true>(address);
                 } else {
                     doMemoryTransaction<true>(address);
                 }
+            }
+        }
+        digitalWrite<Pin::TransactionStatus, HIGH>();
+    }
+    goto ReadTransactionEnter;
+WriteTransactionEnter:
+    waitForNewTransaction();
+WriteBodyEnter:
+    {
+        digitalWrite<Pin::TransactionStatus, LOW>();
+        {
+            if (auto address = getAddress(); isReadOperation()) {
+                configureDataLinesForRead();
+                goto ReadBodyEnter;
             } else {
-                configureDataLinesForWrite();
                 if (address.isIOOperation()) {
                     doIOTransaction<false>(address);
                 } else {
@@ -446,5 +467,6 @@ loop() {
         }
         digitalWrite<Pin::TransactionStatus, HIGH>();
     }
+    goto WriteTransactionEnter;
 }
 

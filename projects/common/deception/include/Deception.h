@@ -184,13 +184,14 @@ namespace Deception {
         static constexpr auto NumBytes = size;
         static constexpr auto ShiftAmount = shift;
         static constexpr auto AddressMask = mask;
-        static constexpr auto ByteOffsetMask = ~AddressMask;
+        static constexpr auto ByteOffsetMask = static_cast<uint8_t>(~AddressMask);
         static_assert(isPowerOfTwo(NumBytes), "CacheLine size must be a power of two");
+        static_assert(NumBytes <= 128, "Cache Line Size is too large!");
         static constexpr Address normalizeAddress(Address input) noexcept {
             return input & AddressMask;
         }
         static constexpr uint8_t computeByteOffset(uint8_t input) noexcept {
-            return input & static_cast<uint8_t>(ByteOffsetMask);
+            return input & ByteOffsetMask;
         }
         constexpr bool dirty() const noexcept { return _dirty; }
         constexpr bool valid() const noexcept { return _backingStore != nullptr; }
