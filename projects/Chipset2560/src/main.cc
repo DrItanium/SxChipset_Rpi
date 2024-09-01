@@ -429,43 +429,47 @@ waitForNewTransaction() noexcept {
 void 
 loop() {
 ReadTransactionEnter:
+    digitalWrite<Pin::TransactionStatus, HIGH>();
     waitForNewTransaction();
-ReadBodyEnter:
+    digitalWrite<Pin::TransactionStatus, LOW>();
     {
-        digitalWrite<Pin::TransactionStatus, LOW>();
-        {
-            if (auto address = getAddress(); !isReadOperation()) {
-                configureDataLinesForWrite();
-                goto WriteBodyEnter;
+        if (auto address = getAddress(); !isReadOperation()) {
+            configureDataLinesForWrite();
+            if (address.isIOOperation()) {
+                doIOTransaction<false>(address);
             } else {
-                if (address.isIOOperation()) {
-                    doIOTransaction<true>(address);
-                } else {
-                    doMemoryTransaction<true>(address);
-                }
+                doMemoryTransaction<false>(address);
+            }
+            goto WriteTransactionEnter;
+        } else {
+            if (address.isIOOperation()) {
+                doIOTransaction<true>(address);
+            } else {
+                doMemoryTransaction<true>(address);
             }
         }
-        digitalWrite<Pin::TransactionStatus, HIGH>();
     }
     goto ReadTransactionEnter;
 WriteTransactionEnter:
+    digitalWrite<Pin::TransactionStatus, HIGH>();
     waitForNewTransaction();
-WriteBodyEnter:
+    digitalWrite<Pin::TransactionStatus, LOW>();
     {
-        digitalWrite<Pin::TransactionStatus, LOW>();
-        {
-            if (auto address = getAddress(); isReadOperation()) {
-                configureDataLinesForRead();
-                goto ReadBodyEnter;
+        if (auto address = getAddress(); isReadOperation()) {
+            configureDataLinesForRead();
+            if (address.isIOOperation()) {
+                doIOTransaction<true>(address);
             } else {
-                if (address.isIOOperation()) {
-                    doIOTransaction<false>(address);
-                } else {
-                    doMemoryTransaction<false>(address);
-                }
+                doMemoryTransaction<true>(address);
+            }
+            goto ReadTransactionEnter;
+        } else {
+            if (address.isIOOperation()) {
+                doIOTransaction<false>(address);
+            } else {
+                doMemoryTransaction<false>(address);
             }
         }
-        digitalWrite<Pin::TransactionStatus, HIGH>();
     }
     goto WriteTransactionEnter;
 }
