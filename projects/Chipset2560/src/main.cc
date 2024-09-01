@@ -23,7 +23,6 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 #include <Arduino.h>
-#include <SPI.h>
 #include <Wire.h>
 #include <Deception.h>
 
@@ -412,13 +411,10 @@ setup() {
     configureDataLinesForRead();
     configureInterruptSources();
     Serial.begin(115200);
-    Serial1.begin(Deception::PCLinkSpeed);
     Wire.begin();
     Wire.setClock(Deception::TWI_ClockRate);
-    SPI.begin();
     onboardCache.begin();
     PCLink2.waitForBackingStoreIdle();
-    Serial.println(F("CONNECTION ESTABLISHED"));
     delay(1000);
     digitalWrite<Pin::RESET, HIGH>();
 }

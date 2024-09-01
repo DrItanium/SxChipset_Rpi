@@ -179,45 +179,62 @@ namespace Deception {
                 return false;
         }
     }
-    /**
-     * @brief A simple 32-byte cache line
-     */
-    class CacheLine32 {
-        public:
-            static constexpr uint8_t NumBytes = 32;
-            static constexpr auto ShiftAmount = 5;
-            static_assert(isPowerOfTwo(NumBytes), "Cache Line size must be a power of two");
-            static constexpr Address AddressMask = 0xFFFFFFE0;
-            static constexpr Address normalizeAddress(Address input) noexcept {
-                return input & AddressMask;
+    template<uint8_t size, uint8_t shift, Address mask>
+    struct CacheLine {
+        static constexpr auto NumBytes = size;
+        static constexpr auto ShiftAmount = shift;
+        static constexpr auto AddressMask = mask;
+        static constexpr auto ByteOffsetMask = ~AddressMask;
+        static_assert(isPowerOfTwo(NumBytes), "CacheLine size must be a power of two");
+        static constexpr Address normalizeAddress(Address input) noexcept {
+            return input & AddressMask;
+        }
+        static constexpr uint8_t computeByteOffset(uint8_t input) noexcept {
+            return input & static_cast<uint8_t>(ByteOffsetMask);
+        }
+        constexpr bool dirty() const noexcept { return _dirty; }
+        constexpr bool valid() const noexcept { return _backingStore != nullptr; }
+        constexpr bool matches(Address other) const noexcept { return valid() && (_key == normalizeAddress(other)); }
+        void replace(BackingStore& store, Address newAddress) noexcept {
+            if (valid()) {
+                if (_dirty) {
+                    _dirty = false;
+                    (void)_backingStore->write(_key, _bytes, NumBytes);
+                }
             }
-            static constexpr uint8_t computeByteOffset(uint8_t input) noexcept {
-                return input & 0x1F;
+            _backingStore = &store;
+            _key = normalizeAddress(newAddress);
+            (void)_backingStore->read(_key, _bytes, NumBytes);
+        }
+        void setByte(uint8_t offset, uint8_t value) noexcept {
+            markDirty();
+            _bytes[computeByteOffset(offset)] = value;
+        }
+        constexpr uint8_t getByte(uint8_t offset) const noexcept {
+            return _bytes[computeByteOffset(offset)];
+        }
+        void clear() noexcept {
+            _dirty = false;
+            _backingStore = nullptr;
+            _key = 0;
+            for (auto i = 0u; i < NumBytes; ++i) {
+                _bytes[i] = 0;
             }
-            constexpr bool dirty() const noexcept { return _dirty; }
-            constexpr bool valid() const noexcept { return _backingStore != nullptr; }
-            constexpr bool matches(Address other) const noexcept {
-                return valid() && (_key == normalizeAddress(other));
-            }
-            void replace(BackingStore& store, Address newAddress) noexcept;
-            void setByte(uint8_t offset, uint8_t value) noexcept;
-            constexpr uint8_t getByte(uint8_t offset) const noexcept {
-                return _bytes[computeByteOffset(offset)];
-            }
-            /**
-             * @brief Clear the contents of the line 
-             */
-            void clear() noexcept;
-            uint8_t* getLineData(uint8_t offset = 0) noexcept {
-                return &_bytes[offset];
-            }
-            void markDirty() noexcept { _dirty = true; }
+        }
+        uint8_t* getLineData(uint8_t offset = 0) noexcept {
+            return &_bytes[offset];
+        }
+        void markDirty() noexcept { _dirty = true; }
         private:
             uint8_t _bytes[NumBytes] = { 0 };
             uint32_t _key = 0;
             bool _dirty = false;
             BackingStore* _backingStore = nullptr;
     };
+    using CacheLine16 = CacheLine<16, 4, 0xFFFF'FFF0>;
+    using CacheLine32 = CacheLine<32, 5, 0xFFFF'FFE0>;
+    using CacheLine64 = CacheLine<64, 6, 0xFFFF'FFC0>;
+    using CacheLine128 = CacheLine<128, 7, 0xFFFF'FF80>;
     template<uint16_t C, typename L>
     class DirectMappedCache {
         public:

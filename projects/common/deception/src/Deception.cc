@@ -28,34 +28,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace Deception {
 
 
-void
-CacheLine32::clear() noexcept {
-    _dirty = false;
-    _backingStore = nullptr;
-    _key = 0;
-    for (auto i = 0u; i < NumBytes; ++i) {
-        _bytes[i] = 0;
-    }
-}
-void
-CacheLine32::replace(BackingStore& store, Address newAddress) noexcept {
-    if (valid()) {
-        if (_dirty) {
-            _dirty = false;
-            (void)_backingStore->write(_key, _bytes, NumBytes);
-        }
-    }
-    _backingStore = &store;
-    _key = normalizeAddress(newAddress);
-    (void)_backingStore->read(_key, _bytes, NumBytes);
-}
-
-void
-CacheLine32::setByte(uint8_t offset, uint8_t value) noexcept {
-    markDirty();
-    _bytes[computeByteOffset(offset)] = value;
-}
-
 MemoryCodes
 TwoWireBackingStore::backingStoreStatus(uint8_t size) noexcept {
     _link.requestFrom(_index, size);
