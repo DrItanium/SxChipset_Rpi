@@ -299,8 +299,9 @@ template<bool readOperation>
 void
 doMemoryTransaction(SplitWord32 address) noexcept {
     auto offset = address.cacheOffset;
-    //Serial.printf(F("Address: 0x%lx\n"), address.full);
+    digitalWrite<Pin::CacheLineLookup, LOW>();
     auto& line = onboardCache.find(PCLink2, address.full);
+    digitalWrite<Pin::CacheLineLookup, HIGH>();
     auto* ptr = line.getLineData(offset);
     if constexpr (!readOperation) {
         line.markDirty();
@@ -343,8 +344,10 @@ getAddress() noexcept {
 }
 void
 configurePins() noexcept {
-    pinMode(Pin::RCONN_OUT, OUTPUT);
-    digitalWrite<Pin::RCONN_OUT, HIGH>();
+    pinMode(Pin::CacheLineLookup, OUTPUT);
+    pinMode(Pin::TransactionStatus, OUTPUT);
+    digitalWrite<Pin::TransactionStatus, HIGH>();
+    digitalWrite<Pin::CacheLineLookup, HIGH>();
     pinMode(Pin::RESET, OUTPUT);
     digitalWrite<Pin::RESET, LOW>();
     pinMode(Pin::INT960_0, OUTPUT);
@@ -362,7 +365,6 @@ configurePins() noexcept {
     pinMode(Pin::FAIL, INPUT);
     pinMode(Pin::READY, OUTPUT);
     pinMode(Pin::WR, INPUT);
-    pinMode(Pin::RCONN_IN, INPUT);
     // deactivate interrupts
     digitalWrite<Pin::INT960_0, HIGH>();
     digitalWrite<Pin::INT960_1, LOW>();
@@ -428,21 +430,25 @@ loop() {
     do { } while (bit_is_clear(EIFR, ADSFLAG));
     clearADSInterrupt();
     {
-        if (auto address = getAddress(); isReadOperation()) {
-            configureDataLinesForRead();
-            if (address.isIOOperation()) {
-                doIOTransaction<true>(address);
+        digitalWrite<Pin::TransactionStatus, LOW>();
+        {
+            if (auto address = getAddress(); isReadOperation()) {
+                configureDataLinesForRead();
+                if (address.isIOOperation()) {
+                    doIOTransaction<true>(address);
+                } else {
+                    doMemoryTransaction<true>(address);
+                }
             } else {
-                doMemoryTransaction<true>(address);
-            }
-        } else {
-            configureDataLinesForWrite();
-            if (address.isIOOperation()) {
-                doIOTransaction<false>(address);
-            } else {
-                doMemoryTransaction<false>(address);
+                configureDataLinesForWrite();
+                if (address.isIOOperation()) {
+                    doIOTransaction<false>(address);
+                } else {
+                    doMemoryTransaction<false>(address);
+                }
             }
         }
+        digitalWrite<Pin::TransactionStatus, HIGH>();
     }
 }
 
