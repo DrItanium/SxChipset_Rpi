@@ -278,9 +278,9 @@ doIOTransaction(SplitWord32 address) noexcept {
     }
 }
 template<bool readOperation>
+inline
 void
 doMemoryTransaction(SplitWord32 address) noexcept {
-    //auto offset = address.getCacheOffset();
     digitalWrite<Pin::CacheLineLookup, LOW>();
     auto& line = onboardCache.find(PCLink2, address.full);
     digitalWrite<Pin::CacheLineLookup, HIGH>();
@@ -288,31 +288,120 @@ doMemoryTransaction(SplitWord32 address) noexcept {
     if constexpr (!readOperation) {
         line.markDirty();
     }
-#define X(base) { \
-    if constexpr (readOperation) { \
-        setLowerData(ptr[base + 0]); \
-        setUpperData(ptr[base + 1]); \
-    } else { \
-        if (lowerByteEnabled()) ptr[base + 0] = lowerData(); \
-        if (upperByteEnabled()) ptr[base + 1] = upperData(); \
-    } \
-    if constexpr (base != 14) { \
-        if (isLastWordOfTransaction()) { \
-            signalReady(); \
-            return; \
-        } \
-    } \
-    signalReady(); \
-}
-    X(0);
-    X(2);
-    X(4);
-    X(6);
-    X(8);
-    X(10);
-    X(12);
-    X(14);
-#undef X
+    if constexpr (readOperation) {
+        setLowerData(ptr[0]);
+        setUpperData(ptr[1]);
+        if (isLastWordOfTransaction()) {
+            signalReady();
+            return;
+        }
+        signalReady();
+        setLowerData(ptr[2]);
+        setUpperData(ptr[3]);
+        if (isLastWordOfTransaction()) {
+            signalReady();
+            return;
+        }
+        signalReady();
+        setLowerData(ptr[4]);
+        setUpperData(ptr[5]);
+        if (isLastWordOfTransaction()) {
+            signalReady();
+            return;
+        }
+        signalReady();
+        setLowerData(ptr[6]);
+        setUpperData(ptr[7]);
+        if (isLastWordOfTransaction()) {
+            signalReady();
+            return;
+        }
+        signalReady();
+        setLowerData(ptr[8]);
+        setUpperData(ptr[9]);
+        if (isLastWordOfTransaction()) {
+            signalReady();
+            return;
+        }
+        signalReady();
+        setLowerData(ptr[10]);
+        setUpperData(ptr[11]);
+        if (isLastWordOfTransaction()) {
+            signalReady();
+            return;
+        }
+        signalReady();
+        setLowerData(ptr[12]);
+        setUpperData(ptr[13]);
+        if (isLastWordOfTransaction()) {
+            signalReady();
+            return;
+        }
+        signalReady();
+        setLowerData(ptr[14]);
+        setUpperData(ptr[15]);
+        signalReady();
+    } else {
+        if (lowerByteEnabled()) ptr[0] = lowerData();
+        if (upperByteEnabled()) ptr[1] = upperData();
+        if (isLastWordOfTransaction()) {
+            signalReady();
+            return;
+        }
+        signalReady();
+        // we can safely ignore checking BE0 since we flowed into this
+        ptr[2] = lowerData();
+        if (upperByteEnabled()) ptr[3] = upperData();
+        if (isLastWordOfTransaction()) {
+            signalReady();
+            return;
+        }
+        signalReady();
+        // we can safely ignore checking BE0 since we flowed into this
+        ptr[4] = lowerData();
+        if (upperByteEnabled()) ptr[5] = upperData();
+        if (isLastWordOfTransaction()) {
+            signalReady();
+            return;
+        }
+        signalReady();
+        // we can safely ignore checking BE0 since we flowed into this
+        ptr[6] = lowerData();
+        if (upperByteEnabled()) ptr[7] = upperData();
+        if (isLastWordOfTransaction()) {
+            signalReady();
+            return;
+        }
+        signalReady();
+        // we can safely ignore checking BE0 since we flowed into this
+        ptr[8] = lowerData();
+        if (upperByteEnabled()) ptr[9] = upperData();
+        if (isLastWordOfTransaction()) {
+            signalReady();
+            return;
+        }
+        signalReady();
+        // we can safely ignore checking BE0 since we flowed into this
+        ptr[10] = lowerData();
+        if (upperByteEnabled()) ptr[11] = upperData();
+        if (isLastWordOfTransaction()) {
+            signalReady();
+            return;
+        }
+        signalReady();
+        // we can safely ignore checking BE0 since we flowed into this
+        ptr[12] = lowerData();
+        if (upperByteEnabled()) ptr[13] = upperData();
+        if (isLastWordOfTransaction()) {
+            signalReady();
+            return;
+        }
+        signalReady();
+        // we can safely ignore checking BE0 since we flowed into this
+        ptr[14] = lowerData();
+        if (upperByteEnabled()) ptr[15] = upperData();
+        signalReady();
+    }
 }
 inline
 SplitWord32
