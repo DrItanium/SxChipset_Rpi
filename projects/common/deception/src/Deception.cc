@@ -29,42 +29,6 @@ namespace Deception {
 
 
 void
-CacheLine16::clear() noexcept {
-    _dirty = false;
-    _backingStore = nullptr;
-    _key = 0;
-    for (auto i = 0u; i < NumBytes; ++i) {
-        _bytes[i] = 0;
-    }
-}
-void
-CacheLine16::sync() noexcept {
-    if (valid()) {
-        if (_dirty) {
-            _dirty = false;
-            (void)_backingStore->write(_key, _bytes, NumBytes);
-        }
-    }
-}
-void
-CacheLine16::replace(BackingStore& store, Address newAddress) noexcept {
-    sync();
-    _backingStore = &store;
-    _key = normalizeAddress(newAddress);
-    (void)_backingStore->read(_key, _bytes, NumBytes);
-}
-
-void
-CacheLine16::setByte(uint8_t offset, uint8_t value) noexcept {
-    markDirty();
-    _bytes[computeByteOffset(offset)] = value;
-}
-
-void
-CacheLine16::markDirty() noexcept {
-    _dirty = true;
-}
-void
 CacheLine32::clear() noexcept {
     _dirty = false;
     _backingStore = nullptr;
@@ -74,17 +38,13 @@ CacheLine32::clear() noexcept {
     }
 }
 void
-CacheLine32::sync() noexcept {
+CacheLine32::replace(BackingStore& store, Address newAddress) noexcept {
     if (valid()) {
         if (_dirty) {
             _dirty = false;
             (void)_backingStore->write(_key, _bytes, NumBytes);
         }
     }
-}
-void
-CacheLine32::replace(BackingStore& store, Address newAddress) noexcept {
-    sync();
     _backingStore = &store;
     _key = normalizeAddress(newAddress);
     (void)_backingStore->read(_key, _bytes, NumBytes);
@@ -92,38 +52,6 @@ CacheLine32::replace(BackingStore& store, Address newAddress) noexcept {
 
 void
 CacheLine32::setByte(uint8_t offset, uint8_t value) noexcept {
-    markDirty();
-    _bytes[computeByteOffset(offset)] = value;
-}
-
-void
-CacheLine64::clear() noexcept {
-    _dirty = false;
-    _backingStore = nullptr;
-    _key = 0;
-    for (auto i = 0u; i < NumBytes; ++i) {
-        _bytes[i] = 0;
-    }
-}
-void
-CacheLine64::sync() noexcept {
-    if (valid()) {
-        if (_dirty) {
-            _dirty = false;
-            (void)_backingStore->write(_key, _bytes, NumBytes);
-        }
-    }
-}
-void
-CacheLine64::replace(BackingStore& store, Address newAddress) noexcept {
-    sync();
-    _backingStore = &store;
-    _key = normalizeAddress(newAddress);
-    (void)_backingStore->read(_key, _bytes, NumBytes);
-}
-
-void
-CacheLine64::setByte(uint8_t offset, uint8_t value) noexcept {
     markDirty();
     _bytes[computeByteOffset(offset)] = value;
 }
@@ -194,28 +122,5 @@ TwoWireBackingStore::read(Address addr, uint8_t* storage, size_t count) noexcept
     ++i;
     return i;
 }
-
-size_t 
-TwoWireBackingStore::swap(Address wrAddress, Address readAddress, uint8_t* storage, size_t count) noexcept {
-    waitForBackingStoreIdle();
-    _link.beginTransmission(_index);
-    _link.write(static_cast<uint8_t>(Deception::MemoryCodes::SwapMemory));
-    _link.write(reinterpret_cast<uint8_t*>(&readAddress), sizeof(Address));
-    _link.write(static_cast<uint8_t>(count));
-    _link.write(reinterpret_cast<uint8_t*>(&wrAddress), sizeof(Address));
-    _link.write(static_cast<uint8_t>(count));
-    _link.write(storage, count);
-    _link.endTransmission();
-    waitForMemoryReadSuccess(static_cast<uint8_t>(count) + 1); // add one for the return code
-    size_t i = 0;
-    while (1 < Wire.available() ) {
-        storage[i] = Wire.read();
-        ++i;
-    }
-    storage[i] = Wire.read();
-    ++i;
-    return i;
-}
-
 
 } // end namespace Deception

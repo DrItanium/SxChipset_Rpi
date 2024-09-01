@@ -51,13 +51,11 @@ constexpr size_t MinimumPoolSize = 1_MB; // we don't want this to go any smaller
 constexpr auto MemoryPoolSize = 16_MB; 
 
 MEMORY_POOL_SECTION uint8_t memory960[MemoryPoolSize];
-CACHE_MEMORY_SECTION Deception::DirectMappedCache_CacheLine16<0x1000> externalCache;
 bool sdcardInstalled = false;
 static_assert(MemoryPoolSize <= MaxMemoryPoolSize, "Requested memory capacity is too large!");
 static_assert(MemoryPoolSize >= MinimumPoolSize, "Requested memory capacity will not fit a default boot image!");
 void
 setupCaches() {
-    externalCache.begin();
 }
 void 
 setupMemoryPool() {
@@ -107,14 +105,6 @@ struct [[gnu::packed]] Packet {
     uint8_t typeCode;
     uint32_t address;
     uint8_t size;
-    uint8_t data[];
-};
-struct [[gnu::packed]] SwapPacket {
-    uint8_t typeCode;
-    uint32_t readAddress;
-    uint8_t readSize;
-    uint32_t writeAddress;
-    uint8_t writeSize;
     uint8_t data[];
 };
 void
@@ -178,7 +168,6 @@ class TwoWireServer {
         union {
             uint8_t _dataBytes[256] = { 0 };
             Packet op;
-            SwapPacket swapOp;
         };
 };
 void
@@ -242,15 +231,6 @@ TwoWireServer::process() noexcept {
                         memory960[a] = op.data[i];
                     }
                 }
-                break;
-            case Deception::MemoryCodes::SwapMemory:
-                for (uint32_t a = swapOp.writeAddress, i = 0; i < swapOp.writeSize; ++i, ++a) {
-                    if (a < 0x0100'0000) {
-                        memory960[a] = swapOp.data[i];
-                    }
-                }
-                setAddressRegister(swapOp.readAddress);
-                setDataSizeRegister(swapOp.readSize);
                 break;
             default:
                 break;

@@ -36,7 +36,6 @@ namespace Deception {
     enum class MemoryCodes : uint8_t {
         ReadMemory = 0xC0,
         WriteMemory,
-        SwapMemory,
         BeginInstruction,
         CurrentlyProcessingRequest,
         BootingUp,
@@ -73,10 +72,6 @@ namespace Deception {
             virtual ~BackingStore() = default;
             virtual size_t read(Address targetAddress, uint8_t* storage, size_t count) noexcept = 0;
             virtual size_t write(Address targetAddress, uint8_t* storage, size_t count) noexcept = 0;
-            virtual size_t swap(Address writeAddress, Address readAddress, uint8_t* storage, size_t count) noexcept {
-                write(writeAddress, storage, count);
-                return read(readAddress, storage, count);
-            }
     };
     /**
      * @brief A backing store that is really just a sink that acts as a
@@ -104,7 +99,6 @@ namespace Deception {
             ~TwoWireBackingStore() override = default;
             size_t read(Address addr, uint8_t* storage, size_t count) noexcept override;
             size_t write(Address addr, uint8_t* storage, size_t count) noexcept override;
-            size_t swap(Address wrAddress, Address readAddress, uint8_t* storage, size_t count) noexcept override;
             void waitForBackingStoreIdle() noexcept;
         private:
             [[nodiscard]] MemoryCodes backingStoreStatus(uint8_t size) noexcept;
@@ -186,46 +180,6 @@ namespace Deception {
         }
     }
     /**
-     * @brief A simple 16-byte cache line
-     */
-    class CacheLine16 {
-        public:
-            static constexpr uint8_t NumBytes = 16;
-            static constexpr auto ShiftAmount = 4;
-            static_assert(isPowerOfTwo(NumBytes), "Cache Line size must be a power of two");
-            static constexpr Address AddressMask = 0xFFFFFFF0;
-            static constexpr Address normalizeAddress(Address input) noexcept {
-                return input & AddressMask;
-            }
-            static constexpr uint8_t computeByteOffset(uint8_t input) noexcept {
-                return input & 0xF;
-            }
-            constexpr bool dirty() const noexcept { return _dirty; }
-            constexpr bool valid() const noexcept { return _backingStore != nullptr; }
-            constexpr bool matches(Address other) const noexcept {
-                return valid() && (_key == normalizeAddress(other));
-            }
-            void sync() noexcept;
-            void replace(BackingStore& store, Address newAddress) noexcept;
-            void setByte(uint8_t offset, uint8_t value) noexcept;
-            constexpr uint8_t getByte(uint8_t offset) const noexcept {
-                return _bytes[computeByteOffset(offset)];
-            }
-            /**
-             * @brief Clear the contents of the line without syncing or anything like that
-             */
-            void clear() noexcept;
-            uint8_t* getLineData(uint8_t offset = 0) noexcept {
-                return &_bytes[offset];
-            }
-            void markDirty() noexcept;
-        private:
-            uint8_t _bytes[NumBytes] = { 0 };
-            uint32_t _key = 0;
-            bool _dirty = false;
-            BackingStore* _backingStore = nullptr;
-    };
-    /**
      * @brief A simple 32-byte cache line
      */
     class CacheLine32 {
@@ -245,54 +199,13 @@ namespace Deception {
             constexpr bool matches(Address other) const noexcept {
                 return valid() && (_key == normalizeAddress(other));
             }
-            void sync() noexcept;
             void replace(BackingStore& store, Address newAddress) noexcept;
             void setByte(uint8_t offset, uint8_t value) noexcept;
             constexpr uint8_t getByte(uint8_t offset) const noexcept {
                 return _bytes[computeByteOffset(offset)];
             }
             /**
-             * @brief Clear the contents of the line without syncing or anything like that
-             */
-            void clear() noexcept;
-            uint8_t* getLineData(uint8_t offset = 0) noexcept {
-                return &_bytes[offset];
-            }
-            void markDirty() noexcept { _dirty = true; }
-        private:
-            uint8_t _bytes[NumBytes] = { 0 };
-            uint32_t _key = 0;
-            bool _dirty = false;
-            BackingStore* _backingStore = nullptr;
-    };
-    /**
-     * @brief A simple 64-byte cache line
-     */
-    class CacheLine64 {
-        public:
-            static constexpr uint8_t NumBytes = 64;
-            static constexpr auto ShiftAmount = 6;
-            static_assert(isPowerOfTwo(NumBytes), "Cache Line size must be a power of two");
-            static constexpr Address AddressMask = 0xFFFFFFC0;
-            static constexpr Address normalizeAddress(Address input) noexcept {
-                return input & AddressMask;
-            }
-            static constexpr uint8_t computeByteOffset(uint8_t input) noexcept {
-                return input & 0x3F;
-            }
-            constexpr bool dirty() const noexcept { return _dirty; }
-            constexpr bool valid() const noexcept { return _backingStore != nullptr; }
-            constexpr bool matches(Address other) const noexcept {
-                return valid() && (_key == normalizeAddress(other));
-            }
-            void sync() noexcept;
-            void replace(BackingStore& store, Address newAddress) noexcept;
-            void setByte(uint8_t offset, uint8_t value) noexcept;
-            constexpr uint8_t getByte(uint8_t offset) const noexcept {
-                return _bytes[computeByteOffset(offset)];
-            }
-            /**
-             * @brief Clear the contents of the line without syncing or anything like that
+             * @brief Clear the contents of the line 
              */
             void clear() noexcept;
             uint8_t* getLineData(uint8_t offset = 0) noexcept {
@@ -331,11 +244,6 @@ namespace Deception {
             void begin() noexcept {
                 clear();
             }
-            void sync() noexcept {
-                for (auto& line : lines) {
-                    line.sync();
-                }
-            }
         private:
             Line_t lines[NumLines];
     };
@@ -372,10 +280,6 @@ namespace Deception {
                         return lines[index];
                     }
                 }
-                void sync() noexcept {
-                    lines[0].sync();
-                    lines[1].sync();
-                }
             };
             using Set_t = CacheSet;
             static constexpr uint8_t computeIndex(Address input) noexcept {
@@ -392,28 +296,12 @@ namespace Deception {
             void begin() noexcept {
                 clear();
             }
-            void sync() noexcept {
-                for (auto& set : sets) {
-                    set.sync();
-                }
-            }
         private:
             Set_t sets[NumSets];
     };
     template<uint16_t C>
-    using DirectMappedCache_CacheLine16 = DirectMappedCache<C, CacheLine16>;
-    using DirectMappedCache4K_CacheLine16 = DirectMappedCache_CacheLine16<256>; 
-    template<uint16_t C>
     using DirectMappedCache_CacheLine32 = DirectMappedCache<C, CacheLine32>;
     using DirectMappedCache4K_CacheLine32 = DirectMappedCache_CacheLine32<128>;
-    template<uint16_t C>
-    using DirectMappedCache_CacheLine64 = DirectMappedCache<C, CacheLine64>;
-    using DirectMappedCache4K_CacheLine64 = DirectMappedCache_CacheLine64<64>;
-    template<uint16_t C>
-    using TwoWayCache_CacheLine64 = TwoWayCache<C, CacheLine64>;
-    using TwoWayCache4K_CacheLine64 = TwoWayCache_CacheLine64<64>;
-    static_assert(DirectMappedCache4K_CacheLine16::computeIndex(0xFFFF'FFFF) == 0xFF);
-    static_assert(DirectMappedCache4K_CacheLine16::computeIndex(0xFFFF'FFDF) == 0xFD);
     static_assert(DirectMappedCache4K_CacheLine32::computeIndex(0xFFFF'FFFF) == 0x7F);
 
 } // end namespace Deception
