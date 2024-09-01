@@ -109,6 +109,14 @@ struct [[gnu::packed]] Packet {
     uint8_t size;
     uint8_t data[];
 };
+struct [[gnu::packed]] SwapPacket {
+    uint8_t typeCode;
+    uint32_t readAddress;
+    uint8_t readSize;
+    uint32_t writeAddress;
+    uint8_t writeSize;
+    uint8_t data[];
+};
 void
 setupHardware() {
 #define X(item, baud, wait) item . begin (baud ) ; \
@@ -170,6 +178,7 @@ class TwoWireServer {
         union {
             uint8_t _dataBytes[256] = { 0 };
             Packet op;
+            SwapPacket swapOp;
         };
 };
 void
@@ -233,6 +242,15 @@ TwoWireServer::process() noexcept {
                         memory960[a] = op.data[i];
                     }
                 }
+                break;
+            case Deception::MemoryCodes::SwapMemory:
+                for (uint32_t a = swapOp.writeAddress, i = 0; i < swapOp.writeSize; ++i, ++a) {
+                    if (a < 0x0100'0000) {
+                        memory960[a] = swapOp.data[i];
+                    }
+                }
+                setAddressRegister(swapOp.readAddress);
+                setDataSizeRegister(swapOp.readSize);
                 break;
             default:
                 break;
