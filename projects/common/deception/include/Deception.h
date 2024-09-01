@@ -247,6 +247,9 @@ namespace Deception {
             static constexpr uint8_t computeIndex(Address input) noexcept {
                 return (static_cast<uint16_t>(input) >> Line_t::ShiftAmount) & LineMask;
             }
+            static constexpr uint8_t computeOffset(uint8_t input) noexcept {
+                return Line_t::computeByteOffset(input);
+            }
             void clear() noexcept {
                 for (auto line : lines) {
                     line.clear();
@@ -275,7 +278,7 @@ namespace Deception {
             static constexpr auto LineMask = NumSets - 1;
             using Line_t = L;
             struct CacheSet {
-                bool lastElement = false;
+                bool lastElement = true;
                 Line_t lines[2];
                 void clear() noexcept {
                     lastElement = true;
@@ -303,6 +306,9 @@ namespace Deception {
             static constexpr uint8_t computeIndex(Address input) noexcept {
                 return (static_cast<uint16_t>(input) >> Line_t::ShiftAmount) & LineMask;
             }
+            static constexpr uint8_t computeOffset(uint8_t input) noexcept {
+                return Line_t::computeByteOffset(input);
+            }
             void clear() noexcept {
                 for (auto set : sets) {
                     set.clear();
@@ -317,10 +323,6 @@ namespace Deception {
         private:
             Set_t sets[NumSets];
     };
-    template<uint16_t C>
-    using DirectMappedCache_CacheLine32 = DirectMappedCache<C, CacheLine32>;
-    using DirectMappedCache4K_CacheLine32 = DirectMappedCache_CacheLine32<128>;
-    static_assert(DirectMappedCache4K_CacheLine32::computeIndex(0xFFFF'FFFF) == 0x7F);
 
 } // end namespace Deception
 #endif // end DECEPTION_H__

@@ -196,8 +196,6 @@ TwoWireServer::handleRequest() {
 
 void
 TwoWireServer::handleReceive(int howMany) {
-    //Serial.println("New Recieve");
-    //Serial.printf("\tHow Many: %i\n", howMany);
     if (!_processingRequest) {
         if (howMany >= 1) {
             _processingRequest = true;

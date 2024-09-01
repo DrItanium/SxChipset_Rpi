@@ -32,37 +32,20 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Setup.h"
 
 Deception::TwoWireBackingStore PCLink2(Wire, Deception::TWI_MemoryControllerIndex);
-using DataCache = Deception::TwoWayCache<128, Deception::CacheLine32>;
+//using DataCache = Deception::TwoWayCache<128, Deception::CacheLine32>;
+using DataCache = Deception::DirectMappedCache<256, Deception::CacheLine16>;
 DataCache onboardCache;
 union [[gnu::packed]] SplitWord32 {
-    uint8_t cacheOffset : DataCache::Line_t::ShiftAmount;
     uint8_t bytes[sizeof(uint32_t) / sizeof(uint8_t)];
     uint16_t halves[sizeof(uint32_t) / sizeof(uint16_t)];
     __uint24 lo24;
     uint32_t full;
     constexpr bool isIOOperation() const noexcept { return bytes[3] == 0xFE; }
+    constexpr auto getCacheOffset() const noexcept {
+        return DataCache::computeOffset(bytes[0]);
+    }
 };
 static_assert(sizeof(SplitWord32) == sizeof(uint32_t));
-// With the way that the 2560 and CH351s are connected to the i960, I have to
-// transfer data through the 2560 to the i960. This is due to the fact that the
-// CH351s are not buffered to prevent this. However, there is nothing stopping
-// me from expanding the width of the EBI for my own internal purposes. I can
-// also make a 256 byte window into the i960 bus as well.
-//
-// Actually, if I keep the data lines on the CH351 off the bus (via making them
-// inputs) then I can actually do this. I just need to move the data lines to
-// buffered parts using two AHC374s per 8-bit block. That way, I can actually
-// keep the parts off of the bus as well. 
-//
-// However, I can easily use the EBI on the 2560 to provide its own internal
-// bus. For example, attaching an internal 32k SRAM to allow for more memory
-// (if desired). 
-//
-
-
-// the memory that we are actually getting data from comes from the PCLink
-// serial device that we cache on chip (eventually over the EBI as well to
-// increase the availability of data as well)
 
 #define ADSFLAG INTF4
 #define ADS_ISC0 ISC40
@@ -297,11 +280,11 @@ doIOTransaction(SplitWord32 address) noexcept {
 template<bool readOperation>
 void
 doMemoryTransaction(SplitWord32 address) noexcept {
-    auto offset = address.cacheOffset;
+    //auto offset = address.getCacheOffset();
     digitalWrite<Pin::CacheLineLookup, LOW>();
     auto& line = onboardCache.find(PCLink2, address.full);
     digitalWrite<Pin::CacheLineLookup, HIGH>();
-    auto* ptr = line.getLineData(offset);
+    auto* ptr = line.getLineData(address.getCacheOffset());
     if constexpr (!readOperation) {
         line.markDirty();
     }
