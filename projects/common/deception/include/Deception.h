@@ -301,7 +301,7 @@ namespace Deception {
             };
             using Set_t = CacheSet;
             static constexpr uint8_t computeIndex(Address input) noexcept {
-                return (input >> Line_t::ShiftAmount) & LineMask;
+                return (static_cast<uint16_t>(input) >> Line_t::ShiftAmount) & LineMask;
             }
             void clear() noexcept {
                 for (auto set : sets) {
