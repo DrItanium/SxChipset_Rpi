@@ -195,5 +195,27 @@ TwoWireBackingStore::read(Address addr, uint8_t* storage, size_t count) noexcept
     return i;
 }
 
+size_t 
+TwoWireBackingStore::swap(Address wrAddress, Address readAddress, uint8_t* storage, size_t count) noexcept {
+    waitForBackingStoreIdle();
+    _link.beginTransmission(_index);
+    _link.write(static_cast<uint8_t>(Deception::MemoryCodes::SwapMemory));
+    _link.write(reinterpret_cast<uint8_t*>(&readAddress), sizeof(Address));
+    _link.write(static_cast<uint8_t>(count));
+    _link.write(reinterpret_cast<uint8_t*>(&wrAddress), sizeof(Address));
+    _link.write(static_cast<uint8_t>(count));
+    _link.write(storage, count);
+    _link.endTransmission();
+    waitForMemoryReadSuccess(static_cast<uint8_t>(count) + 1); // add one for the return code
+    size_t i = 0;
+    while (1 < Wire.available() ) {
+        storage[i] = Wire.read();
+        ++i;
+    }
+    storage[i] = Wire.read();
+    ++i;
+    return i;
+}
+
 
 } // end namespace Deception

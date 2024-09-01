@@ -73,6 +73,10 @@ namespace Deception {
             virtual ~BackingStore() = default;
             virtual size_t read(Address targetAddress, uint8_t* storage, size_t count) noexcept = 0;
             virtual size_t write(Address targetAddress, uint8_t* storage, size_t count) noexcept = 0;
+            virtual size_t swap(Address writeAddress, Address readAddress, uint8_t* storage, size_t count) noexcept {
+                write(writeAddress, storage, count);
+                return read(readAddress, storage, count);
+            }
     };
     /**
      * @brief A backing store that is really just a sink that acts as a
@@ -100,6 +104,7 @@ namespace Deception {
             ~TwoWireBackingStore() override = default;
             size_t read(Address addr, uint8_t* storage, size_t count) noexcept override;
             size_t write(Address addr, uint8_t* storage, size_t count) noexcept override;
+            size_t swap(Address wrAddress, Address readAddress, uint8_t* storage, size_t count) noexcept override;
             void waitForBackingStoreIdle() noexcept;
         private:
             [[nodiscard]] MemoryCodes backingStoreStatus(uint8_t size) noexcept;
