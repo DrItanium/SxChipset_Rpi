@@ -297,12 +297,9 @@ doMemoryTransaction(SplitWord32 address) noexcept {
         digitalWrite<Pin::CacheLineLookup, LOW>();
     }
     auto& line = onboardCache.find(PCLink2, address.full);
+    auto* ptr = line.getLineData(address.getCacheOffset());
     if constexpr (EnableStateDebuggingPins) {
         digitalWrite<Pin::CacheLineLookup, HIGH>();
-    }
-    auto* ptr = line.getLineData(address.getCacheOffset());
-    if constexpr (!readOperation) {
-        line.markDirty();
     }
     if constexpr (readOperation) {
         uint8_t lo = ptr[0];
@@ -381,6 +378,7 @@ doMemoryTransaction(SplitWord32 address) noexcept {
         setUpperData(hi);
         signalReady();
     } else {
+        line.markDirty();
         if (lowerByteEnabled()) ptr[0] = lowerData();
         if (upperByteEnabled()) ptr[1] = upperData();
         if (isLastWordOfTransaction()) {
@@ -586,6 +584,9 @@ loop() {
         }
         {
             if (auto address = getAddress(); isReadOperation()) {
+                if constexpr (EnableStateDebuggingPins) {
+                    digitalWrite<Pin::ReadyWaitDone, HIGH>();
+                }
                 configureDataLinesForRead();
                 if (address.isIOOperation()) {
                     doIOTransaction<true>(address);
@@ -593,6 +594,9 @@ loop() {
                     doMemoryTransaction<true>(address);
                 }
             } else {
+                if constexpr (EnableStateDebuggingPins) {
+                    digitalWrite<Pin::ReadyWaitDone, LOW>();
+                }
                 configureDataLinesForWrite();
                 if (address.isIOOperation()) {
                     doIOTransaction<false>(address);
