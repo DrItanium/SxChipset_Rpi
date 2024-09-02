@@ -78,7 +78,8 @@ configureInterruptSources() noexcept {
     bitSet(EICRB, ADS_ISC1);
     // Configure rising edge of READY (falling edge can also be quite safe as
     // well
-    bitSet(EICRB, READY_ISC0);
+    //bitSet(EICRB, READY_ISC0);
+    bitClear(EICRB, READY_ISC0);
     bitSet(EICRB, READY_ISC1);
 
     clearHLDAInterrupt();
@@ -86,7 +87,6 @@ configureInterruptSources() noexcept {
     clearREADYInterrupt();
 }
 
-[[gnu::used]]
 [[gnu::always_inline]]
 inline 
 void
