@@ -31,7 +31,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Pinout.h"
 #include "Setup.h"
 
-constexpr bool EnableStateDebuggingPins = false;
+constexpr bool EnableStateDebuggingPins = true;
 Deception::TwoWireBackingStore PCLink2(Wire, Deception::TWI_MemoryControllerIndex);
 using DataCache = Deception::DirectMappedCache<256, Deception::CacheLine16<Deception::TwoWireBackingStore>>;
 DataCache onboardCache;
@@ -89,8 +89,16 @@ configureInterruptSources() noexcept {
 inline 
 void
 waitForReady() noexcept {
-    do { } while (bit_is_clear(EIFR, READYFLAG));
+    if constexpr (EnableStateDebuggingPins) {
+        digitalWrite<Pin::ReadyWaitDone, LOW>();
+    }
+    if (bit_is_set(EIFR, READYFLAG)) {
+        while (bit_is_clear(EIFR, READYFLAG));
+    }
     clearREADYInterrupt();
+    if constexpr (EnableStateDebuggingPins) {
+        digitalWrite<Pin::ReadyWaitDone, HIGH>();
+    }
 }
 template<bool wait = true>
 [[gnu::always_inline]] 
@@ -492,6 +500,8 @@ void
 configurePins() noexcept {
     pinMode(Pin::CacheLineLookup, OUTPUT);
     pinMode(Pin::TransactionStatus, OUTPUT);
+    pinMode(Pin::ReadyWaitDone, OUTPUT);
+    digitalWrite<Pin::ReadyWaitDone, HIGH>();
     digitalWrite<Pin::TransactionStatus, HIGH>();
     digitalWrite<Pin::CacheLineLookup, HIGH>();
     pinMode(Pin::RESET, OUTPUT);

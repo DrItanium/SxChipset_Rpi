@@ -73,6 +73,7 @@ Count = NUM_DIGITAL_PINS,
     // SDA = PortD1,
     //RXD1 = PortD2,
     //TXD1 = PortD3,
+    ReadyWaitDone = PortD5,
     CacheLineLookup = PortD6,
     TransactionStatus = PortD7,
     
