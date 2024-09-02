@@ -85,20 +85,13 @@ configureInterruptSources() noexcept {
     clearREADYInterrupt();
 }
 
+[[gnu::used]]
 [[gnu::always_inline]]
 inline 
 void
 waitForReady() noexcept {
-    if constexpr (EnableStateDebuggingPins) {
-        digitalWrite<Pin::ReadyWaitDone, LOW>();
-    }
-    if (bit_is_set(EIFR, READYFLAG)) {
-        while (bit_is_clear(EIFR, READYFLAG));
-    }
+    while (bit_is_clear(EIFR, READYFLAG));
     clearREADYInterrupt();
-    if constexpr (EnableStateDebuggingPins) {
-        digitalWrite<Pin::ReadyWaitDone, HIGH>();
-    }
 }
 template<bool wait = true>
 [[gnu::always_inline]] 
