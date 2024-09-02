@@ -64,41 +64,12 @@ namespace Deception {
         AnalogSensors_Channel10,
         TimeSinceStartup,
     };
-    /**
-     * @brief An abstract representation of backing storage (memory, disk, etc)
-     */
-    class BackingStore {
-        public:
-            virtual ~BackingStore() = default;
-            virtual size_t read(Address targetAddress, uint8_t* storage, size_t count) noexcept = 0;
-            virtual size_t write(Address targetAddress, uint8_t* storage, size_t count) noexcept = 0;
-    };
-    /**
-     * @brief A backing store that is really just a sink that acts as a
-     * fallback in the cases where we are not mapped to anything
-     */
-    class DummyBackingStore final : public BackingStore {
-        public:
-            ~DummyBackingStore() override = default;
-            size_t read(Address, uint8_t* storage, size_t count) noexcept override {
-                // clear the memory
-                for (size_t i = 0; i < count; ++i) {
-                    storage[i] = 0;
-                }
-                return count;
-            }
-            size_t write(Address, uint8_t*, size_t count) noexcept override {
-                // do nothing
-                return count;
-            }
-    };
 
-    class TwoWireBackingStore : public BackingStore {
+    class TwoWireBackingStore {
         public:
             TwoWireBackingStore(TwoWire& link, uint8_t index) : _link(link), _index(index) { }
-            ~TwoWireBackingStore() override = default;
-            size_t read(Address addr, uint8_t* storage, size_t count) noexcept override;
-            size_t write(Address addr, uint8_t* storage, size_t count) noexcept override;
+            size_t read(Address addr, uint8_t* storage, size_t count) noexcept;
+            size_t write(Address addr, uint8_t* storage, size_t count) noexcept;
             void waitForBackingStoreIdle() noexcept;
         private:
             [[nodiscard]] MemoryCodes backingStoreStatus(uint8_t size) noexcept;
@@ -179,7 +150,7 @@ namespace Deception {
                 return false;
         }
     }
-    template<uint8_t size, uint8_t shift, Address mask, typename T = BackingStore>
+    template<uint8_t size, uint8_t shift, Address mask, typename T>
     struct CacheLine {
         using BackingStore_t = T;
         static constexpr auto NumBytes = size;
@@ -233,13 +204,13 @@ namespace Deception {
             bool _dirty = false;
             BackingStore_t* _backingStore = nullptr;
     };
-    template<typename T = BackingStore>
+    template<typename T>
     using CacheLine16 = CacheLine<16, 4, 0xFFFF'FFF0, T>;
-    template<typename T = BackingStore>
+    template<typename T>
     using CacheLine32 = CacheLine<32, 5, 0xFFFF'FFE0, T>;
-    template<typename T = BackingStore>
+    template<typename T>
     using CacheLine64 = CacheLine<64, 6, 0xFFFF'FFC0, T>;
-    template<typename T = BackingStore>
+    template<typename T>
     using CacheLine128 = CacheLine<128, 7, 0xFFFF'FF80, T>;
     template<uint16_t C, typename L>
     class DirectMappedCache {
