@@ -437,21 +437,33 @@ doMemoryTransaction(SplitWord32 address) noexcept {
         ptr[9] = hi;
         waitForReady();
         // we can safely ignore checking BE0 since we flowed into this
-        ptr[10] = lowerData();
-        if (upperByteEnabled()) ptr[11] = upperData();
+        lo = lowerData();
+        hi = upperData();
         if (isLastWordOfTransaction()) {
-            signalReady();
+            if (upperByteEnabled()) ptr[11] = hi;
+            signalReady<false>();
+            ptr[10] = lo;
+            waitForReady();
             return;
         }
-        signalReady();
+        signalReady<false>();
+        ptr[10] = lo;
+        ptr[11] = hi;
+        waitForReady();
         // we can safely ignore checking BE0 since we flowed into this
-        ptr[12] = lowerData();
-        if (upperByteEnabled()) ptr[13] = upperData();
+        lo = lowerData();
+        hi = upperData();
         if (isLastWordOfTransaction()) {
-            signalReady();
+            if (upperByteEnabled()) ptr[13] = hi;
+            signalReady<false>();
+            ptr[12] = lo;
+            waitForReady();
             return;
         }
-        signalReady();
+        signalReady<false>();
+        ptr[12] = lo;
+        ptr[13] = hi;
+        waitForReady();
         // we can safely ignore checking BE0 since we flowed into this
         ptr[14] = lowerData();
         if (upperByteEnabled()) ptr[15] = upperData();
