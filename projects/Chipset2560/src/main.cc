@@ -306,61 +306,55 @@ doMemoryTransaction(SplitWord32 address) noexcept {
         auto val = ptr16[0];
         setDataValue(val);
         if (isLastWordOfTransaction()) {
-            signalReady();
-            return;
+            goto ReadMemoryDone;
         }
         signalReady<false>();
         val = ptr16[1];
         waitForReady();
         setDataValue(val);
         if (isLastWordOfTransaction()) {
-            signalReady();
-            return;
+            goto ReadMemoryDone;
         }
         signalReady<false>();
         val = ptr16[2];
         waitForReady();
         setDataValue(val);
         if (isLastWordOfTransaction()) {
-            signalReady();
-            return;
+            goto ReadMemoryDone;
         }
         signalReady<false>();
         val = ptr16[3];
         waitForReady();
         setDataValue(val);
         if (isLastWordOfTransaction()) {
-            signalReady();
-            return;
+            goto ReadMemoryDone;
         }
         signalReady<false>();
         val = ptr16[4];
         waitForReady();
         setDataValue(val);
         if (isLastWordOfTransaction()) {
-            signalReady();
-            return;
+            goto ReadMemoryDone;
         }
         signalReady<false>();
         val = ptr16[5];
         waitForReady();
         setDataValue(val);
         if (isLastWordOfTransaction()) {
-            signalReady();
-            return;
+            goto ReadMemoryDone;
         }
         signalReady<false>();
         val = ptr16[6];
         waitForReady();
         setDataValue(val);
         if (isLastWordOfTransaction()) {
-            signalReady();
-            return;
+            goto ReadMemoryDone;
         }
         signalReady<false>();
         val = ptr16[7];
         waitForReady();
         setDataValue(val);
+ReadMemoryDone:
         signalReady();
     } else {
         line.markDirty();
