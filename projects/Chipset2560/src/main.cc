@@ -289,9 +289,9 @@ template<bool readOperation>
 inline
 void
 doMemoryTransaction(SplitWord32 address) noexcept {
-    digitalWrite<Pin::CacheLineLookup, LOW>();
+    //digitalWrite<Pin::CacheLineLookup, LOW>();
     auto& line = onboardCache.find(PCLink2, address.full);
-    digitalWrite<Pin::CacheLineLookup, HIGH>();
+    //digitalWrite<Pin::CacheLineLookup, HIGH>();
     auto* ptr = line.getLineData(address.getCacheOffset());
     if constexpr (!readOperation) {
         line.markDirty();
