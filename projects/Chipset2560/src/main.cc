@@ -335,30 +335,42 @@ doMemoryTransaction(SplitWord32 address) noexcept {
             signalReady();
             return;
         }
-        signalReady();
-        setLowerData(ptr[8]);
-        setUpperData(ptr[9]);
+        signalReady<false>();
+        lo = ptr[8];
+        hi = ptr[9];
+        waitForReady();
+        setLowerData(lo);
+        setUpperData(hi);
         if (isLastWordOfTransaction()) {
             signalReady();
             return;
         }
-        signalReady();
-        setLowerData(ptr[10]);
-        setUpperData(ptr[11]);
+        signalReady<false>();
+        lo = ptr[10];
+        hi = ptr[11];
+        waitForReady();
+        setLowerData(lo);
+        setUpperData(hi);
         if (isLastWordOfTransaction()) {
             signalReady();
             return;
         }
-        signalReady();
-        setLowerData(ptr[12]);
-        setUpperData(ptr[13]);
+        signalReady<false>();
+        lo = ptr[12];
+        hi = ptr[13];
+        waitForReady();
+        setLowerData(lo);
+        setUpperData(hi);
         if (isLastWordOfTransaction()) {
             signalReady();
             return;
         }
-        signalReady();
-        setLowerData(ptr[14]);
-        setUpperData(ptr[15]);
+        signalReady<false>();
+        lo = ptr[14];
+        hi = ptr[15];
+        waitForReady();
+        setLowerData(lo);
+        setUpperData(hi);
         signalReady();
     } else {
         if (lowerByteEnabled()) ptr[0] = lowerData();
