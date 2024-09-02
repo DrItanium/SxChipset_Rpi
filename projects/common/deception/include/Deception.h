@@ -150,30 +150,31 @@ namespace Deception {
                 return false;
         }
     }
-    template<uint8_t size, uint8_t shift, Address mask, typename T>
+    template<typename A, uint8_t size, uint8_t shift, A mask, typename T>
     struct CacheLine {
         using BackingStore_t = T;
+        using Address_t = A;
         static constexpr auto NumBytes = size;
         static constexpr auto ShiftAmount = shift;
         static constexpr auto AddressMask = mask;
         static constexpr auto ByteOffsetMask = static_cast<uint8_t>(~AddressMask);
         static_assert(isPowerOfTwo(NumBytes), "CacheLine size must be a power of two");
         static_assert(NumBytes <= 128, "Cache Line Size is too large!");
-        static constexpr Address normalizeAddress(Address input) noexcept {
+        static constexpr Address_t normalizeAddress(Address_t input) noexcept {
             return input & AddressMask;
         }
         static constexpr uint8_t computeByteOffset(uint8_t input) noexcept {
             return input & ByteOffsetMask;
         }
         constexpr bool dirty() const noexcept { return _dirty; }
-        constexpr bool matches(Address other) const noexcept { return (_key == other); }
-        void replace(BackingStore_t& store, Address newAddress) noexcept {
+        constexpr bool matches(Address_t other) const noexcept { return (_key == other); }
+        void replace(BackingStore_t& store, Address_t newAddress) noexcept {
             if (_dirty) {
                 (void)store.write(_key, _bytes, NumBytes);
             }
             load(store, newAddress);
         }
-        void load(BackingStore_t& store, Address newAddress) noexcept {
+        void load(BackingStore_t& store, Address_t newAddress) noexcept {
             _dirty = false;
             _key = newAddress;
             (void)store.read(_key, _bytes, NumBytes);
@@ -198,17 +199,17 @@ namespace Deception {
         void markDirty() noexcept { _dirty = true; }
         private:
             uint8_t _bytes[NumBytes] = { 0 };
-            uint32_t _key = 0;
+            Address_t _key = 0;
             bool _dirty = false;
     };
-    template<typename T>
-    using CacheLine16 = CacheLine<16, 4, 0xFFFF'FFF0, T>;
-    template<typename T>
-    using CacheLine32 = CacheLine<32, 5, 0xFFFF'FFE0, T>;
-    template<typename T>
-    using CacheLine64 = CacheLine<64, 6, 0xFFFF'FFC0, T>;
-    template<typename T>
-    using CacheLine128 = CacheLine<128, 7, 0xFFFF'FF80, T>;
+    template<typename A, typename T>
+    using CacheLine16 = CacheLine<A, 16, 4, 0xFFFF'FFF0, T>;
+    template<typename A, typename T>
+    using CacheLine32 = CacheLine<A, 32, 5, 0xFFFF'FFE0, T>;
+    template<typename A, typename T>
+    using CacheLine64 = CacheLine<A, 64, 6, 0xFFFF'FFC0, T>;
+    template<typename A, typename T>
+    using CacheLine128 = CacheLine<A, 128, 7, 0xFFFF'FF80, T>;
     template<uint16_t C, typename L>
     class DirectMappedCache {
         public:
@@ -217,16 +218,17 @@ namespace Deception {
             static constexpr auto NumLines = C;
             static constexpr auto LineMask = NumLines - 1;
             using Line_t = L;
+            using Address_t = typename Line_t::Address_t;
             using BackingStore_t = typename Line_t::BackingStore_t;
             static constexpr auto NumBytesPerLine = Line_t::NumBytes;
             static constexpr auto NumCacheBytes = NumLines * NumBytesPerLine;
-            static constexpr uint8_t computeIndex(Address input) noexcept {
+            static constexpr uint8_t computeIndex(Address_t input) noexcept {
                 return (static_cast<uint16_t>(input) >> Line_t::ShiftAmount) & LineMask;
             }
             static constexpr uint8_t computeOffset(uint8_t input) noexcept {
                 return Line_t::computeByteOffset(input);
             }
-            static constexpr Address normalizeAddress(Address input) noexcept {
+            static constexpr Address_t normalizeAddress(Address_t input) noexcept {
                 return Line_t::normalizeAddress(input);
             }
             void clear() noexcept {
@@ -234,7 +236,7 @@ namespace Deception {
                     line.clear();
                 }
             }
-            Line_t& find(BackingStore_t& store, Address address) noexcept {
+            Line_t& find(BackingStore_t& store, Address_t address) noexcept {
                 auto addr = normalizeAddress(address);
                 auto& line = lines[computeIndex(addr)];
                 if (!line.matches(addr)) {
@@ -242,7 +244,7 @@ namespace Deception {
                 } 
                 return line;
             }
-            void seed(BackingStore_t& store, Address address) noexcept {
+            void seed(BackingStore_t& store, Address_t address) noexcept {
                 auto addr = normalizeAddress(address);
                 auto& line = lines[computeIndex(addr)];
                 line.load(store, addr);
@@ -252,65 +254,6 @@ namespace Deception {
             }
         private:
             Line_t lines[NumLines];
-    };
-    template<uint16_t C, typename L>
-    class TwoWayCache {
-        public:
-            static_assert(C > 0, "Must have at least one cache line!");
-            static_assert(isPowerOfTwo(C), "The given line size is not a power of two!");
-            static constexpr auto NumLines = C;
-            static constexpr auto NumSets = NumLines / 2;
-            static constexpr auto LineMask = NumSets - 1;
-            using Line_t = L;
-            using BackingStore_t = typename Line_t::BackingStore_t;
-            struct CacheSet {
-                bool lastElement = true;
-                Line_t lines[2];
-                void clear() noexcept {
-                    lastElement = true;
-                    lines[0].clear();
-                    lines[1].clear();
-                }
-
-                Line_t& find(BackingStore_t& store, Address address) noexcept {
-                    if (lines[0].matches(address)) {
-                        lastElement = false;
-                        return lines[0];
-                    } else if (lines[1].matches(address)) {
-                        lastElement = true;
-                        return lines[1];
-                    } else {
-                        // no match
-                        auto index = lastElement ? 0 : 1;
-                        lastElement = !lastElement;
-                        lines[index].replace(store, address);
-                        return lines[index];
-                    }
-                }
-            };
-            using Set_t = CacheSet;
-            static constexpr uint8_t computeIndex(Address input) noexcept {
-                return (static_cast<uint16_t>(input) >> Line_t::ShiftAmount) & LineMask;
-            }
-            static constexpr uint8_t computeOffset(uint8_t input) noexcept {
-                return Line_t::computeByteOffset(input);
-            }
-            static constexpr Address normalizeAddress(Address input) noexcept {
-                return Line_t::normalizeAddress(input);
-            }
-            void clear() noexcept {
-                for (auto set : sets) {
-                    set.clear();
-                }
-            }
-            Line_t& find(BackingStore_t& store, Address address) noexcept {
-                return sets[computeIndex(address)].find(store, normalizeAddress(address));
-            }
-            void begin() noexcept {
-                clear();
-            }
-        private:
-            Set_t sets[NumSets];
     };
 
 } // end namespace Deception

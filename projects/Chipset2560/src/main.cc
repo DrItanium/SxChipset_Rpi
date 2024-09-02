@@ -33,7 +33,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 constexpr bool EnableStateDebuggingPins = false;
 Deception::TwoWireBackingStore PCLink2(Wire, Deception::TWI_MemoryControllerIndex);
-using DataCache = Deception::DirectMappedCache<256, Deception::CacheLine16<Deception::TwoWireBackingStore>>;
+using CacheAddress = Address;
+using DataCache = Deception::DirectMappedCache<256, Deception::CacheLine16<CacheAddress, Deception::TwoWireBackingStore>>;
 DataCache onboardCache;
 union [[gnu::packed]] SplitWord32 {
     uint8_t bytes[sizeof(uint32_t) / sizeof(uint8_t)];
