@@ -203,13 +203,9 @@ namespace Deception {
             bool _dirty = false;
     };
     template<typename A, typename T>
-    using CacheLine16 = CacheLine<A, 16, 4, 0xFFFF'FFF0, T>;
+    using CacheLine16 = CacheLine<A, 16, 4, static_cast<A>(0xFFFF'FFF0), T>;
     template<typename A, typename T>
-    using CacheLine32 = CacheLine<A, 32, 5, 0xFFFF'FFE0, T>;
-    template<typename A, typename T>
-    using CacheLine64 = CacheLine<A, 64, 6, 0xFFFF'FFC0, T>;
-    template<typename A, typename T>
-    using CacheLine128 = CacheLine<A, 128, 7, 0xFFFF'FF80, T>;
+    using CacheLine32 = CacheLine<A, 32, 5, static_cast<A>(0xFFFF'FFE0), T>;
     template<uint16_t C, typename L>
     class DirectMappedCache {
         public:

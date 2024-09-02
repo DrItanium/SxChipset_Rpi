@@ -33,7 +33,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 constexpr bool EnableStateDebuggingPins = false;
 Deception::TwoWireBackingStore PCLink2(Wire, Deception::TWI_MemoryControllerIndex);
-using CacheAddress = Address;
+using CacheAddress = __uint24;
 using DataCache = Deception::DirectMappedCache<256, Deception::CacheLine16<CacheAddress, Deception::TwoWireBackingStore>>;
 DataCache onboardCache;
 union [[gnu::packed]] SplitWord32 {
@@ -44,9 +44,7 @@ union [[gnu::packed]] SplitWord32 {
     constexpr SplitWord32(uint32_t value = 0) : full(value) { }
     constexpr SplitWord32(uint8_t a, uint8_t b, uint8_t c, uint8_t d) : bytes{a, b, c, d} { }
     constexpr bool isIOOperation() const noexcept { return bytes[3] == 0xFE; }
-    constexpr auto getCacheOffset() const noexcept {
-        return DataCache::computeOffset(bytes[0]);
-    }
+    constexpr auto getCacheOffset() const noexcept { return DataCache::computeOffset(bytes[0]); }
 };
 static_assert(sizeof(SplitWord32) == sizeof(uint32_t));
 
@@ -297,7 +295,7 @@ doMemoryTransaction(SplitWord32 address) noexcept {
     if constexpr (EnableStateDebuggingPins) {
         digitalWrite<Pin::CacheLineLookup, LOW>();
     }
-    auto& line = onboardCache.find(PCLink2, address.full);
+    auto& line = onboardCache.find(PCLink2, address.lo24);
     auto* ptr = line.getLineData(address.getCacheOffset());
     if constexpr (EnableStateDebuggingPins) {
         digitalWrite<Pin::CacheLineLookup, HIGH>();
@@ -364,8 +362,8 @@ ReadMemoryDone:
         if (lowerByteEnabled()) ptr[0] = lo;
         if (isLastWordOfTransaction()) {
             if (upperByteEnabled()) ptr[1] = hi;
-            signalReady();
-            return;
+            signalReady<false>();
+            goto WriteMemoryDone;
         }
         signalReady<false>();
         ptr[1] = hi;
@@ -377,8 +375,7 @@ ReadMemoryDone:
             if (upperByteEnabled()) ptr[3] = hi;
             signalReady<false>();
             ptr[2] = lo;
-            waitForReady();
-            return;
+            goto WriteMemoryDone;
         }
         signalReady<false>();
         ptr[2] = lo;
@@ -391,8 +388,7 @@ ReadMemoryDone:
             if (upperByteEnabled()) ptr[5] = hi;
             signalReady<false>();
             ptr[4] = lo;
-            waitForReady();
-            return;
+            goto WriteMemoryDone;
         }
         signalReady<false>();
         ptr[4] = lo;
@@ -405,8 +401,7 @@ ReadMemoryDone:
             if (upperByteEnabled()) ptr[7] = hi;
             signalReady<false>();
             ptr[6] = lo;
-            waitForReady();
-            return;
+            goto WriteMemoryDone;
         }
         signalReady<false>();
         ptr[6] = lo;
@@ -419,8 +414,7 @@ ReadMemoryDone:
             if (upperByteEnabled()) ptr[9] = hi;
             signalReady<false>();
             ptr[8] = lo;
-            waitForReady();
-            return;
+            goto WriteMemoryDone;
         }
         signalReady<false>();
         ptr[8] = lo;
@@ -433,8 +427,7 @@ ReadMemoryDone:
             if (upperByteEnabled()) ptr[11] = hi;
             signalReady<false>();
             ptr[10] = lo;
-            waitForReady();
-            return;
+            goto WriteMemoryDone;
         }
         signalReady<false>();
         ptr[10] = lo;
@@ -447,8 +440,7 @@ ReadMemoryDone:
             if (upperByteEnabled()) ptr[13] = hi;
             signalReady<false>();
             ptr[12] = lo;
-            waitForReady();
-            return;
+            goto WriteMemoryDone;
         }
         signalReady<false>();
         ptr[12] = lo;
@@ -457,7 +449,9 @@ ReadMemoryDone:
         // we can safely ignore checking BE0 since we flowed into this
         ptr[14] = lowerData();
         if (upperByteEnabled()) ptr[15] = upperData();
-        signalReady();
+        signalReady<false>();
+WriteMemoryDone:
+        waitForReady();
     }
 }
 
