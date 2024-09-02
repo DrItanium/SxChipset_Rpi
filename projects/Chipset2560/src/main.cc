@@ -40,6 +40,8 @@ union [[gnu::packed]] SplitWord32 {
     uint16_t halves[sizeof(uint32_t) / sizeof(uint16_t)];
     __uint24 lo24;
     uint32_t full;
+    constexpr SplitWord32(uint32_t value = 0) : full(value) { }
+    constexpr SplitWord32(uint8_t a, uint8_t b, uint8_t c, uint8_t d) : bytes{a, b, c, d} { }
     constexpr bool isIOOperation() const noexcept { return bytes[3] == 0xFE; }
     constexpr auto getCacheOffset() const noexcept {
         return DataCache::computeOffset(bytes[0]);
@@ -470,16 +472,18 @@ doMemoryTransaction(SplitWord32 address) noexcept {
         signalReady();
     }
 }
+
 inline
 SplitWord32
 getAddress() noexcept {
-    SplitWord32 storage;
-    storage.bytes[0] = getInputRegister<Port::AddressLowest>();
-    storage.bytes[1] = getInputRegister<Port::AddressLower>();
-    storage.bytes[2] = getInputRegister<Port::AddressHigher>();
-    storage.bytes[3] = getInputRegister<Port::AddressHighest>();
-    return storage;
+    return { 
+        getInputRegister<Port::AddressLowest>(),
+        getInputRegister<Port::AddressLower>(),
+        getInputRegister<Port::AddressHigher>(),
+        getInputRegister<Port::AddressHighest>()
+    };
 }
+
 void
 configurePins() noexcept {
     pinMode(Pin::CacheLineLookup, OUTPUT);
