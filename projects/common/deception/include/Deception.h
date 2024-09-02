@@ -166,16 +166,15 @@ namespace Deception {
             return input & ByteOffsetMask;
         }
         constexpr bool dirty() const noexcept { return _dirty; }
-        constexpr bool valid() const noexcept { return _valid; }
-        constexpr bool matches(Address other) const noexcept { return _valid && (_key == other); }
+        constexpr bool matches(Address other) const noexcept { return (_key == other); }
         void replace(BackingStore_t& store, Address newAddress) noexcept {
-            if (_valid) {
-                if (_dirty) {
-                    (void)store.write(_key, _bytes, NumBytes);
-                }
+            if (_dirty) {
+                (void)store.write(_key, _bytes, NumBytes);
             }
+            load(store, newAddress);
+        }
+        void load(BackingStore_t& store, Address newAddress) noexcept {
             _dirty = false;
-            _valid = true;
             _key = newAddress;
             (void)store.read(_key, _bytes, NumBytes);
         }
@@ -188,7 +187,6 @@ namespace Deception {
         }
         void clear() noexcept {
             _key = 0;
-            _valid = false;
             _dirty = false;
             for (auto i = 0u; i < NumBytes; ++i) {
                 _bytes[i] = 0;
@@ -202,7 +200,6 @@ namespace Deception {
             uint8_t _bytes[NumBytes] = { 0 };
             uint32_t _key = 0;
             bool _dirty = false;
-            bool _valid = false;
     };
     template<typename T>
     using CacheLine16 = CacheLine<16, 4, 0xFFFF'FFF0, T>;
@@ -221,6 +218,8 @@ namespace Deception {
             static constexpr auto LineMask = NumLines - 1;
             using Line_t = L;
             using BackingStore_t = typename Line_t::BackingStore_t;
+            static constexpr auto NumBytesPerLine = Line_t::NumBytes;
+            static constexpr auto NumCacheBytes = NumLines * NumBytesPerLine;
             static constexpr uint8_t computeIndex(Address input) noexcept {
                 return (static_cast<uint16_t>(input) >> Line_t::ShiftAmount) & LineMask;
             }
@@ -242,6 +241,11 @@ namespace Deception {
                     line.replace(store, addr);
                 } 
                 return line;
+            }
+            void seed(BackingStore_t& store, Address address) noexcept {
+                auto addr = normalizeAddress(address);
+                auto& line = lines[computeIndex(addr)];
+                line.load(store, addr);
             }
             void begin() noexcept {
                 clear();

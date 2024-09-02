@@ -547,6 +547,11 @@ setup() {
     Wire.setClock(Deception::TWI_ClockRate);
     onboardCache.begin();
     PCLink2.waitForBackingStoreIdle();
+    // okay now we need to setup the cache so that I can eliminate the valid
+    // bit. This is done by seeding the cache with teh first 4096 bytes
+    for (Address i = 0; i < DataCache::NumCacheBytes; i += DataCache::NumBytesPerLine) {
+        onboardCache.seed(PCLink2, i);
+    }
     delay(1000);
     digitalWrite<Pin::RESET, HIGH>();
 }
