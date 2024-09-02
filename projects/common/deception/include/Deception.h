@@ -167,7 +167,7 @@ namespace Deception {
         }
         constexpr bool dirty() const noexcept { return _dirty; }
         constexpr bool valid() const noexcept { return _backingStore != nullptr; }
-        constexpr bool matches(Address other) const noexcept { return valid() && (_key == normalizeAddress(other)); }
+        constexpr bool matches(Address other) const noexcept { return valid() && (_key == other); }
         void replace(BackingStore_t& store, Address newAddress) noexcept {
             if (valid()) {
                 if (_dirty) {
@@ -176,7 +176,7 @@ namespace Deception {
                 }
             }
             _backingStore = &store;
-            _key = normalizeAddress(newAddress);
+            _key = newAddress;
             (void)_backingStore->read(_key, _bytes, NumBytes);
         }
         void setByte(uint8_t offset, uint8_t value) noexcept {
@@ -227,15 +227,19 @@ namespace Deception {
             static constexpr uint8_t computeOffset(uint8_t input) noexcept {
                 return Line_t::computeByteOffset(input);
             }
+            static constexpr Address normalizeAddress(Address input) noexcept {
+                return Line_t::normalizeAddress(input);
+            }
             void clear() noexcept {
                 for (auto line : lines) {
                     line.clear();
                 }
             }
             Line_t& find(BackingStore_t& store, Address address) noexcept {
-                auto& line = lines[computeIndex(address)];
-                if (!line.matches(address)) {
-                    line.replace(store, address);
+                auto addr = normalizeAddress(address);
+                auto& line = lines[computeIndex(addr)];
+                if (!line.matches(addr)) {
+                    line.replace(store, addr);
                 } 
                 return line;
             }
@@ -287,13 +291,16 @@ namespace Deception {
             static constexpr uint8_t computeOffset(uint8_t input) noexcept {
                 return Line_t::computeByteOffset(input);
             }
+            static constexpr Address normalizeAddress(Address input) noexcept {
+                return Line_t::normalizeAddress(input);
+            }
             void clear() noexcept {
                 for (auto set : sets) {
                     set.clear();
                 }
             }
             Line_t& find(BackingStore_t& store, Address address) noexcept {
-                return sets[computeIndex(address)].find(store, address);
+                return sets[computeIndex(address)].find(store, normalizeAddress(address));
             }
             void begin() noexcept {
                 clear();
