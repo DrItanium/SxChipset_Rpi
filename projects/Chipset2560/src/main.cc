@@ -358,16 +358,20 @@ ReadMemoryDone:
         signalReady();
     } else {
         line.markDirty();
-        if (lowerByteEnabled()) ptr[0] = lowerData();
-        if (upperByteEnabled()) ptr[1] = upperData();
+        auto lo = lowerData();
+        auto hi = upperData();
+        if (lowerByteEnabled()) ptr[0] = lo;
         if (isLastWordOfTransaction()) {
+            if (upperByteEnabled()) ptr[1] = hi;
             signalReady();
             return;
         }
-        signalReady();
+        signalReady<false>();
+        ptr[1] = hi;
+        waitForReady();
         // we can safely ignore checking BE0 since we flowed into this
-        auto lo = lowerData();
-        auto hi = upperData();
+        lo = lowerData();
+        hi = upperData();
         if (isLastWordOfTransaction()) {
             if (upperByteEnabled()) ptr[3] = hi;
             signalReady<false>();
