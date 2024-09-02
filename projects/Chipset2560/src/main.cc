@@ -31,6 +31,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Pinout.h"
 #include "Setup.h"
 
+constexpr bool EnableStateDebuggingPins = false;
 Deception::TwoWireBackingStore PCLink2(Wire, Deception::TWI_MemoryControllerIndex);
 using DataCache = Deception::DirectMappedCache<256, Deception::CacheLine16<Deception::TwoWireBackingStore>>;
 DataCache onboardCache;
@@ -290,9 +291,13 @@ template<bool readOperation>
 inline
 void
 doMemoryTransaction(SplitWord32 address) noexcept {
-    digitalWrite<Pin::CacheLineLookup, LOW>();
+    if constexpr (EnableStateDebuggingPins) {
+        digitalWrite<Pin::CacheLineLookup, LOW>();
+    }
     auto& line = onboardCache.find(PCLink2, address.full);
-    digitalWrite<Pin::CacheLineLookup, HIGH>();
+    if constexpr (EnableStateDebuggingPins) {
+        digitalWrite<Pin::CacheLineLookup, HIGH>();
+    }
     auto* ptr = line.getLineData(address.getCacheOffset());
     if constexpr (!readOperation) {
         line.markDirty();
@@ -572,7 +577,9 @@ void
 loop() {
     waitForNewTransaction();
     {
-        digitalWrite<Pin::TransactionStatus, LOW>();
+        if constexpr (EnableStateDebuggingPins) {
+            digitalWrite<Pin::TransactionStatus, LOW>();
+        }
         {
             if (auto address = getAddress(); isReadOperation()) {
                 configureDataLinesForRead();
@@ -591,8 +598,9 @@ loop() {
 
             }
         }
-
-        digitalWrite<Pin::TransactionStatus, HIGH>();
+        if constexpr (EnableStateDebuggingPins) {
+            digitalWrite<Pin::TransactionStatus, HIGH>();
+        }
     }
 }
 
