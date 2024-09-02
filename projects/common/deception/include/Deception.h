@@ -179,8 +179,9 @@ namespace Deception {
                 return false;
         }
     }
-    template<uint8_t size, uint8_t shift, Address mask>
+    template<uint8_t size, uint8_t shift, Address mask, typename T = BackingStore>
     struct CacheLine {
+        using BackingStore_t = T;
         static constexpr auto NumBytes = size;
         static constexpr auto ShiftAmount = shift;
         static constexpr auto AddressMask = mask;
@@ -196,7 +197,7 @@ namespace Deception {
         constexpr bool dirty() const noexcept { return _dirty; }
         constexpr bool valid() const noexcept { return _backingStore != nullptr; }
         constexpr bool matches(Address other) const noexcept { return valid() && (_key == normalizeAddress(other)); }
-        void replace(BackingStore& store, Address newAddress) noexcept {
+        void replace(BackingStore_t& store, Address newAddress) noexcept {
             if (valid()) {
                 if (_dirty) {
                     _dirty = false;
@@ -230,12 +231,16 @@ namespace Deception {
             uint8_t _bytes[NumBytes] = { 0 };
             uint32_t _key = 0;
             bool _dirty = false;
-            BackingStore* _backingStore = nullptr;
+            BackingStore_t* _backingStore = nullptr;
     };
-    using CacheLine16 = CacheLine<16, 4, 0xFFFF'FFF0>;
-    using CacheLine32 = CacheLine<32, 5, 0xFFFF'FFE0>;
-    using CacheLine64 = CacheLine<64, 6, 0xFFFF'FFC0>;
-    using CacheLine128 = CacheLine<128, 7, 0xFFFF'FF80>;
+    template<typename T = BackingStore>
+    using CacheLine16 = CacheLine<16, 4, 0xFFFF'FFF0, T>;
+    template<typename T = BackingStore>
+    using CacheLine32 = CacheLine<32, 5, 0xFFFF'FFE0, T>;
+    template<typename T = BackingStore>
+    using CacheLine64 = CacheLine<64, 6, 0xFFFF'FFC0, T>;
+    template<typename T = BackingStore>
+    using CacheLine128 = CacheLine<128, 7, 0xFFFF'FF80, T>;
     template<uint16_t C, typename L>
     class DirectMappedCache {
         public:
@@ -244,6 +249,7 @@ namespace Deception {
             static constexpr auto NumLines = C;
             static constexpr auto LineMask = NumLines - 1;
             using Line_t = L;
+            using BackingStore_t = typename Line_t::BackingStore_t;
             static constexpr uint8_t computeIndex(Address input) noexcept {
                 return (static_cast<uint16_t>(input) >> Line_t::ShiftAmount) & LineMask;
             }
@@ -255,7 +261,7 @@ namespace Deception {
                     line.clear();
                 }
             }
-            Line_t& find(BackingStore& store, Address address) noexcept {
+            Line_t& find(BackingStore_t& store, Address address) noexcept {
                 auto& line = lines[computeIndex(address)];
                 if (!line.matches(address)) {
                     line.replace(store, address);
@@ -277,6 +283,7 @@ namespace Deception {
             static constexpr auto NumSets = NumLines / 2;
             static constexpr auto LineMask = NumSets - 1;
             using Line_t = L;
+            using BackingStore_t = typename Line_t::BackingStore_t;
             struct CacheSet {
                 bool lastElement = true;
                 Line_t lines[2];
@@ -286,7 +293,7 @@ namespace Deception {
                     lines[1].clear();
                 }
 
-                Line_t& find(BackingStore& store, Address address) noexcept {
+                Line_t& find(BackingStore_t& store, Address address) noexcept {
                     if (lines[0].matches(address)) {
                         lastElement = false;
                         return lines[0];
@@ -314,7 +321,7 @@ namespace Deception {
                     set.clear();
                 }
             }
-            Line_t& find(BackingStore& store, Address address) noexcept {
+            Line_t& find(BackingStore_t& store, Address address) noexcept {
                 return sets[computeIndex(address)].find(store, address);
             }
             void begin() noexcept {

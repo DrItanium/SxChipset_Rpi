@@ -32,8 +32,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Setup.h"
 
 Deception::TwoWireBackingStore PCLink2(Wire, Deception::TWI_MemoryControllerIndex);
-//using DataCache = Deception::TwoWayCache<128, Deception::CacheLine32>;
-using DataCache = Deception::DirectMappedCache<256, Deception::CacheLine16>;
+using DataCache = Deception::DirectMappedCache<256, Deception::CacheLine16<Deception::TwoWireBackingStore>>;
 DataCache onboardCache;
 union [[gnu::packed]] SplitWord32 {
     uint8_t bytes[sizeof(uint32_t) / sizeof(uint8_t)];
