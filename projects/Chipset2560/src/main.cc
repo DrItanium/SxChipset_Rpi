@@ -302,80 +302,65 @@ doMemoryTransaction(SplitWord32 address) noexcept {
         digitalWrite<Pin::CacheLineLookup, HIGH>();
     }
     if constexpr (readOperation) {
-        uint8_t lo = ptr[0];
-        uint8_t hi = ptr[1];
-        setLowerData(lo);
-        setUpperData(hi);
+        uint16_t* ptr16 = reinterpret_cast<uint16_t*>(ptr);
+        auto val = ptr16[0];
+        setDataValue(val);
         if (isLastWordOfTransaction()) {
             signalReady();
             return;
         }
         signalReady<false>();
-        lo = ptr[2];
-        hi = ptr[3];
+        val = ptr16[1];
         waitForReady();
-        setLowerData(lo);
-        setUpperData(hi);
+        setDataValue(val);
         if (isLastWordOfTransaction()) {
             signalReady();
             return;
         }
         signalReady<false>();
-        lo = ptr[4];
-        hi = ptr[5];
+        val = ptr16[2];
         waitForReady();
-        setLowerData(lo);
-        setUpperData(hi);
+        setDataValue(val);
         if (isLastWordOfTransaction()) {
             signalReady();
             return;
         }
         signalReady<false>();
-        lo = ptr[6];
-        hi = ptr[7];
+        val = ptr16[3];
         waitForReady();
-        setLowerData(lo);
-        setUpperData(hi);
+        setDataValue(val);
         if (isLastWordOfTransaction()) {
             signalReady();
             return;
         }
         signalReady<false>();
-        lo = ptr[8];
-        hi = ptr[9];
+        val = ptr16[4];
         waitForReady();
-        setLowerData(lo);
-        setUpperData(hi);
+        setDataValue(val);
         if (isLastWordOfTransaction()) {
             signalReady();
             return;
         }
         signalReady<false>();
-        lo = ptr[10];
-        hi = ptr[11];
+        val = ptr16[5];
         waitForReady();
-        setLowerData(lo);
-        setUpperData(hi);
+        setDataValue(val);
         if (isLastWordOfTransaction()) {
             signalReady();
             return;
         }
         signalReady<false>();
-        lo = ptr[12];
-        hi = ptr[13];
+        val = ptr16[6];
         waitForReady();
-        setLowerData(lo);
-        setUpperData(hi);
+        setDataValue(val);
         if (isLastWordOfTransaction()) {
             signalReady();
             return;
         }
         signalReady<false>();
-        lo = ptr[14];
-        hi = ptr[15];
+        val = ptr16[7];
         waitForReady();
-        setLowerData(lo);
-        setUpperData(hi);
+        setDataValue(val);
         signalReady();
     } else {
         line.markDirty();
