@@ -83,13 +83,21 @@ configureInterruptSources() noexcept {
     clearREADYInterrupt();
 }
 
-
+[[gnu::always_inline]]
+inline 
+void
+waitForReady() noexcept {
+    do { } while (bit_is_clear(EIFR, READYFLAG));
+    clearREADYInterrupt();
+}
+template<bool wait = true>
 [[gnu::always_inline]] 
 inline void 
 signalReady() noexcept {
     toggle<Pin::READY>();
-    do { } while (bit_is_clear(EIFR, READYFLAG));
-    clearREADYInterrupt();
+    if constexpr (wait) {
+        waitForReady();
+    }
 }
 
 [[gnu::always_inline]]
@@ -289,29 +297,40 @@ doMemoryTransaction(SplitWord32 address) noexcept {
         line.markDirty();
     }
     if constexpr (readOperation) {
-        setLowerData(ptr[0]);
-        setUpperData(ptr[1]);
+        uint8_t lo = ptr[0];
+        uint8_t hi = ptr[1];
+        setLowerData(lo);
+        setUpperData(hi);
         if (isLastWordOfTransaction()) {
             signalReady();
             return;
         }
-        signalReady();
-        setLowerData(ptr[2]);
-        setUpperData(ptr[3]);
+        signalReady<false>();
+        lo = ptr[2];
+        hi = ptr[3];
+        waitForReady();
+        setLowerData(lo);
+        setUpperData(hi);
         if (isLastWordOfTransaction()) {
             signalReady();
             return;
         }
-        signalReady();
-        setLowerData(ptr[4]);
-        setUpperData(ptr[5]);
+        signalReady<false>();
+        lo = ptr[4];
+        hi = ptr[5];
+        waitForReady();
+        setLowerData(lo);
+        setUpperData(hi);
         if (isLastWordOfTransaction()) {
             signalReady();
             return;
         }
-        signalReady();
-        setLowerData(ptr[6]);
-        setUpperData(ptr[7]);
+        signalReady<false>();
+        lo = ptr[6];
+        hi = ptr[7];
+        waitForReady();
+        setLowerData(lo);
+        setUpperData(hi);
         if (isLastWordOfTransaction()) {
             signalReady();
             return;
