@@ -592,6 +592,17 @@ setupRandomSource() noexcept {
     randomSeed(newSeed);
 }
 void
+setupTWIDevices() {
+    QTGamepad::begin();
+    PCJoystick::begin();
+    Slider::begin();
+    Slider::setPixelColor(0, seesaw_NeoPixel::Color(255, 0, 0));
+    Slider::setPixelColor(1, seesaw_NeoPixel::Color(0, 255, 0));
+    Slider::setPixelColor(2, seesaw_NeoPixel::Color(0, 0, 255));
+    Slider::setPixelColor(3, seesaw_NeoPixel::Color(255, 255, 255));
+    Slider::show();
+}
+void
 setup() {
     GPIOR0 = 0;
     GPIOR1 = 0;
@@ -602,15 +613,8 @@ setup() {
     configureInterruptSources();
     Serial.begin(115200);
     Wire.begin();
-    QTGamepad::begin();
-    PCJoystick::begin();
-    Slider::begin();
+    //setupTWIDevices();
     Wire.setClock(Deception::TWI_ClockRate);
-    Slider::setPixelColor(0, seesaw_NeoPixel::Color(255, 0, 0));
-    Slider::setPixelColor(1, seesaw_NeoPixel::Color(0, 255, 0));
-    Slider::setPixelColor(2, seesaw_NeoPixel::Color(0, 0, 255));
-    Slider::setPixelColor(3, seesaw_NeoPixel::Color(255, 255, 255));
-    Slider::show();
     onboardCache.begin();
     PCLink2.waitForBackingStoreIdle();
     // okay now we need to setup the cache so that I can eliminate the valid
