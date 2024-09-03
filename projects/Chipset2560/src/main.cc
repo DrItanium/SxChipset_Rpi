@@ -27,6 +27,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <SPI.h>
 #include <Deception.h>
 #include <Adafruit_seesaw.h>
+#include <seesaw_neopixel.h>
 
 
 #include "Types.h"
@@ -63,7 +64,9 @@ namespace PCJoystick {
     constexpr uint32_t Mask = (1UL << Button1) | (1UL << Button2) | 
                               (1UL << Button3) | (1UL << Button4);
     Adafruit_seesaw device(&Wire);
-
+    void begin() {
+        device.begin(Address);
+    }
 } // end namespace PCJoystick
 namespace QTGamepad {
     constexpr auto Address = 0x50;
@@ -78,7 +81,35 @@ namespace QTGamepad {
     constexpr uint32_t Mask = (1UL << ButtonX) | (1UL << ButtonY) | (1UL << ButtonStart) | 
                               (1UL << ButtonA) | (1UL << ButtonB) | (1UL << ButtonSelect);
     Adafruit_seesaw device(&Wire);
+    void begin() {
+        device.begin(Address);
+    }
 } // end namespace QTGamepad
+
+namespace Slider {
+    constexpr auto Address = 0x30;
+    constexpr auto Slider = 18;
+    constexpr auto NeoPixelOut = 14;
+    Adafruit_seesaw device(&Wire);
+    seesaw_NeoPixel pixels(4, NeoPixelOut, NEO_GRB + NEO_KHZ800);
+
+    void setPixelColor(uint8_t index, uint32_t color) noexcept {
+        pixels.setPixelColor(index, color);
+    }
+    void show() {
+        pixels.show();
+    }
+    void begin() {
+        device.begin(Address);
+        pixels.begin(Address);
+        pixels.setBrightness(255); 
+        for (uint8_t i = 0; i < pixels.numPixels(); ++i) {
+            setPixelColor(i, seesaw_NeoPixel::Color(255, 0, 255));
+        }
+        pixels.show();
+    }
+    
+} // end namespace Slider
 
 #define ADSFLAG INTF4
 #define ADS_ISC0 ISC40
@@ -571,7 +602,15 @@ setup() {
     configureInterruptSources();
     Serial.begin(115200);
     Wire.begin();
+    QTGamepad::begin();
+    PCJoystick::begin();
+    Slider::begin();
     Wire.setClock(Deception::TWI_ClockRate);
+    Slider::setPixelColor(0, seesaw_NeoPixel::Color(255, 0, 0));
+    Slider::setPixelColor(1, seesaw_NeoPixel::Color(0, 255, 0));
+    Slider::setPixelColor(2, seesaw_NeoPixel::Color(0, 0, 255));
+    Slider::setPixelColor(3, seesaw_NeoPixel::Color(255, 255, 255));
+    Slider::show();
     onboardCache.begin();
     PCLink2.waitForBackingStoreIdle();
     // okay now we need to setup the cache so that I can eliminate the valid
