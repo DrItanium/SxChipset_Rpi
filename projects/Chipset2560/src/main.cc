@@ -24,7 +24,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 #include <Arduino.h>
 #include <Wire.h>
+#include <SPI.h>
 #include <Deception.h>
+#include <Adafruit_seesaw.h>
 
 
 #include "Types.h"
@@ -47,6 +49,36 @@ union [[gnu::packed]] SplitWord32 {
     constexpr auto getCacheOffset() const noexcept { return DataCache::computeOffset(bytes[0]); }
 };
 static_assert(sizeof(SplitWord32) == sizeof(uint32_t));
+
+namespace PCJoystick {
+    constexpr auto Address = 0x49;
+    constexpr auto Button1 = 3;
+    constexpr auto Button2 = 13;
+    constexpr auto Button3 = 2;
+    constexpr auto Button4 = 14;
+    constexpr auto Joy1_X = 1;
+    constexpr auto Joy1_Y = 15;
+    constexpr auto Joy2_X = 0;
+    constexpr auto Joy2_Y = 16;
+    constexpr uint32_t Mask = (1UL << Button1) | (1UL << Button2) | 
+                              (1UL << Button3) | (1UL << Button4);
+    Adafruit_seesaw device(&Wire);
+
+} // end namespace PCJoystick
+namespace QTGamepad {
+    constexpr auto Address = 0x50;
+    constexpr auto ButtonX = 6;
+    constexpr auto ButtonY = 2;
+    constexpr auto ButtonA = 5;
+    constexpr auto ButtonB = 1;
+    constexpr auto ButtonSelect = 0;
+    constexpr auto ButtonStart = 16;
+    constexpr auto JoystickX = 14;
+    constexpr auto JoystickY = 15;
+    constexpr uint32_t Mask = (1UL << ButtonX) | (1UL << ButtonY) | (1UL << ButtonStart) | 
+                              (1UL << ButtonA) | (1UL << ButtonB) | (1UL << ButtonSelect);
+    Adafruit_seesaw device(&Wire);
+} // end namespace QTGamepad
 
 #define ADSFLAG INTF4
 #define ADS_ISC0 ISC40
