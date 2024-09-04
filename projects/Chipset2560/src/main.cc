@@ -549,7 +549,6 @@ setup() {
     for (Address i = 0; i < DataCache::NumCacheBytes; i += DataCache::NumBytesPerLine) {
         onboardCache.seed(PCLink2, i);
     }
-    delay(1000);
     digitalWrite<Pin::RESET, HIGH>();
 }
 [[gnu::always_inline]]
