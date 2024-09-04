@@ -507,35 +507,10 @@ configurePins() noexcept {
     getDirectionRegister<Port::AddressHighest>() = 0;
 }
 void
-setupRandomSource() noexcept {
-    uint32_t newSeed = 0;
-#define X(pin) newSeed += static_cast<uint32_t>(analogRead(pin))
-    X(A0);
-    X(A1);
-    X(A2);
-    X(A3);
-    X(A4);
-    X(A5);
-    X(A6);
-    X(A6);
-    X(A7);
-    X(A8);
-    X(A9);
-    X(A10);
-    X(A11);
-    X(A12);
-    X(A13);
-    X(A14);
-    X(A15);
-#undef X
-    randomSeed(newSeed);
-}
-void
 setup() {
     GPIOR0 = 0;
     GPIOR1 = 0;
     GPIOR2 = 0;
-    setupRandomSource();
     configurePins();
     configureDataLinesForRead();
     configureInterruptSources();
