@@ -26,8 +26,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Wire.h>
 #include <SPI.h>
 #include <Deception.h>
-#include <Adafruit_seesaw.h>
-#include <seesaw_neopixel.h>
 
 
 #include "Types.h"
@@ -51,65 +49,6 @@ union [[gnu::packed]] SplitWord32 {
 };
 static_assert(sizeof(SplitWord32) == sizeof(uint32_t));
 
-namespace PCJoystick {
-    constexpr auto Address = 0x49;
-    constexpr auto Button1 = 3;
-    constexpr auto Button2 = 13;
-    constexpr auto Button3 = 2;
-    constexpr auto Button4 = 14;
-    constexpr auto Joy1_X = 1;
-    constexpr auto Joy1_Y = 15;
-    constexpr auto Joy2_X = 0;
-    constexpr auto Joy2_Y = 16;
-    constexpr uint32_t Mask = (1UL << Button1) | (1UL << Button2) | 
-                              (1UL << Button3) | (1UL << Button4);
-    Adafruit_seesaw device(&Wire);
-    void begin() {
-        device.begin(Address);
-    }
-} // end namespace PCJoystick
-namespace QTGamepad {
-    constexpr auto Address = 0x50;
-    constexpr auto ButtonX = 6;
-    constexpr auto ButtonY = 2;
-    constexpr auto ButtonA = 5;
-    constexpr auto ButtonB = 1;
-    constexpr auto ButtonSelect = 0;
-    constexpr auto ButtonStart = 16;
-    constexpr auto JoystickX = 14;
-    constexpr auto JoystickY = 15;
-    constexpr uint32_t Mask = (1UL << ButtonX) | (1UL << ButtonY) | (1UL << ButtonStart) | 
-                              (1UL << ButtonA) | (1UL << ButtonB) | (1UL << ButtonSelect);
-    Adafruit_seesaw device(&Wire);
-    void begin() {
-        device.begin(Address);
-    }
-} // end namespace QTGamepad
-
-namespace Slider {
-    constexpr auto Address = 0x30;
-    constexpr auto Slider = 18;
-    constexpr auto NeoPixelOut = 14;
-    Adafruit_seesaw device(&Wire);
-    seesaw_NeoPixel pixels(4, NeoPixelOut, NEO_GRB + NEO_KHZ800);
-
-    void setPixelColor(uint8_t index, uint32_t color) noexcept {
-        pixels.setPixelColor(index, color);
-    }
-    void show() {
-        pixels.show();
-    }
-    void begin() {
-        device.begin(Address);
-        pixels.begin(Address);
-        pixels.setBrightness(255); 
-        for (uint8_t i = 0; i < pixels.numPixels(); ++i) {
-            setPixelColor(i, seesaw_NeoPixel::Color(255, 0, 255));
-        }
-        pixels.show();
-    }
-    
-} // end namespace Slider
 
 #define ADSFLAG INTF4
 #define ADS_ISC0 ISC40
@@ -592,17 +531,6 @@ setupRandomSource() noexcept {
     randomSeed(newSeed);
 }
 void
-setupTWIDevices() {
-    QTGamepad::begin();
-    PCJoystick::begin();
-    Slider::begin();
-    Slider::setPixelColor(0, seesaw_NeoPixel::Color(255, 0, 0));
-    Slider::setPixelColor(1, seesaw_NeoPixel::Color(0, 255, 0));
-    Slider::setPixelColor(2, seesaw_NeoPixel::Color(0, 0, 255));
-    Slider::setPixelColor(3, seesaw_NeoPixel::Color(255, 255, 255));
-    Slider::show();
-}
-void
 setup() {
     GPIOR0 = 0;
     GPIOR1 = 0;
@@ -613,7 +541,6 @@ setup() {
     configureInterruptSources();
     Serial.begin(115200);
     Wire.begin();
-    //setupTWIDevices();
     Wire.setClock(Deception::TWI_ClockRate);
     onboardCache.begin();
     PCLink2.waitForBackingStoreIdle();
