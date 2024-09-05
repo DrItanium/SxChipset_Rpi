@@ -263,15 +263,7 @@ handleRequestTop() {
     link0.handleRequest();
 }
 
-void 
-loop() {
-    link0.process();
-}
 
-void
-setupMicroshell() {
-    
-}
 // taken from the BasicExample
 int 
 ushRead(struct ush_object* self, char* ch) {
@@ -437,5 +429,27 @@ const struct ush_file_descriptor cmdFiles[] = {
         .exec = rebootExecCallback,
     },
 };
+
+struct ush_node_object root;
+struct ush_node_object dev;
+struct ush_node_object bin;
+struct ush_node_object cmd;
+
+void
+setupMicroshell() {
+    ush_init(&ush, &ush_desc);
+#define NELEM(obj) (sizeof(obj) / sizeof(obj[0]))
+    ush_commands_add(&ush, &cmd, cmdFiles, NELEM(cmdFiles));
+    ush_node_mount(&ush, "/", &root, rootFiles, NELEM(rootFiles));
+    ush_node_mount(&ush, "/dev", &dev, devFiles, NELEM(devFiles));
+    ush_node_mount(&ush, "/bin", &bin, binFiles, NELEM(binFiles));
+#undef NELEM
+}
+
+void 
+loop() {
+    link0.process();
+    ush_service(&ush);
+}
 
 #undef FILE_DESCRIPTOR_ARGS
