@@ -33,6 +33,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Bounce.h>
 #include <Ethernet.h>
 #include <Deception.h>
+#include <microshell.h>
 
 #define CACHE_MEMORY_SECTION DMAMEM
 #define MEMORY_POOL_SECTION EXTMEM
@@ -54,9 +55,8 @@ MEMORY_POOL_SECTION uint8_t memory960[MemoryPoolSize];
 bool sdcardInstalled = false;
 static_assert(MemoryPoolSize <= MaxMemoryPoolSize, "Requested memory capacity is too large!");
 static_assert(MemoryPoolSize >= MinimumPoolSize, "Requested memory capacity will not fit a default boot image!");
-void
-setupCaches() {
-}
+
+void setupMicroshell();
 void 
 setupMemoryPool() {
     // clear out the actual memory pool ahead of setting up the memory pool
@@ -107,6 +107,7 @@ struct [[gnu::packed]] Packet {
     uint8_t size;
     uint8_t data[];
 };
+
 void
 setupHardware() {
 #define X(item, baud, wait) item . begin (baud ) ; \
@@ -118,7 +119,6 @@ setupHardware() {
     X(Serial, 9600, true);
 #undef X
     setupMemoryPool();
-    setupCaches();
     // the sdcard should come last to make sure that we don't clear out all of
     // our work!
     setupSDCard();
@@ -251,6 +251,7 @@ TwoWireServer link0(Wire);
 void 
 setupServers() {
     link0.begin(Deception::TWI_MemoryControllerIndex);
+    setupMicroshell();
 }
 void
 handleReceiveTop(int howMany) {
@@ -266,3 +267,175 @@ void
 loop() {
     link0.process();
 }
+
+void
+setupMicroshell() {
+    
+}
+// taken from the BasicExample
+int 
+ushRead(struct ush_object* self, char* ch) {
+    if (Serial.available() > 0) {
+        *ch = Serial.read();
+        return 1;
+    }
+    return 0;
+}
+
+int 
+ushWrite(struct ush_object* self, char ch) {
+    return (Serial.write(ch) == 1);
+}
+
+
+constexpr auto BufferInSize = 128;
+constexpr auto BufferOutSize = 128;
+constexpr auto PathMaxSize = 128;
+
+char ushInBuf[BufferInSize];
+char ushOutBuf[BufferOutSize];
+
+struct ush_object ush;
+const struct ush_io_interface ushInterface = {
+    .read = ushRead,
+    .write = ushWrite,
+};
+const struct ush_descriptor ush_desc = {
+    .io = &ushInterface,
+    .input_buffer = ushInBuf,
+    .input_buffer_size = sizeof(ushInBuf),
+    .output_buffer = ushOutBuf,
+    .output_buffer_size = sizeof(ushOutBuf),
+    .path_max_length = PathMaxSize,
+    .hostname = "system_chip",
+};
+#define FILE_DESCRIPTOR_ARGS struct ush_object* self, struct ush_file_descriptor const * file
+
+void 
+toggleExecCallback(FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
+    digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
+}
+
+void 
+rebootExecCallback(FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
+    /// @todo implement reboot at some point
+    ush_print(self, "error: reboot not supported");
+}
+
+void 
+setExecCallback(FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
+    if (argc != 0) {
+        ush_print_status(self, USH_STATUS_ERROR_COMMAND_WRONG_ARGUMENTS);
+        return;
+    }
+
+    if (strcmp(argv[1], "1") == 0) {
+        digitalWrite(LED_BUILTIN, HIGH);
+    } else if (strcmp(argv[1], "0") == 0) {
+        digitalWrite(LED_BUILTIN, LOW);
+    } else {
+        // return predefined error message
+        ush_print_status(self, USH_STATUS_ERROR_COMMAND_WRONG_ARGUMENTS);
+        return;
+    }
+}
+
+// info file get data callback
+size_t 
+infoGetDataCallback(FILE_DESCRIPTOR_ARGS, uint8_t** data) noexcept {
+    static const char* info = "Use MicroShell and make fun!\r\n";
+
+    *data = (uint8_t*)info;
+    return strlen(info);
+}
+
+
+size_t 
+ledGetDataCallback(FILE_DESCRIPTOR_ARGS, uint8_t** data) noexcept {
+    // read current led state
+    bool state = digitalRead(LED_BUILTIN);
+    // return pointer to data
+    *data = (uint8_t*)((state) ? "1\r\n" : "0\r\n");
+    // return data size
+    return strlen((char*)(*data));
+}
+
+void 
+ledSetDataCallback(FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) noexcept {
+    if (size < 1) {
+        return;
+    }
+
+    if (data[0] == '1') {
+        digitalWrite(LED_BUILTIN, HIGH);
+    } else if (data[0] == '0') {
+        digitalWrite(LED_BUILTIN, LOW);
+    }
+}
+
+// time file get data callback
+size_t
+timeGetDataCallback(FILE_DESCRIPTOR_ARGS, uint8_t** data) noexcept {
+    static char timeBuf[16];
+    // read current time
+    auto currentTime = millis();
+    // convert
+    snprintf(timeBuf, sizeof(timeBuf), "%ld\r\n", currentTime);
+    timeBuf[sizeof(timeBuf) -1] = 0;
+    *data = (uint8_t*)timeBuf;
+    return strlen((char*)(*data));
+}
+
+const struct ush_file_descriptor rootFiles[] = {
+    {
+        .name = "info.txt", 
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = infoGetDataCallback,
+    }
+};
+
+const struct ush_file_descriptor binFiles[] = {
+    {
+        .name = "toggle", 
+        .description = "toggle led",
+        .help = "usage: toggle\r\n",
+        .exec = toggleExecCallback,
+    },
+    {
+        .name = "set", 
+        .description = "set led",
+        .help = "usage: set {0,1}\r\n",
+        .exec = setExecCallback,
+    },
+};
+
+const struct ush_file_descriptor devFiles[] = {
+    {
+        .name = "led", 
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = ledGetDataCallback,
+        .set_data = ledSetDataCallback,
+    },
+    {
+        .name = "time", 
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr, 
+        .get_data = timeGetDataCallback,
+    },
+};
+
+const struct ush_file_descriptor cmdFiles[] = {
+    {
+        .name = "reboot",
+        .description = "reboot device",
+        .help = nullptr,
+        .exec = rebootExecCallback,
+    },
+};
+
+#undef FILE_DESCRIPTOR_ARGS
