@@ -302,11 +302,7 @@ const struct ush_descriptor ush_desc = {
     .hostname = "system_chip",
 };
 #define FILE_DESCRIPTOR_ARGS struct ush_object* self, struct ush_file_descriptor const * file
-
-void 
-toggleExecCallback(FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
-    digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
-}
+#define PASS_FILE_DESCRIPTOR_ARGS self, file
 
 void 
 rebootExecCallback(FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
@@ -314,56 +310,13 @@ rebootExecCallback(FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
     ush_print(self, "error: reboot not supported");
 }
 
-void 
-setExecCallback(FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
-    if (argc != 0) {
-        ush_print_status(self, USH_STATUS_ERROR_COMMAND_WRONG_ARGUMENTS);
-        return;
-    }
-
-    if (strcmp(argv[1], "1") == 0) {
-        digitalWrite(LED_BUILTIN, HIGH);
-    } else if (strcmp(argv[1], "0") == 0) {
-        digitalWrite(LED_BUILTIN, LOW);
-    } else {
-        // return predefined error message
-        ush_print_status(self, USH_STATUS_ERROR_COMMAND_WRONG_ARGUMENTS);
-        return;
-    }
-}
-
 // info file get data callback
-size_t 
-infoGetDataCallback(FILE_DESCRIPTOR_ARGS, uint8_t** data) noexcept {
-    static const char* info = "Use MicroShell and make fun!\r\n";
-
+size_t
+fixedFileDataCallback(FILE_DESCRIPTOR_ARGS, uint8_t** data, const char* info) noexcept {
     *data = (uint8_t*)info;
     return strlen(info);
 }
 
-
-size_t 
-ledGetDataCallback(FILE_DESCRIPTOR_ARGS, uint8_t** data) noexcept {
-    // read current led state
-    bool state = digitalRead(LED_BUILTIN);
-    // return pointer to data
-    *data = (uint8_t*)((state) ? "1\r\n" : "0\r\n");
-    // return data size
-    return strlen((char*)(*data));
-}
-
-void 
-ledSetDataCallback(FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) noexcept {
-    if (size < 1) {
-        return;
-    }
-
-    if (data[0] == '1') {
-        digitalWrite(LED_BUILTIN, HIGH);
-    } else if (data[0] == '0') {
-        digitalWrite(LED_BUILTIN, LOW);
-    }
-}
 
 // time file get data callback
 size_t
@@ -384,7 +337,9 @@ const struct ush_file_descriptor rootFiles[] = {
         .description = nullptr,
         .help = nullptr,
         .exec = nullptr,
-        .get_data = infoGetDataCallback,
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) noexcept {
+            return fixedFileDataCallback(PASS_FILE_DESCRIPTOR_ARGS, data, "Teensy 4.1 System Chip\n");
+        },
     }
 };
 
@@ -393,13 +348,30 @@ const struct ush_file_descriptor binFiles[] = {
         .name = "toggle", 
         .description = "toggle led",
         .help = "usage: toggle\r\n",
-        .exec = toggleExecCallback,
+        .exec = [](FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
+            digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
+        },
     },
     {
         .name = "set", 
         .description = "set led",
         .help = "usage: set {0,1}\r\n",
-        .exec = setExecCallback,
+        .exec = [](FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
+            if (argc != 0) {
+                ush_print_status(self, USH_STATUS_ERROR_COMMAND_WRONG_ARGUMENTS);
+                return;
+            }
+
+            if (strcmp(argv[1], "1") == 0) {
+                digitalWrite(LED_BUILTIN, HIGH);
+            } else if (strcmp(argv[1], "0") == 0) {
+                digitalWrite(LED_BUILTIN, LOW);
+            } else {
+                // return predefined error message
+                ush_print_status(self, USH_STATUS_ERROR_COMMAND_WRONG_ARGUMENTS);
+                return;
+            }
+        },
     },
 };
 
@@ -409,7 +381,14 @@ const struct ush_file_descriptor devFiles[] = {
         .description = nullptr,
         .help = nullptr,
         .exec = nullptr,
-        .get_data = ledGetDataCallback,
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) noexcept {
+            // read current led state
+            bool state = digitalRead(LED_BUILTIN);
+            // return pointer to data
+            *data = (uint8_t*)((state) ? "1\r\n" : "0\r\n");
+            // return data size
+            return strlen((char*)(*data));
+        },
         .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) noexcept {
             if (size < 1) {
                 return;
@@ -424,13 +403,6 @@ const struct ush_file_descriptor devFiles[] = {
     },
     {
         .name = "time", 
-        .description = nullptr,
-        .help = nullptr,
-        .exec = nullptr, 
-        .get_data = timeGetDataCallback,
-    },
-    {
-        .name = "millis",
         .description = nullptr,
         .help = nullptr,
         .exec = nullptr, 
