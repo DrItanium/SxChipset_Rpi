@@ -148,6 +148,8 @@ class TwoWireServer {
         void handleReceive(int howMany);
         void handleRequest();
         void process();
+        [[nodiscard]] constexpr auto getNumberOfMemoryRequests() const noexcept { return _numRequests; }
+        [[nodiscard]] constexpr auto getNumberOfMemoryReceives() const noexcept { return _numReceives; }
     private:
         void sink();
         void setAddressRegister(uint32_t value) noexcept {
@@ -165,6 +167,9 @@ class TwoWireServer {
         bool _availableForRead = false;
         uint8_t _capacity = 0;
         uint8_t _index = 0;
+        uint64_t _numRequests = 0;
+        uint64_t _numReceives = 0;
+        // must be last
         union {
             uint8_t _dataBytes[256] = { 0 };
             Packet op;
@@ -172,6 +177,7 @@ class TwoWireServer {
 };
 void
 TwoWireServer::handleRequest() {
+    ++_numRequests;
     if (_systemBooted) {
         if (_processingRequest) {
             _link.write(static_cast<uint8_t>(Deception::MemoryCodes::CurrentlyProcessingRequest));
@@ -196,6 +202,7 @@ TwoWireServer::handleRequest() {
 
 void
 TwoWireServer::handleReceive(int howMany) {
+    ++_numReceives;
     if (!_processingRequest) {
         if (howMany >= 1) {
             _processingRequest = true;
@@ -304,11 +311,6 @@ const struct ush_descriptor ush_desc = {
 #define FILE_DESCRIPTOR_ARGS struct ush_object* self, struct ush_file_descriptor const * file
 #define PASS_FILE_DESCRIPTOR_ARGS self, file
 
-void 
-rebootExecCallback(FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
-    /// @todo implement reboot at some point
-    ush_print(self, "error: reboot not supported");
-}
 
 // info file get data callback
 size_t
@@ -444,6 +446,11 @@ const struct ush_file_descriptor devFiles[] = {
     },
 };
 
+void 
+rebootExecCallback(FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
+    /// @todo implement reboot at some point
+    ush_print(self, "error: reboot not supported");
+}
 const struct ush_file_descriptor cmdFiles[] = {
     {
         .name = "reboot",
@@ -451,12 +458,26 @@ const struct ush_file_descriptor cmdFiles[] = {
         .help = nullptr,
         .exec = rebootExecCallback,
     },
+    {
+        .name = "memory_stats",
+        .description = "display memory connection statistics",
+        .help = nullptr,
+        .exec = [](FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
+            ush_printf(self, "Number of Request Operations: %lld\n", link0.getNumberOfMemoryRequests());
+            ush_printf(self, "Number of Receive Operations: %lld\n", link0.getNumberOfMemoryReceives());
+        },
+    },
 };
+
+
+
 
 struct ush_node_object root;
 struct ush_node_object dev;
 struct ush_node_object bin;
 struct ush_node_object cmd;
+
+
 
 void
 setupMicroshell() {
