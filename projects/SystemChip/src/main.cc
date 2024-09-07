@@ -343,16 +343,16 @@ const struct ush_file_descriptor rootFiles[] = {
     }
 };
 
-const struct ush_file_descriptor binFiles[] = {
-    {
-        .name = "toggle", 
-        .description = "toggle led",
-        .help = "usage: toggle\r\n",
-        .exec = [](FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
-            digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
-        },
+const struct ush_file_descriptor cmdToggleLED{
+    .name = "toggle-led",
+    .description = "toggle led",
+    .help = "usage: toggle-led\n",
+    .exec = [](FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
+        digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
     },
-    {
+};
+
+const struct ush_file_descriptor cmdSetLED {
         .name = "set", 
         .description = "set led",
         .help = "usage: set {0,1}\r\n",
@@ -372,7 +372,24 @@ const struct ush_file_descriptor binFiles[] = {
                 return;
             }
         },
+};
+
+const struct ush_file_descriptor cmdFeedbackTest {
+    .name = "feedback",
+    .description = "display what was passed in",
+    .help = "usage: feedback ...\n",
+    .exec = [](FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
+        ush_printf(self, "Number of Args: %d\n", argc);
+        for (int i = 0; i < argc; ++i) {
+            ush_printf(self, "%d: %s\n", argv[i]);
+        }
     },
+};
+
+
+const struct ush_file_descriptor binFiles[] = {
+    cmdToggleLED,
+    cmdSetLED,
 };
 
 const struct ush_file_descriptor devFiles[] = {
@@ -385,7 +402,7 @@ const struct ush_file_descriptor devFiles[] = {
             // read current led state
             bool state = digitalRead(LED_BUILTIN);
             // return pointer to data
-            *data = (uint8_t*)((state) ? "1\r\n" : "0\r\n");
+            *data = (uint8_t*)((state) ? "1\n" : "0\n");
             // return data size
             return strlen((char*)(*data));
         },
