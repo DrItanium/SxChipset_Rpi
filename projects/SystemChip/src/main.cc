@@ -344,9 +344,9 @@ const struct ush_file_descriptor rootFiles[] = {
 };
 
 const struct ush_file_descriptor cmdToggleLED{
-    .name = "toggle-led",
+    .name = "toggle",
     .description = "toggle led",
-    .help = "usage: toggle-led\n",
+    .help = "usage: toggle\n",
     .exec = [](FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
         digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
     },
@@ -379,9 +379,8 @@ const struct ush_file_descriptor cmdFeedbackTest {
     .description = "display what was passed in",
     .help = "usage: feedback ...\n",
     .exec = [](FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
-        ush_printf(self, "Number of Args: %d\n", argc);
         for (int i = 0; i < argc; ++i) {
-            ush_printf(self, "%d: %s\n", argv[i]);
+            ush_printf(self, "\t%d: %s\n", i, argv[i]);
         }
     },
 };
@@ -390,7 +389,9 @@ const struct ush_file_descriptor cmdFeedbackTest {
 const struct ush_file_descriptor binFiles[] = {
     cmdToggleLED,
     cmdSetLED,
+    cmdFeedbackTest,
 };
+
 
 const struct ush_file_descriptor devFiles[] = {
     {
