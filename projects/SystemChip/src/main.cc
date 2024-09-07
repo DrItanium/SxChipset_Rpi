@@ -471,6 +471,51 @@ const struct ush_file_descriptor cmdFiles[] = {
     },
 };
 
+const struct ush_file_descriptor memcFiles[] = {
+    {
+        .name = "address",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) noexcept {
+            static char buf[16];
+            auto address = link0.getAddress();
+            snprintf(buf, sizeof(buf), "%d\n", address);
+            buf[sizeof(buf) - 1] = 0;
+            *data = (uint8_t*)buf;
+            return strlen((char*)(*data));
+        },
+    },
+    {
+        .name = "receives",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) noexcept {
+            static char buf[32];
+            auto value = link0.getNumberOfMemoryReceives();
+            snprintf(buf, sizeof(buf), "%lld\n", value);
+            buf[sizeof(buf) - 1] = 0;
+            *data = (uint8_t*)buf;
+            return strlen((char*)(*data));
+        },
+    },
+    {
+        .name = "requests",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) noexcept {
+            static char buf[32];
+            auto value = link0.getNumberOfMemoryRequests();
+            snprintf(buf, sizeof(buf), "%lld\n", value);
+            buf[sizeof(buf) - 1] = 0;
+            *data = (uint8_t*)buf;
+            return strlen((char*)(*data));
+        },
+    },
+};
+
 
 
 
@@ -478,6 +523,7 @@ struct ush_node_object root;
 struct ush_node_object dev;
 struct ush_node_object bin;
 struct ush_node_object cmd;
+struct ush_node_object memc;
 
 
 
@@ -489,6 +535,7 @@ setupMicroshell() {
     ush_node_mount(&ush, "/", &root, rootFiles, NELEM(rootFiles));
     ush_node_mount(&ush, "/dev", &dev, devFiles, NELEM(devFiles));
     ush_node_mount(&ush, "/bin", &bin, binFiles, NELEM(binFiles));
+    ush_node_mount(&ush, "/dev/memc", &memc, memcFiles, NELEM(memcFiles));
 #undef NELEM
 }
 
