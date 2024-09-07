@@ -419,6 +419,29 @@ const struct ush_file_descriptor devFiles[] = {
         .exec = nullptr, 
         .get_data = timeGetDataCallback,
     },
+    {
+        .name = "millis",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr, 
+        .get_data = timeGetDataCallback,
+    },
+    {
+        .name = "micros",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr, 
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) noexcept {
+            static char timeBuf[16];
+            // read current time
+            auto currentTime = micros();
+            // convert
+            snprintf(timeBuf, sizeof(timeBuf), "%ld\r\n", currentTime);
+            timeBuf[sizeof(timeBuf) -1] = 0;
+            *data = (uint8_t*)timeBuf;
+            return strlen((char*)(*data));
+        },
+    },
 };
 
 const struct ush_file_descriptor cmdFiles[] = {
