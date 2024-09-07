@@ -150,6 +150,7 @@ class TwoWireServer {
         void process();
         [[nodiscard]] constexpr auto getNumberOfMemoryRequests() const noexcept { return _numRequests; }
         [[nodiscard]] constexpr auto getNumberOfMemoryReceives() const noexcept { return _numReceives; }
+        [[nodiscard]] constexpr auto getAddress() const noexcept { return _systemAddress; }
     private:
         void sink();
         void setAddressRegister(uint32_t value) noexcept {
@@ -463,6 +464,7 @@ const struct ush_file_descriptor cmdFiles[] = {
         .description = "display memory connection statistics",
         .help = nullptr,
         .exec = [](FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
+            ush_printf(self, "Memory Controller Address: %d\n", link0.getAddress());
             ush_printf(self, "Number of Request Operations: %lld\n", link0.getNumberOfMemoryRequests());
             ush_printf(self, "Number of Receive Operations: %lld\n", link0.getNumberOfMemoryReceives());
         },
