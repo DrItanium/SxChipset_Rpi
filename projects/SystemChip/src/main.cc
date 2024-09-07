@@ -410,7 +410,17 @@ const struct ush_file_descriptor devFiles[] = {
         .help = nullptr,
         .exec = nullptr,
         .get_data = ledGetDataCallback,
-        .set_data = ledSetDataCallback,
+        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) noexcept {
+            if (size < 1) {
+                return;
+            }
+            
+            if (data[0] == '1') {
+                digitalWrite(LED_BUILTIN, HIGH);
+            } else if (data[0] == '0') {
+                digitalWrite(LED_BUILTIN, LOW);
+            }
+        },
     },
     {
         .name = "time", 
