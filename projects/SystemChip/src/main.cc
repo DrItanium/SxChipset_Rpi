@@ -50,9 +50,7 @@ constexpr unsigned long long int operator ""_MB(unsigned long long int value) no
 constexpr size_t MaxMemoryPoolSize = 16_MB; // PSRAM Pool Maximum Size
 constexpr size_t MinimumPoolSize = 1_MB; // we don't want this to go any smaller than this
 constexpr auto MemoryPoolSize = 16_MB; 
-
 MEMORY_POOL_SECTION uint8_t memory960[MemoryPoolSize];
-bool sdcardInstalled = false;
 static_assert(MemoryPoolSize <= MaxMemoryPoolSize, "Requested memory capacity is too large!");
 static_assert(MemoryPoolSize >= MinimumPoolSize, "Requested memory capacity will not fit a default boot image!");
 
@@ -65,8 +63,7 @@ setupMemoryPool() {
 }
 void
 setupSDCard() {
-    sdcardInstalled = SD.begin(BUILTIN_SDCARD);
-    if (!sdcardInstalled) {
+    if (!SD.begin(BUILTIN_SDCARD)) {
         Serial.println("No SDCard found!");
     } else {
         Serial.println("Found an SDCard, will try to transfer the contents of prog.bin to onboard psram");
@@ -536,13 +533,41 @@ const struct ush_file_descriptor memcFiles[] = {
 
 const struct ush_file_descriptor sdCardFiles[] = {
     {
-        .name = "available",
+        .name = "present",
         .description = nullptr,
         .help = nullptr,
         .exec = nullptr,
         .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) noexcept {
-            *data = (uint8_t*)((sdcardInstalled) ? "1\n" : "0\n");
+            *data = (uint8_t*)((SD.mediaPresent()) ? "1\n" : "0\n");
             // return data size
+            return strlen((char*)(*data));
+        },
+    },
+    {
+        .name = "capacity",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) noexcept {
+            static char buf[32];
+            auto value = SD.totalSize();
+            snprintf(buf, sizeof(buf), "%lld\n", value);
+            buf[sizeof(buf) - 1] = 0;
+            *data = (uint8_t*)buf;
+            return strlen((char*)(*data));
+        },
+    },
+    {
+        .name = "used",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) noexcept {
+            static char buf[32];
+            auto value = SD.usedSize();
+            snprintf(buf, sizeof(buf), "%lld\n", value);
+            buf[sizeof(buf) - 1] = 0;
+            *data = (uint8_t*)buf;
             return strlen((char*)(*data));
         },
     },
