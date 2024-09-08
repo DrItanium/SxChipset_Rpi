@@ -534,6 +534,20 @@ const struct ush_file_descriptor memcFiles[] = {
     },
 };
 
+const struct ush_file_descriptor sdCardFiles[] = {
+    {
+        .name = "available",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) noexcept {
+            *data = (uint8_t*)((sdcardInstalled) ? "1\n" : "0\n");
+            // return data size
+            return strlen((char*)(*data));
+        },
+    },
+};
+
 
 
 
@@ -542,6 +556,7 @@ struct ush_node_object dev;
 struct ush_node_object bin;
 struct ush_node_object cmd;
 struct ush_node_object memc;
+struct ush_node_object isd;
 
 
 
@@ -554,6 +569,7 @@ setupMicroshell() {
     ush_node_mount(&ush, "/dev", &dev, devFiles, NELEM(devFiles));
     ush_node_mount(&ush, "/bin", &bin, binFiles, NELEM(binFiles));
     ush_node_mount(&ush, "/dev/memc", &memc, memcFiles, NELEM(memcFiles));
+    ush_node_mount(&ush, "/dev/sd", &isd, sdCardFiles, NELEM(sdCardFiles));
 #undef NELEM
 }
 
