@@ -138,10 +138,11 @@ void handleRequestTop();
 class TwoWireServer {
     public:
         TwoWireServer(TwoWire& link) : _link(link) { }
-        void begin(uint8_t index) {
+        void begin(uint8_t index, uint32_t clockRate = Deception::TWI_ClockRate) {
             _systemAddress = index;
             _link.begin(index);
-            _link.setClock(Deception::TWI_ClockRate);
+            _clockRate = clockRate;
+            _link.setClock(clockRate);
             _link.onReceive(handleReceiveTop);
             _link.onRequest(handleRequestTop);
         }
@@ -151,6 +152,7 @@ class TwoWireServer {
         [[nodiscard]] constexpr auto getNumberOfMemoryRequests() const noexcept { return _numRequests; }
         [[nodiscard]] constexpr auto getNumberOfMemoryReceives() const noexcept { return _numReceives; }
         [[nodiscard]] constexpr auto getAddress() const noexcept { return _systemAddress; }
+        [[nodiscard]] constexpr auto getClockRate() const noexcept { return _clockRate; }
     private:
         void sink();
         void setAddressRegister(uint32_t value) noexcept {
@@ -170,6 +172,7 @@ class TwoWireServer {
         uint8_t _index = 0;
         uint64_t _numRequests = 0;
         uint64_t _numReceives = 0;
+        uint32_t _clockRate = 0;
         // must be last
         union {
             uint8_t _dataBytes[256] = { 0 };
@@ -464,9 +467,10 @@ const struct ush_file_descriptor cmdFiles[] = {
         .description = "display memory connection statistics",
         .help = nullptr,
         .exec = [](FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
-            ush_printf(self, "Memory Controller Address: %d\n", link0.getAddress());
-            ush_printf(self, "Number of Request Operations: %lld\n", link0.getNumberOfMemoryRequests());
-            ush_printf(self, "Number of Receive Operations: %lld\n", link0.getNumberOfMemoryReceives());
+            ush_printf(self, "Address: %d\n", link0.getAddress());
+            ush_printf(self, "Clock Rate: %ld\n", link0.getClockRate());
+            ush_printf(self, "Requests: %lld\n", link0.getNumberOfMemoryRequests());
+            ush_printf(self, "Receives: %lld\n", link0.getNumberOfMemoryReceives());
         },
     },
 };
@@ -481,6 +485,20 @@ const struct ush_file_descriptor memcFiles[] = {
             static char buf[16];
             auto address = link0.getAddress();
             snprintf(buf, sizeof(buf), "%d\n", address);
+            buf[sizeof(buf) - 1] = 0;
+            *data = (uint8_t*)buf;
+            return strlen((char*)(*data));
+        },
+    },
+    {
+        .name = "clkrate",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) noexcept {
+            static char buf[16];
+            auto address = link0.getClockRate();
+            snprintf(buf, sizeof(buf), "%ld\n", address);
             buf[sizeof(buf) - 1] = 0;
             *data = (uint8_t*)buf;
             return strlen((char*)(*data));
