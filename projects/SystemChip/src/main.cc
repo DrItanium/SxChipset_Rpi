@@ -37,8 +37,23 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define CACHE_MEMORY_SECTION DMAMEM
 #define MEMORY_POOL_SECTION EXTMEM
-constexpr auto Connection2560_Up = 36;
-constexpr auto TeensyUp_Pin = 33;
+// fake smi interface
+constexpr auto SD0 = 0;
+constexpr auto SD1 = 1;
+constexpr auto SD2 = 2;
+constexpr auto SD3 = 3;
+constexpr auto SD4 = 4;
+constexpr auto SD5 = 5;
+constexpr auto SD6 = 6;
+constexpr auto SD7 = 7;
+constexpr auto WriteEnable = 25;
+constexpr auto OutputEnable = 26;
+constexpr auto SA0 = 27;
+constexpr auto SA1 = 28;
+constexpr auto SA2 = 29;
+constexpr auto SA3 = 30;
+constexpr auto SA4 = 31;
+constexpr auto SA5 = 32;
 using Address = uint32_t;
 using RawCacheLineData = uint8_t*;
 constexpr unsigned long long int operator ""_KB(unsigned long long int value) noexcept {
@@ -54,7 +69,69 @@ MEMORY_POOL_SECTION uint8_t memory960[MemoryPoolSize];
 static_assert(MemoryPoolSize <= MaxMemoryPoolSize, "Requested memory capacity is too large!");
 static_assert(MemoryPoolSize >= MinimumPoolSize, "Requested memory capacity will not fit a default boot image!");
 
+union [[gnu::packed]] DataInterfaceInput {
+    struct {
+        uint8_t d0 : 1;
+        uint8_t d1 : 1;
+        uint8_t d2 : 1;
+        uint8_t d3 : 1;
+        uint8_t d4 : 1;
+        uint8_t d5 : 1;
+        uint8_t d6 : 1;
+        uint8_t d7 : 1;
+    };
+    uint8_t full;
+};
+template<typename T>
+union [[gnu::packed]] SplitWord {
+    T full;
+    static constexpr auto NumberOfBytes = sizeof(T)/sizeof(uint8_t);
+    uint8_t bytes[NumberOfBytes];
+    static_assert(NumberOfBytes < 32);
+};
+using SplitWord32 = SplitWord<uint32_t>;
+using SplitWord16 = SplitWord<uint16_t>;
 void setupMicroshell();
+void configureParallelInterface() noexcept;
+void setDataLines(uint8_t value) noexcept;
+uint8_t getDataLines() noexcept;
+void setAddress(uint8_t address) noexcept;
+void startReadOperation() noexcept;
+void endReadOperation() noexcept;
+void startWriteOperation() noexcept;
+void endWriteOperation() noexcept;
+template<decltype(OUTPUT) direction>
+inline void configureDataLinesDirection() noexcept {
+    pinMode(SD0, direction);
+    pinMode(SD1, direction);
+    pinMode(SD2, direction);
+    pinMode(SD3, direction);
+    pinMode(SD4, direction);
+    pinMode(SD5, direction);
+    pinMode(SD6, direction);
+    pinMode(SD7, direction);
+}
+
+uint8_t externalBusRead8(uint8_t address) noexcept;
+void externalBusWrite8(uint8_t address, uint8_t value) noexcept;
+template<typename T>
+inline T externalBusRead(uint8_t baseAddress) noexcept {
+    using K = SplitWord<T>;
+    K tmp;
+    for (uint8_t i = 0; i < K::NumberOfBytes; ++i) {
+        tmp.bytes[i] = externalBusRead8(baseAddress + i);
+    }
+    return tmp.full;
+}
+template<typename T>
+inline void externalBusWrite(uint8_t baseAddress, T value) noexcept {
+    using K = SplitWord<T>;
+    K tmp;
+    tmp.full = value;
+    for (uint8_t i = 0; i < K::NumberOfBytes; ++i) {
+        externalBusWrite8(baseAddress + i, tmp.bytes[i]);
+    }
+}
 void 
 setupMemoryPool() {
     // clear out the actual memory pool ahead of setting up the memory pool
@@ -115,6 +192,8 @@ setupHardware() {
     }
     X(Serial, 9600, true);
 #undef X
+    Serial.println("Interface up");
+    configureParallelInterface();
     setupMemoryPool();
     // the sdcard should come last to make sure that we don't clear out all of
     // our work!
@@ -603,5 +682,108 @@ loop() {
     link0.process();
     ush_service(&ush);
 }
+
+void 
+configureParallelInterface() noexcept {
+    pinMode(SA0, OUTPUT);
+    pinMode(SA1, OUTPUT);
+    pinMode(SA2, OUTPUT);
+    pinMode(SA3, OUTPUT);
+    pinMode(SA4, OUTPUT);
+    pinMode(SA5, OUTPUT);
+    pinMode(WriteEnable, OUTPUT);
+    pinMode(OutputEnable, OUTPUT);
+    configureDataLinesDirection<OUTPUT>();
+    endWriteOperation();
+    endReadOperation();
+    setAddress(0);
+    externalBusWrite<uint32_t>(0b000100, 0);
+    externalBusWrite<uint32_t>(0b001100, 0);
+}
+void 
+setDataLines(uint8_t value) noexcept {
+    DataInterfaceInput tmp;
+    tmp.full = value;
+#define X(index) digitalWrite( SD ## index , tmp.d ## index ) 
+    X(0);
+    X(1);
+    X(2);
+    X(3);
+    X(4);
+    X(5);
+    X(6);
+    X(7);
+#undef X
+}
+uint8_t 
+getDataLines() noexcept {
+    DataInterfaceInput tmp;
+#define X(index) tmp. d ## index = digitalRead( SD ## index )
+    X(0);
+    X(1);
+    X(2);
+    X(3);
+    X(4);
+    X(5);
+    X(6);
+    X(7);
+#undef X
+    return tmp.full;
+}
+
+void
+setAddress(uint8_t address) noexcept {
+    DataInterfaceInput tmp;
+    tmp.full = address;
+#define X(index) digitalWrite( SA ## index , tmp. d ## index )
+    X(0);
+    X(1);
+    X(2);
+    X(3);
+    X(4);
+    X(5);
+#undef X
+}
+
+void 
+startReadOperation() noexcept {
+    digitalWrite(OutputEnable, LOW);
+}
+void 
+endReadOperation() noexcept {
+    digitalWrite(OutputEnable, HIGH);
+}
+void 
+startWriteOperation() noexcept {
+    digitalWrite(WriteEnable, LOW);
+}
+void 
+endWriteOperation() noexcept {
+    digitalWrite(WriteEnable, HIGH);
+}
+
+uint8_t 
+externalBusRead8(uint8_t address) noexcept {
+    configureDataLinesDirection<INPUT>();
+    setAddress(address);
+    startReadOperation();
+    // give it time to respond!
+    delayNanoseconds(200);
+    auto result = getDataLines();
+    endReadOperation();
+    return result;
+}
+
+void
+externalBusWrite8(uint8_t address, uint8_t value) noexcept {
+    configureDataLinesDirection<OUTPUT>();
+    setAddress(address);
+    setDataLines(value);
+    startWriteOperation();
+    delayNanoseconds(200);
+    endWriteOperation();
+}
+
+
 
 #undef FILE_DESCRIPTOR_ARGS
