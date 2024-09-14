@@ -140,6 +140,8 @@ inline void externalBusWrite(uint8_t baseAddress, T value) noexcept {
         externalBusWrite8(baseAddress + i, tmp.bytes[i]);
     }
 }
+volatile uint64_t numberOfReadySignals = 0;
+void configurePinModes() noexcept;
 void 
 setupMemoryPool() {
     // clear out the actual memory pool ahead of setting up the memory pool
@@ -201,6 +203,7 @@ setupHardware() {
     X(Serial, 9600, true);
 #undef X
     Serial.println("Interface up");
+    configurePinModes();
     configureParallelInterface();
     setupMemoryPool();
     // the sdcard should come last to make sure that we don't clear out all of
@@ -558,12 +561,13 @@ const struct ush_file_descriptor cmdFiles[] = {
         },
     },
     {
-        .name = "read_ioexp",
-        .description = "read IO expander values",
-        .help = "usage: read_ioexp\n",
+        .name = "systat",
+        .description = "system statistics",
+        .help = "usage: systat\n",
         .exec = [](FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
             ush_printf(self, "IOEXP0 : 0x%lx\n", externalBusRead<uint32_t>(0b000'000));
             ush_printf(self, "IOEXP1 : 0x%lx\n", externalBusRead<uint32_t>(0b001'000));
+            ush_printf(self, "Number of Ready Signals: 0x%llx\n", numberOfReadySignals);
         },
     },
 
@@ -802,6 +806,11 @@ externalBusWrite8(uint8_t address, uint8_t value) noexcept {
     endWriteOperation();
 }
 
+void
+configurePinModes() noexcept {
+    pinMode(READY_SYNC, INPUT);
+    attachInterrupt(READY_SYNC, []() { ++numberOfReadySignals; }, FALLING);
+}
 
 
 #undef FILE_DESCRIPTOR_ARGS
