@@ -46,6 +46,14 @@ constexpr auto SD4 = 4;
 constexpr auto SD5 = 5;
 constexpr auto SD6 = 6;
 constexpr auto SD7 = 7;
+constexpr auto READY_SYNC = 8;
+constexpr auto READY = 9;
+constexpr auto ADS = 10;
+constexpr auto BLAST = 11;
+constexpr auto BE0 = 12;
+constexpr auto BE1 = 14;
+constexpr auto Free0 = 15;
+constexpr auto Free1 = 16;
 constexpr auto WriteEnable = 25;
 constexpr auto OutputEnable = 26;
 constexpr auto SA0 = 27;
@@ -549,6 +557,16 @@ const struct ush_file_descriptor cmdFiles[] = {
             ush_printf(self, "Receives: %lld\n", link0.getNumberOfMemoryReceives());
         },
     },
+    {
+        .name = "read_ioexp",
+        .description = "read IO expander values",
+        .help = "usage: read_ioexp\n",
+        .exec = [](FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
+            ush_printf(self, "IOEXP0 : 0x%lx\n", externalBusRead<uint32_t>(0b000'000));
+            ush_printf(self, "IOEXP1 : 0x%lx\n", externalBusRead<uint32_t>(0b001'000));
+        },
+    },
+
 };
 
 const struct ush_file_descriptor memcFiles[] = {
