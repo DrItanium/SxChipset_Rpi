@@ -38,30 +38,103 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define CACHE_MEMORY_SECTION DMAMEM
 #define MEMORY_POOL_SECTION EXTMEM
 // fake smi interface
-constexpr auto SD0 = 0;
-constexpr auto SD1 = 1;
-constexpr auto SD2 = 2;
-constexpr auto SD3 = 3;
-constexpr auto SD4 = 4;
-constexpr auto SD5 = 5;
-constexpr auto SD6 = 6;
-constexpr auto SD7 = 7;
-constexpr auto READY_SYNC = 8;
-constexpr auto READY = 9;
-constexpr auto ADS = 10;
-constexpr auto BLAST = 11;
-constexpr auto BE0 = 12;
-constexpr auto BE1 = 14;
-constexpr auto Free0 = 15;
-constexpr auto Free1 = 16;
-constexpr auto WriteEnable = 25;
-constexpr auto OutputEnable = 26;
-constexpr auto SA0 = 27;
-constexpr auto SA1 = 28;
-constexpr auto SA2 = 29;
-constexpr auto SA3 = 30;
-constexpr auto SA4 = 31;
-constexpr auto SA5 = 32;
+enum class Pinout : int {
+    D0,
+    D1,
+    D2,
+    D3,
+    D4,
+    D5,
+    D6,
+    D7,
+    D8,
+    D9,
+    D10,
+    D11,
+    D12,
+    D13,
+    D14,
+    D15,
+    D16,
+    D17,
+    D18,
+    D19,
+    D20,
+    D21,
+    D22,
+    D23,
+    D24,
+    D25,
+    D26,
+    D27,
+    D28,
+    D29,
+    D30,
+    D31,
+    D32,
+    D33,
+    D34,
+    D35,
+    D36,
+    D37,
+    D38,
+    D39,
+    D40,
+    D41,
+    ADS = D0,
+    BE1 = D1,
+    BE0 = D2,
+    WR = D3,
+    HOLD = D4,
+    READY = D5,
+    HLDA = D6,
+    BLAST = D7,
+    READY_SYNC = D9,
+    SD0 = D25,
+    SD1 = D26,
+    SD2 = D27,
+    SD3 = D28,
+    SD4 = D29,
+    SD5 = D30,
+    SD6 = D31,
+    SD7 = D32,
+    SA5 = D33,
+    SA4 = D34,
+    SA1 = D35,
+    SA0 = D36,
+    SOE = D37,
+    SWE = D38,
+    SA2 = D39,
+    SA3 = D40,
+
+};
+#define X(name) constexpr auto name = static_cast<int>( Pinout :: name )
+X(SD0);
+X(SD1);
+X(SD2);
+X(SD3);
+X(SD4);
+X(SD5);
+X(SD6);
+X(SD7);
+X(READY_SYNC);
+X(READY);
+X(ADS);
+X(BLAST);
+X(BE0);
+X(BE1);
+X(WR);
+X(HLDA);
+X(HOLD);
+X(SOE);
+X(SWE);
+X(SA0);
+X(SA1);
+X(SA2);
+X(SA3);
+X(SA4);
+X(SA5);
+#undef X
 using Address = uint32_t;
 using RawCacheLineData = uint8_t*;
 constexpr unsigned long long int operator ""_KB(unsigned long long int value) noexcept {
@@ -140,7 +213,6 @@ inline void externalBusWrite(uint8_t baseAddress, T value) noexcept {
         externalBusWrite8(baseAddress + i, tmp.bytes[i]);
     }
 }
-volatile uint64_t numberOfReadySignals = 0;
 void configurePinModes() noexcept;
 void 
 setupMemoryPool() {
@@ -183,6 +255,8 @@ setupSDCard() {
     }
 }
 volatile bool _systemBooted = false;
+volatile bool _readySynchronized = false;
+volatile bool _adsTriggered = false;
 void setupServers();
 void stateChange2560();
 struct [[gnu::packed]] Packet {
@@ -535,6 +609,23 @@ const struct ush_file_descriptor devFiles[] = {
             return strlen((char*)(*data));
         },
     },
+#if 0
+    {
+        .name = "clkgen",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) noexcept {
+            if (size < 1) {
+                return;
+            }
+            float value = 0;
+            (void)sscanf((char*)data, "%f", &value);
+            ush_printf(self, "Frequency updated to %f\n", value);
+            analogWriteFrequency(CLK2, value);
+        },
+    },
+#endif
 };
 
 void 
@@ -567,7 +658,6 @@ const struct ush_file_descriptor cmdFiles[] = {
         .exec = [](FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
             ush_printf(self, "IOEXP0 : 0x%lx\n", externalBusRead<uint32_t>(0b000'000));
             ush_printf(self, "IOEXP1 : 0x%lx\n", externalBusRead<uint32_t>(0b001'000));
-            ush_printf(self, "Number of Ready Signals: 0x%llx\n", numberOfReadySignals);
         },
     },
 
@@ -703,6 +793,10 @@ void
 loop() {
     link0.process();
     ush_service(&ush);
+    if (_adsTriggered) {
+        _adsTriggered = false;
+        /// @todo implement execution body here
+    }
 }
 
 void 
@@ -713,8 +807,8 @@ configureParallelInterface() noexcept {
     pinMode(SA3, OUTPUT);
     pinMode(SA4, OUTPUT);
     pinMode(SA5, OUTPUT);
-    pinMode(WriteEnable, OUTPUT);
-    pinMode(OutputEnable, OUTPUT);
+    pinMode(SWE, OUTPUT);
+    pinMode(SOE, OUTPUT);
     configureDataLinesDirection<OUTPUT>();
     endWriteOperation();
     endReadOperation();
@@ -769,19 +863,19 @@ setAddress(uint8_t address) noexcept {
 
 void 
 startReadOperation() noexcept {
-    digitalWrite(OutputEnable, LOW);
+    digitalWrite(SOE, LOW);
 }
 void 
 endReadOperation() noexcept {
-    digitalWrite(OutputEnable, HIGH);
+    digitalWrite(SOE, HIGH);
 }
 void 
 startWriteOperation() noexcept {
-    digitalWrite(WriteEnable, LOW);
+    digitalWrite(SWE, LOW);
 }
 void 
 endWriteOperation() noexcept {
-    digitalWrite(WriteEnable, HIGH);
+    digitalWrite(SWE, HIGH);
 }
 
 uint8_t 
@@ -809,7 +903,12 @@ externalBusWrite8(uint8_t address, uint8_t value) noexcept {
 void
 configurePinModes() noexcept {
     pinMode(READY_SYNC, INPUT);
-    attachInterrupt(READY_SYNC, []() { ++numberOfReadySignals; }, FALLING);
+    pinMode(ADS, INPUT);
+    pinMode(BLAST, INPUT);
+    pinMode(BE0, INPUT);
+    pinMode(BE1, INPUT);
+    attachInterrupt(READY_SYNC, []() { _readySynchronized = true; }, FALLING);
+    attachInterrupt(ADS, []() { _adsTriggered = true; }, RISING);
 }
 
 
