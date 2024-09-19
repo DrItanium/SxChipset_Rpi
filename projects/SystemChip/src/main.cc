@@ -277,8 +277,6 @@ inline void externalBusWrite(uint8_t baseAddress, T value) noexcept {
 namespace i960 {
     uint32_t readAddress() noexcept;
     uint16_t readData16() noexcept;
-    uint8_t readDataLower() noexcept;
-    uint8_t readDataUpper() noexcept;
     void writeData(uint16_t value) noexcept;
     void configureDataBusForWrite() noexcept;
     void configureDataBusForRead() noexcept;
@@ -300,12 +298,13 @@ namespace i960 {
     void triggerINT2() noexcept;
     void triggerINT3() noexcept;
     bool busIsLocked() noexcept;
-    void modifyControlSignals(std::function<void(SplitWord16&)> fn);
-    void handleRequest();
-    void handleIORequest(uint32_t address);
-    void handleMemoryRequest(uint32_t address);
-    void handleDoNothingRequest();
-
+    void modifyControlSignals(std::function<void(SplitWord16&)> fn) noexcept;
+    void handleRequest() noexcept;
+    void handleIORequest(uint32_t address) noexcept;
+    void handleMemoryRequest(uint32_t address) noexcept;
+    void handleDoNothingRequest() noexcept;
+    void triggerReadyState() noexcept;
+    bool do16BitReadOperation(uint16_t value);
 }
 void configurePinModes() noexcept;
 void 
@@ -1031,14 +1030,6 @@ uint16_t
 i960::readData16() noexcept {
     return externalBusRead<uint16_t>(0b00'1000);
 }
-uint8_t 
-i960::readDataLower() noexcept {
-    return externalBusRead8(0b00'1000);
-}
-uint8_t 
-i960::readDataUpper() noexcept {
-    return externalBusRead8(0b00'1001);
-}
 void 
 i960::writeData(uint16_t value) noexcept {
     externalBusWrite<uint16_t>(0b00'1000, value);
@@ -1186,24 +1177,80 @@ i960::handleRequest() {
 }
 void
 i960::handleMemoryRequest(uint32_t address) {
-
-    /// @todo implement
+    auto baseAddress = address & 0x00FF'FFFE;
+    if (isReadOperation()) {
+        const uint16_t* basePointer = reinterpret_cast<const uint16_t*>(&memory960[baseAddress]);
+#define X(index) \
+        writeData(basePointer[index]); \
+        if (isBurstLast()) { \
+            triggerReadyState(); \
+            return; \
+        } \
+        triggerReadyState()
+        X(0);
+        X(1);
+        X(2);
+        X(3);
+        X(4);
+        X(5);
+        X(6);
+        X(7);
+#undef X
+    } else {
+        uint8_t* pointer = &memory960[baseAddress];
+#define X(base) { \
+        uint16_t data = readData16(); \
+        if (lowerByteEnabled()) { \
+            pointer[(base + 0)] = static_cast<uint8_t>(data); \
+        } \
+        if (upperByteEnabled()) { \
+            pointer[(base + 1)] = static_cast<uint8_t>(data >> 8); \
+        } \
+        if (isBurstLast()) { \
+            triggerReadyState(); \
+            return; \
+        } \
+        triggerReadyState(); \
+}
+        X(0);
+        X(2);
+        X(4);
+        X(6);
+        X(8);
+        X(10);
+        X(12);
+        X(14);
+#undef X
+    }
 }
 void 
 i960::handleIORequest(uint32_t address) {
     /// @todo implement
-    switch (address) {
+    switch (address & 0x00FF'FFFF) {
+        case 0x0:
+        case 0x4:
+        case 0x8:
+        case 0xC:
         default:
             handleDoNothingRequest();
             break;
     }
 }
 void
+i960::triggerReadyState() noexcept {
+    signalReady();
+    waitUntilReadySync();
+    delayNanoseconds(200);
+}
+void
 i960::handleDoNothingRequest() {
     if (isReadOperation()) {
         writeData(0);
     }
-    /// @todo implement
+    while (!isBurstLast()) {
+        triggerReadyState();
+    }
+    triggerReadyState();
 }
 
 
