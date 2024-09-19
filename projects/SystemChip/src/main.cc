@@ -34,6 +34,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Ethernet.h>
 #include <Deception.h>
 #include <microshell.h>
+#include <functional>
 
 #define CACHE_MEMORY_SECTION DMAMEM
 #define MEMORY_POOL_SECTION EXTMEM
@@ -139,7 +140,6 @@ enum class Pinout : int {
     BLAST = PI22,
     ADS = PI23,
     READY_SYNC = PI24,
-
 };
 #define X(name) constexpr auto name = static_cast<int>( Pinout :: name )
 X(SD0);
@@ -203,6 +203,34 @@ union [[gnu::packed]] SplitWord {
     uint8_t bytes[NumberOfBytes];
     static_assert(NumberOfBytes < 32);
 };
+
+template<>
+union [[gnu::packed]] SplitWord<uint16_t> {
+    using T = uint16_t;
+    T full;
+    static constexpr auto NumberOfBytes = sizeof(T)/sizeof(uint8_t);
+    uint8_t bytes[NumberOfBytes];
+    struct {
+        T be1 : 1; // input
+        T be0: 1; // input
+        T wr: 1; // input
+        T den : 1; // input
+        T blast : 1; // input
+        T ads : 1; // input 
+        T lock : 1; // open drain (treat as input for now)
+        T hold : 1; // output (direct connect, treat as input)
+        T int3 : 1; // output
+        T int2 : 1; // output
+        T int1 : 1; // output
+        T int0 : 1; // output
+        T reset : 1; // output 
+        T ready : 1; // output (direct connect, treat as input)
+        T hlda : 1; // input
+        T fail : 1; // input
+    } ctl;
+};
+static constexpr uint32_t AddressInterfaceDirectionMask = 0x0000'0000;
+static constexpr uint32_t DataInterfaceDirectionMask = 0x1F00'FFFF;
 using SplitWord32 = SplitWord<uint32_t>;
 using SplitWord16 = SplitWord<uint16_t>;
 void setupMicroshell();
@@ -245,6 +273,34 @@ inline void externalBusWrite(uint8_t baseAddress, T value) noexcept {
     for (uint8_t i = 0; i < K::NumberOfBytes; ++i) {
         externalBusWrite8(baseAddress + i, tmp.bytes[i]);
     }
+}
+namespace i960 {
+    uint32_t readAddress() noexcept;
+    uint16_t readData16() noexcept;
+    uint8_t readDataLower() noexcept;
+    uint8_t readDataUpper() noexcept;
+    void writeData(uint16_t value) noexcept;
+    void configureDataBusForWrite() noexcept;
+    void configureDataBusForRead() noexcept;
+    SplitWord16 readControlSignals() noexcept;
+    void writeControlSignals(uint16_t value) noexcept;
+    bool lowerByteEnabled() noexcept;
+    bool upperByteEnabled() noexcept;
+    bool isReadOperation() noexcept;
+    void putCPUInReset() noexcept;
+    void pullCPUOutOfReset() noexcept;
+    bool isBurstLast() noexcept;
+    void waitUntilReadySync() noexcept;
+    void signalReady() noexcept;
+    void holdBus() noexcept;
+    void releaseBus() noexcept;
+    bool busHoldAcknowledged() noexcept;
+    void triggerINT0() noexcept;
+    void triggerINT1() noexcept;
+    void triggerINT2() noexcept;
+    void triggerINT3() noexcept;
+    bool busIsLocked() noexcept;
+    void modifyControlSignals(std::function<void(SplitWord16&)> fn);
 }
 void configurePinModes() noexcept;
 void 
@@ -833,23 +889,6 @@ loop() {
 }
 
 void 
-configureParallelInterface() noexcept {
-    pinMode(SA0, OUTPUT);
-    pinMode(SA1, OUTPUT);
-    pinMode(SA2, OUTPUT);
-    pinMode(SA3, OUTPUT);
-    pinMode(SA4, OUTPUT);
-    pinMode(SA5, OUTPUT);
-    pinMode(SWE, OUTPUT);
-    pinMode(SOE, OUTPUT);
-    configureDataLinesDirection<OUTPUT>();
-    endWriteOperation();
-    endReadOperation();
-    setAddress(0);
-    externalBusWrite<uint32_t>(0b000100, 0);
-    externalBusWrite<uint32_t>(0b001100, 0);
-}
-void 
 setDataLines(uint8_t value) noexcept {
     DataInterfaceInput tmp;
     tmp.full = value;
@@ -940,8 +979,137 @@ configurePinModes() noexcept {
     pinMode(BLAST, INPUT);
     pinMode(BE0, INPUT);
     pinMode(BE1, INPUT);
+    pinMode(READY, OUTPUT);
+    pinMode(HOLD, OUTPUT);
+    pinMode(HLDA, INPUT);
+    pinMode(WR, INPUT);
     attachInterrupt(READY_SYNC, []() { _readySynchronized = true; }, FALLING);
     attachInterrupt(ADS, []() { _adsTriggered = true; }, RISING);
+}
+
+void 
+configureParallelInterface() noexcept {
+    pinMode(SA0, OUTPUT);
+    pinMode(SA1, OUTPUT);
+    pinMode(SA2, OUTPUT);
+    pinMode(SA3, OUTPUT);
+    pinMode(SA4, OUTPUT);
+    pinMode(SA5, OUTPUT);
+    pinMode(SWE, OUTPUT);
+    pinMode(SOE, OUTPUT);
+    configureDataLinesDirection<OUTPUT>();
+    endWriteOperation();
+    endReadOperation();
+    setAddress(0);
+    externalBusWrite<uint32_t>(0b000100, AddressInterfaceDirectionMask);
+    externalBusWrite<uint32_t>(0b001100, DataInterfaceDirectionMask);
+    SplitWord16 defaultSignals;
+    defaultSignals.full = 0;
+    defaultSignals.ctl.ready = 1;
+    defaultSignals.ctl.int0 = 1;
+    defaultSignals.ctl.int1 = 0;
+    defaultSignals.ctl.int2 = 0;
+    defaultSignals.ctl.int3 = 1;
+    defaultSignals.ctl.reset = 0;
+    defaultSignals.ctl.hold = 0;
+    externalBusWrite<uint16_t>(0b001110, defaultSignals.full);
+}
+
+uint32_t 
+i960::readAddress() noexcept {
+    return externalBusRead<uint32_t>(0b00'0000);
+}
+uint16_t 
+i960::readData16() noexcept {
+    return externalBusRead<uint16_t>(0b00'1000);
+}
+uint8_t 
+i960::readDataLower() noexcept {
+    return externalBusRead8(0b00'1000);
+}
+uint8_t 
+i960::readDataUpper() noexcept {
+    return externalBusRead8(0b00'1001);
+}
+void 
+i960::writeData(uint16_t value) noexcept {
+    externalBusWrite<uint16_t>(0b00'1000, value);
+}
+void 
+i960::configureDataBusForWrite() noexcept {
+    externalBusWrite<uint16_t>(0b00'1100, 0);
+}
+void 
+i960::configureDataBusForRead() noexcept {
+    externalBusWrite<uint16_t>(0b00'1100, 0xFFFF);
+}
+SplitWord16
+i960::readControlSignals() noexcept {
+    return SplitWord16 {
+        .full = externalBusRead<uint16_t>(0b00'1010)
+    };
+}
+void
+i960::writeControlSignals(uint16_t value) noexcept {
+    externalBusWrite<uint16_t>(0b001110, value);
+}
+void 
+i960::modifyControlSignals(std::function<void(SplitWord16&)> fn) {
+    auto sigs = readControlSignals();
+    fn(sigs);
+    writeControlSignals(sigs.full);
+}
+/*
+    void waitUntilReadySync() noexcept;
+    void signalReady() noexcept;
+    void holdBus() noexcept;
+    void releaseBus() noexcept;
+    void triggerINT0() noexcept;
+    void triggerINT1() noexcept;
+    void triggerINT2() noexcept;
+    void triggerINT3() noexcept;
+    */
+bool
+i960::lowerByteEnabled() noexcept {
+    return digitalRead(BE0) == LOW;
+}
+bool
+i960::upperByteEnabled() noexcept {
+    return digitalRead(BE1) == LOW;
+}
+bool
+i960::isReadOperation() noexcept {
+    return digitalRead(WR) == LOW;
+}
+void
+i960::putCPUInReset() noexcept {
+    modifyControlSignals([](auto& sigs) { sigs.ctl.reset = 0; });
+}
+void
+i960::pullCPUOutOfReset() noexcept {
+    modifyControlSignals([](auto& sigs) { sigs.ctl.reset = 1; });
+}
+bool
+i960::isBurstLast() noexcept {
+    return digitalRead(BLAST) == LOW;
+}
+
+bool 
+i960::busHoldAcknowledged() noexcept {
+    return digitalRead(HLDA) == HIGH;
+}
+
+bool
+i960::busIsLocked() noexcept {
+    return readControlSignals().ctl.lock == 0;
+}
+void
+i960::holdBus() noexcept {
+    modifyControlSignals([](auto& sigs) { sigs.ctl.hold = 1; });
+}
+void
+i960::releaseBus() noexcept {
+    modifyControlSignals([](auto& sigs) { sigs.ctl.hold = 0; });
 }
 
 
