@@ -301,6 +301,11 @@ namespace i960 {
     void triggerINT3() noexcept;
     bool busIsLocked() noexcept;
     void modifyControlSignals(std::function<void(SplitWord16&)> fn);
+    void handleRequest(uint32_t address);
+    void handleIORequest(uint32_t address);
+    void handleMemoryRequest(uint32_t address);
+    void handleDoNothingRequest();
+
 }
 void configurePinModes() noexcept;
 void 
@@ -1155,6 +1160,21 @@ i960::waitUntilReadySync() noexcept {
 
     } while (!_readySynchronized);
     _readySynchronized = false;
+}
+
+void
+i960::handleRequest(uint32_t address) {
+    switch (address & 0xFF00'0000) {
+        case 0x0000'0000:
+            handleMemoryRequest(address);
+            break;
+        case 0xFE00'0000:
+            handleIORequest(address);
+            break;
+        default:
+            handleDoNothingRequest();
+            break;
+    }
 }
 
 
