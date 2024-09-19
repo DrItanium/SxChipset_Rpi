@@ -346,6 +346,7 @@ setupSDCard() {
 volatile bool _systemBooted = false;
 volatile bool _readySynchronized = false;
 volatile bool _adsTriggered = false;
+volatile bool _previousReadyState = true;
 void setupServers();
 void stateChange2560();
 struct [[gnu::packed]] Packet {
@@ -1062,12 +1063,6 @@ i960::modifyControlSignals(std::function<void(SplitWord16&)> fn) {
 /*
     void waitUntilReadySync() noexcept;
     void signalReady() noexcept;
-    void holdBus() noexcept;
-    void releaseBus() noexcept;
-    void triggerINT0() noexcept;
-    void triggerINT1() noexcept;
-    void triggerINT2() noexcept;
-    void triggerINT3() noexcept;
     */
 bool
 i960::lowerByteEnabled() noexcept {
@@ -1110,6 +1105,56 @@ i960::holdBus() noexcept {
 void
 i960::releaseBus() noexcept {
     modifyControlSignals([](auto& sigs) { sigs.ctl.hold = 0; });
+}
+
+void
+i960::triggerINT0() noexcept {
+    // trigger low
+    modifyControlSignals([](auto& sigs) { sigs.ctl.int0 = 0; });
+    delayNanoseconds(200);
+    modifyControlSignals([](auto& sigs) { sigs.ctl.int0 = 1; });
+}
+
+void
+i960::triggerINT3() noexcept {
+    // trigger low
+    modifyControlSignals([](auto& sigs) { sigs.ctl.int3 = 0; });
+    delayNanoseconds(200);
+    modifyControlSignals([](auto& sigs) { sigs.ctl.int3 = 1; });
+}
+
+void
+i960::triggerINT1() noexcept {
+    // trigger low
+    modifyControlSignals([](auto& sigs) { sigs.ctl.int1 = 1; });
+    delayNanoseconds(200);
+    modifyControlSignals([](auto& sigs) { sigs.ctl.int1 = 0; });
+}
+
+void
+i960::triggerINT2() noexcept {
+    // trigger low
+    modifyControlSignals([](auto& sigs) { sigs.ctl.int2 = 1; });
+    delayNanoseconds(200);
+    modifyControlSignals([](auto& sigs) { sigs.ctl.int2 = 0; });
+}
+
+void
+i960::signalReady() noexcept {
+    if (_previousReadyState) {
+        digitalWrite(READY, LOW);
+    } else {
+        digitalWrite(READY, HIGH);
+    }
+    _previousReadyState = !_previousReadyState;
+}
+
+void
+i960::waitUntilReadySync() noexcept {
+    do { 
+
+    } while (!_readySynchronized);
+    _readySynchronized = false;
 }
 
 
