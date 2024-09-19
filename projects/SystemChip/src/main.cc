@@ -301,7 +301,7 @@ namespace i960 {
     void triggerINT3() noexcept;
     bool busIsLocked() noexcept;
     void modifyControlSignals(std::function<void(SplitWord16&)> fn);
-    void handleRequest(uint32_t address);
+    void handleRequest();
     void handleIORequest(uint32_t address);
     void handleMemoryRequest(uint32_t address);
     void handleDoNothingRequest();
@@ -890,7 +890,9 @@ loop() {
     ush_service(&ush);
     if (_adsTriggered) {
         _adsTriggered = false;
-        /// @todo implement execution body here
+        delayNanoseconds(200);
+        i960::handleRequest();
+
     }
 }
 
@@ -1163,7 +1165,13 @@ i960::waitUntilReadySync() noexcept {
 }
 
 void
-i960::handleRequest(uint32_t address) {
+i960::handleRequest() {
+    if (isReadOperation()) {
+        configureDataBusForRead();
+    } else {
+        configureDataBusForWrite();
+    }
+    auto address = readAddress();
     switch (address & 0xFF00'0000) {
         case 0x0000'0000:
             handleMemoryRequest(address);
@@ -1175,6 +1183,27 @@ i960::handleRequest(uint32_t address) {
             handleDoNothingRequest();
             break;
     }
+}
+void
+i960::handleMemoryRequest(uint32_t address) {
+
+    /// @todo implement
+}
+void 
+i960::handleIORequest(uint32_t address) {
+    /// @todo implement
+    switch (address) {
+        default:
+            handleDoNothingRequest();
+            break;
+    }
+}
+void
+i960::handleDoNothingRequest() {
+    if (isReadOperation()) {
+        writeData(0);
+    }
+    /// @todo implement
 }
 
 
