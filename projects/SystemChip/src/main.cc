@@ -517,7 +517,7 @@ TwoWireServer::sink() {
 TwoWireServer link0(Wire);
 void 
 setupServers() {
-    link0.begin(Deception::TWI_MemoryControllerIndex);
+    //link0.begin(Deception::TWI_MemoryControllerIndex);
     setupMicroshell();
 }
 void
