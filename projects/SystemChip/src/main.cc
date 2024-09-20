@@ -131,9 +131,7 @@ enum class Pinout : int {
     SD5 = PI13,
     SD6 = PI14,
     SD7 = PI15,
-    HLDA = PI16,
     READY = PI17,
-    HOLD = PI18,
     BE0 = PI19,
     BE1 = PI20,
     WR = PI21,
@@ -157,8 +155,6 @@ X(BLAST);
 X(BE0);
 X(BE1);
 X(WR);
-X(HLDA);
-X(HOLD);
 X(SOE);
 X(SWE);
 X(SA0);
@@ -229,8 +225,6 @@ union [[gnu::packed]] SplitWord<uint16_t> {
         T fail : 1; // input
     } ctl;
 };
-static constexpr uint32_t AddressInterfaceDirectionMask = 0x0000'0000;
-static constexpr uint32_t DataInterfaceDirectionMask = 0x1F80'FFFF;
 using SplitWord32 = SplitWord<uint32_t>;
 using SplitWord16 = SplitWord<uint16_t>;
 void setupMicroshell();
@@ -256,22 +250,24 @@ inline void configureDataLinesDirection() noexcept {
 
 uint8_t externalBusRead8(uint8_t address) noexcept;
 void externalBusWrite8(uint8_t address, uint8_t value) noexcept;
-template<typename T>
+template<typename T, uint32_t delay = 200>
 inline T externalBusRead(uint8_t baseAddress) noexcept {
     using K = SplitWord<T>;
     K tmp;
     for (uint8_t i = 0; i < K::NumberOfBytes; ++i) {
         tmp.bytes[i] = externalBusRead8(baseAddress + i);
+        delayNanoseconds(delay);
     }
     return tmp.full;
 }
-template<typename T>
+template<typename T, uint32_t delay = 200>
 inline void externalBusWrite(uint8_t baseAddress, T value) noexcept {
     using K = SplitWord<T>;
     K tmp;
     tmp.full = value;
     for (uint8_t i = 0; i < K::NumberOfBytes; ++i) {
         externalBusWrite8(baseAddress + i, tmp.bytes[i]);
+        delayNanoseconds(delay);
     }
 }
 namespace i960 {
@@ -389,7 +385,7 @@ setup() {
     _systemBooted = true;
     delay(1000); // give us enough delay time
     i960::pullCPUOutOfReset();
-    
+    Serial.println("CPU Pulled Out of Reset");
 }
 
 void handleReceiveTop(int howMany);
@@ -898,12 +894,13 @@ loop() {
         _adsTriggered = false;
         delayNanoseconds(200);
         i960::handleRequest();
+        Serial.println("Transaction Done");
     } else {
-        auto newAddress = i960::readAddress();
-        if (newAddress != _lastAddress) {
-            Serial.printf("Address: 0x%x\n", newAddress);
-            _lastAddress = newAddress;
-
+        auto addr = i960::readAddress();
+        if (addr != _lastAddress) {
+            Serial.print("Current Address: 0b");
+            Serial.println(addr, BIN);
+            _lastAddress = addr;
         }
     }
 }
@@ -943,7 +940,7 @@ void
 setAddress(uint8_t address) noexcept {
     DataInterfaceInput tmp;
     tmp.full = address;
-#define X(index) digitalWrite( SA ## index , tmp. d ## index )
+#define X(index) digitalWrite( SA ## index , tmp. d ## index == 0 ? LOW : HIGH )
     X(0);
     X(1);
     X(2);
@@ -1000,13 +997,13 @@ configurePinModes() noexcept {
     pinMode(BE0, INPUT);
     pinMode(BE1, INPUT);
     pinMode(READY, OUTPUT);
-    pinMode(HOLD, INPUT);
-    pinMode(HLDA, INPUT);
     pinMode(WR, INPUT);
     attachInterrupt(READY_SYNC, []() { _readySynchronized = true; }, FALLING);
     attachInterrupt(ADS, []() { _adsTriggered = true; }, RISING);
 }
 
+static constexpr uint32_t AddressInterfaceDirectionMask = 0x0000'0000;
+static constexpr uint32_t DataInterfaceDirectionMask = 0b0001'1111'1000'0000'1111'1111'1111'1111;
 void 
 configureParallelInterface() noexcept {
     pinMode(SA0, OUTPUT);
@@ -1021,11 +1018,19 @@ configureParallelInterface() noexcept {
     endWriteOperation();
     endReadOperation();
     setAddress(0);
-    externalBusWrite<uint32_t>(0b000100, AddressInterfaceDirectionMask);
-    externalBusWrite<uint32_t>(0b001100, DataInterfaceDirectionMask);
+    externalBusWrite8(0b000100, 0);
+    delay(1000);
+    externalBusWrite8(0b000101, 0);
+    delay(1000);
+    externalBusWrite8(0b000110, 0);
+    delay(1000);
+    externalBusWrite8(0b000111, 0);
+    delay(1000);
+    //externalBusWrite<uint32_t>(0b00'0100, AddressInterfaceDirectionMask);
+    Serial.printf("Address Sample 0x%x\n", i960::readAddress());
+    externalBusWrite<uint32_t>(0b00'1100, DataInterfaceDirectionMask);
     SplitWord16 defaultSignals;
     defaultSignals.full = 0;
-    defaultSignals.ctl.ready = 1;
     defaultSignals.ctl.int0 = 1;
     defaultSignals.ctl.int1 = 0;
     defaultSignals.ctl.int2 = 0;
@@ -1037,7 +1042,17 @@ configureParallelInterface() noexcept {
 
 uint32_t 
 i960::readAddress() noexcept {
-    return externalBusRead<uint32_t>(0b00'0000);
+    SplitWord32 value;
+    value.bytes[0] = externalBusRead8(0b000000);
+    delay(1);
+    value.bytes[1] = externalBusRead8(0b000001);
+    delay(1);
+    value.bytes[2] = externalBusRead8(0b000010);
+    delay(1);
+    value.bytes[3] = externalBusRead8(0b000011);
+    delay(1);
+    return value.full;
+    //return externalBusRead<uint32_t>(0b00'0000);
 }
 uint16_t 
 i960::readData16() noexcept {
@@ -1098,7 +1113,7 @@ i960::isBurstLast() noexcept {
 
 bool 
 i960::busHoldAcknowledged() noexcept {
-    return digitalRead(HLDA) == HIGH;
+    return readControlSignals().ctl.hlda == 1;
 }
 
 bool
@@ -1278,8 +1293,11 @@ i960::handleIORequest(uint32_t address) {
 }
 void
 i960::triggerReadyState() noexcept {
+    Serial.println("About To Signal Ready");
     signalReady();
+    Serial.println("Ready Tripped");
     waitUntilReadySync();
+    Serial.println("Wait Complete");
     delayNanoseconds(200);
 }
 void
