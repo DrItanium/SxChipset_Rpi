@@ -304,7 +304,8 @@ namespace i960 {
     void handleMemoryRequest(uint32_t address) noexcept;
     void handleDoNothingRequest() noexcept;
     void triggerReadyState() noexcept;
-    bool do16BitReadOperation(uint16_t value);
+    void send16BitValue(uint16_t value);
+    void send32BitValue(uint32_t value);
 }
 void configurePinModes() noexcept;
 void 
@@ -1227,10 +1228,40 @@ void
 i960::handleIORequest(uint32_t address) {
     /// @todo implement
     switch (address & 0x00FF'FFFF) {
-        case 0x0:
+        case 0x0: 
+            send32BitValue(10'000'000);
+            break;
         case 0x4:
+            send32BitValue(5'000'000);
+            break;
         case 0x8:
+            if (isReadOperation()) {
+                send16BitValue(Serial.read());
+            } else {
+                Serial.write(static_cast<uint8_t>(readData16()));
+            }
+            handleDoNothingRequest();
+            break;
         case 0xC:
+            if (!isReadOperation()) {
+                Serial.flush();
+            }
+            handleDoNothingRequest();
+            break;
+        case 0x40:
+            if (isReadOperation()) {
+                send32BitValue(millis());
+            } else {
+                handleDoNothingRequest();
+            }
+            break;
+        case 0x44:
+            if (isReadOperation()) {
+                send32BitValue(micros());
+            } else {
+                handleDoNothingRequest();
+            }
+            break;
         default:
             handleDoNothingRequest();
             break;
@@ -1251,6 +1282,35 @@ i960::handleDoNothingRequest() {
         triggerReadyState();
     }
     triggerReadyState();
+}
+
+void
+i960::send16BitValue(uint16_t value) noexcept {
+    writeData(value);
+    if (isBurstLast()) { 
+        triggerReadyState(); 
+        return; 
+    } 
+    triggerReadyState();
+    handleDoNothingRequest();
+}
+
+void
+i960::send32BitValue(uint32_t value) noexcept {
+
+    writeData(static_cast<uint16_t>(value));
+    if (isBurstLast()) { 
+        triggerReadyState(); 
+        return; 
+    } 
+    triggerReadyState();
+    writeData(static_cast<uint16_t>(value>>16));
+    if (isBurstLast()) { 
+        triggerReadyState(); 
+        return; 
+    } 
+    triggerReadyState();
+    handleDoNothingRequest();
 }
 
 
