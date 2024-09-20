@@ -131,13 +131,15 @@ enum class Pinout : int {
     SD5 = PI13,
     SD6 = PI14,
     SD7 = PI15,
-    READY = PI17,
-    BE0 = PI19,
-    BE1 = PI20,
-    WR = PI21,
-    BLAST = PI22,
-    ADS = PI23,
-    READY_SYNC = PI24,
+
+    BE0 = PI20,
+    BE1 = PI21,
+    WR = PI22,
+    BLAST = PI23,
+    ADS = PI24,
+    READY = PI25,
+    TRANSLATOR_ENABLE = PI26,
+    READY_SYNC = PI27,
 };
 #define X(name) constexpr auto name = static_cast<int>( Pinout :: name )
 X(SD0);
@@ -163,6 +165,7 @@ X(SA2);
 X(SA3);
 X(SA4);
 X(SA5);
+X(TRANSLATOR_ENABLE);
 #undef X
 using Address = uint32_t;
 using RawCacheLineData = uint8_t*;
@@ -347,7 +350,6 @@ setupSDCard() {
 volatile bool _systemBooted = false;
 volatile bool _readySynchronized = false;
 volatile bool _adsTriggered = false;
-volatile bool _previousReadyState = true;
 volatile uint32_t _lastAddress = 0xFFFF'FFFF;
 void setupServers();
 void stateChange2560();
@@ -907,18 +909,14 @@ loop() {
 
 void 
 setDataLines(uint8_t value) noexcept {
-    DataInterfaceInput tmp;
-    tmp.full = value;
-#define X(index) digitalWrite( SD ## index , tmp.d ## index ) 
-    X(0);
-    X(1);
-    X(2);
-    X(3);
-    X(4);
-    X(5);
-    X(6);
-    X(7);
-#undef X
+    digitalWrite(SD0, value & 0b0000'0001);
+    digitalWrite(SD1, value & 0b0000'0010);
+    digitalWrite(SD2, value & 0b0000'0100);
+    digitalWrite(SD3, value & 0b0000'1000);
+    digitalWrite(SD4, value & 0b0001'0000);
+    digitalWrite(SD5, value & 0b0010'0000);
+    digitalWrite(SD6, value & 0b0100'0000);
+    digitalWrite(SD7, value & 0b1000'0000);
 }
 uint8_t 
 getDataLines() noexcept {
@@ -938,16 +936,12 @@ getDataLines() noexcept {
 
 void
 setAddress(uint8_t address) noexcept {
-    DataInterfaceInput tmp;
-    tmp.full = address;
-#define X(index) digitalWrite( SA ## index , tmp. d ## index == 0 ? LOW : HIGH )
-    X(0);
-    X(1);
-    X(2);
-    X(3);
-    X(4);
-    X(5);
-#undef X
+    digitalWrite(SA0, address & 0b0000'0001);
+    digitalWrite(SA1, address & 0b0000'0010);
+    digitalWrite(SA2, address & 0b0000'0100);
+    digitalWrite(SA3, address & 0b0000'1000);
+    digitalWrite(SA4, address & 0b0001'0000);
+    digitalWrite(SA5, address & 0b0010'0000);
 }
 
 void 
@@ -991,15 +985,17 @@ externalBusWrite8(uint8_t address, uint8_t value) noexcept {
 
 void
 configurePinModes() noexcept {
+    pinMode(TRANSLATOR_ENABLE, OUTPUT);
+    digitalWrite(TRANSLATOR_ENABLE, HIGH);
     pinMode(READY_SYNC, INPUT);
-    pinMode(ADS, INPUT);
+    pinMode(ADS, INPUT_PULLUP);
     pinMode(BLAST, INPUT);
     pinMode(BE0, INPUT);
     pinMode(BE1, INPUT);
     pinMode(READY, OUTPUT);
     pinMode(WR, INPUT);
-    attachInterrupt(READY_SYNC, []() { _readySynchronized = true; }, FALLING);
-    attachInterrupt(ADS, []() { _adsTriggered = true; }, RISING);
+    attachInterrupt(digitalPinToInterrupt(READY_SYNC), []() { _readySynchronized = true; }, FALLING);
+    attachInterrupt(digitalPinToInterrupt(ADS), []() { _adsTriggered = true; }, RISING);
 }
 
 static constexpr uint32_t AddressInterfaceDirectionMask = 0x0000'0000;
@@ -1018,15 +1014,7 @@ configureParallelInterface() noexcept {
     endWriteOperation();
     endReadOperation();
     setAddress(0);
-    externalBusWrite8(0b000100, 0);
-    delay(1000);
-    externalBusWrite8(0b000101, 0);
-    delay(1000);
-    externalBusWrite8(0b000110, 0);
-    delay(1000);
-    externalBusWrite8(0b000111, 0);
-    delay(1000);
-    //externalBusWrite<uint32_t>(0b00'0100, AddressInterfaceDirectionMask);
+    externalBusWrite<uint32_t>(0b00'0100, AddressInterfaceDirectionMask);
     Serial.printf("Address Sample 0x%x\n", i960::readAddress());
     externalBusWrite<uint32_t>(0b00'1100, DataInterfaceDirectionMask);
     SplitWord16 defaultSignals;
@@ -1038,21 +1026,12 @@ configureParallelInterface() noexcept {
     defaultSignals.ctl.reset = 0;
     defaultSignals.ctl.hold = 0;
     externalBusWrite<uint16_t>(0b001110, defaultSignals.full);
+    Serial.printf("Control Signals 0x%x\n", i960::readControlSignals().full);
 }
 
 uint32_t 
 i960::readAddress() noexcept {
-    SplitWord32 value;
-    value.bytes[0] = externalBusRead8(0b000000);
-    delay(1);
-    value.bytes[1] = externalBusRead8(0b000001);
-    delay(1);
-    value.bytes[2] = externalBusRead8(0b000010);
-    delay(1);
-    value.bytes[3] = externalBusRead8(0b000011);
-    delay(1);
-    return value.full;
-    //return externalBusRead<uint32_t>(0b00'0000);
+    return externalBusRead<uint32_t>(0b00'0000);
 }
 uint16_t 
 i960::readData16() noexcept {
@@ -1163,12 +1142,7 @@ i960::triggerINT2() noexcept {
 
 void
 i960::signalReady() noexcept {
-    if (_previousReadyState) {
-        digitalWrite(READY, LOW);
-    } else {
-        digitalWrite(READY, HIGH);
-    }
-    _previousReadyState = !_previousReadyState;
+    digitalToggle(READY);
 }
 
 void
