@@ -131,7 +131,7 @@ enum class Pinout : int {
     SD5 = PI13,
     SD6 = PI14,
     SD7 = PI15,
-
+    DEN = PI19,
     BE0 = PI20,
     BE1 = PI21,
     WR = PI22,
@@ -166,6 +166,7 @@ X(SA3);
 X(SA4);
 X(SA5);
 X(TRANSLATOR_ENABLE);
+X(DEN);
 #undef X
 using Address = uint32_t;
 using RawCacheLineData = uint8_t*;
@@ -253,24 +254,22 @@ inline void configureDataLinesDirection() noexcept {
 
 uint8_t externalBusRead8(uint8_t address) noexcept;
 void externalBusWrite8(uint8_t address, uint8_t value) noexcept;
-template<typename T, uint32_t delay = 200>
+template<typename T>
 inline T externalBusRead(uint8_t baseAddress) noexcept {
     using K = SplitWord<T>;
     K tmp;
     for (uint8_t i = 0; i < K::NumberOfBytes; ++i) {
         tmp.bytes[i] = externalBusRead8(baseAddress + i);
-        delayNanoseconds(delay);
     }
     return tmp.full;
 }
-template<typename T, uint32_t delay = 200>
+template<typename T>
 inline void externalBusWrite(uint8_t baseAddress, T value) noexcept {
     using K = SplitWord<T>;
     K tmp;
     tmp.full = value;
     for (uint8_t i = 0; i < K::NumberOfBytes; ++i) {
         externalBusWrite8(baseAddress + i, tmp.bytes[i]);
-        delayNanoseconds(delay);
     }
 }
 namespace i960 {
@@ -386,8 +385,9 @@ setup() {
     setupHardware();
     _systemBooted = true;
     delay(1000); // give us enough delay time
+    _adsTriggered = false;
+    _readySynchronized = false;
     i960::pullCPUOutOfReset();
-    Serial.println("CPU Pulled Out of Reset");
 }
 
 void handleReceiveTop(int howMany);
@@ -892,18 +892,10 @@ loop() {
     //ush_service(&ush);
     _readySynchronized = false;
     if (_adsTriggered) {
-        Serial.println("New Transaction");
         _adsTriggered = false;
-        delayNanoseconds(200);
         i960::handleRequest();
-        Serial.println("Transaction Done");
-    } else {
-        auto addr = i960::readAddress();
-        if (addr != _lastAddress) {
-            Serial.print("Current Address: 0b");
-            Serial.println(addr, BIN);
-            _lastAddress = addr;
-        }
+    } else if (digitalRead(DEN) == LOW) {
+        i960::handleRequest();
     }
 }
 
@@ -987,13 +979,14 @@ void
 configurePinModes() noexcept {
     pinMode(TRANSLATOR_ENABLE, OUTPUT);
     digitalWrite(TRANSLATOR_ENABLE, HIGH);
-    pinMode(READY_SYNC, INPUT);
+    pinMode(READY_SYNC, INPUT_PULLUP);
     pinMode(ADS, INPUT_PULLUP);
     pinMode(BLAST, INPUT);
     pinMode(BE0, INPUT);
     pinMode(BE1, INPUT);
     pinMode(READY, OUTPUT);
     pinMode(WR, INPUT);
+    pinMode(DEN, INPUT);
     attachInterrupt(digitalPinToInterrupt(READY_SYNC), []() { _readySynchronized = true; }, FALLING);
     attachInterrupt(digitalPinToInterrupt(ADS), []() { _adsTriggered = true; }, RISING);
 }
@@ -1015,7 +1008,6 @@ configureParallelInterface() noexcept {
     endReadOperation();
     setAddress(0);
     externalBusWrite<uint32_t>(0b00'0100, AddressInterfaceDirectionMask);
-    Serial.printf("Address Sample 0x%x\n", i960::readAddress());
     externalBusWrite<uint32_t>(0b00'1100, DataInterfaceDirectionMask);
     SplitWord16 defaultSignals;
     defaultSignals.full = 0;
@@ -1026,7 +1018,6 @@ configureParallelInterface() noexcept {
     defaultSignals.ctl.reset = 0;
     defaultSignals.ctl.hold = 0;
     externalBusWrite<uint16_t>(0b001110, defaultSignals.full);
-    Serial.printf("Control Signals 0x%x\n", i960::readControlSignals().full);
 }
 
 uint32_t 
@@ -1161,7 +1152,6 @@ i960::handleRequest() {
         configureDataBusForWrite();
     }
     auto address = readAddress();
-    Serial.printf("Address: 0x%x\n", address);
     switch (address & 0xFF00'0000) {
         case 0x0000'0000:
             handleMemoryRequest(address);
@@ -1179,13 +1169,14 @@ i960::handleMemoryRequest(uint32_t address) {
     auto baseAddress = address & 0x00FF'FFFE;
     if (isReadOperation()) {
         const uint16_t* basePointer = reinterpret_cast<const uint16_t*>(&memory960[baseAddress]);
-#define X(index) \
+#define X(index) { \
         writeData(basePointer[index]); \
         if (isBurstLast()) { \
             triggerReadyState(); \
             return; \
         } \
-        triggerReadyState()
+        triggerReadyState(); \
+}
         X(0);
         X(1);
         X(2);
@@ -1267,11 +1258,8 @@ i960::handleIORequest(uint32_t address) {
 }
 void
 i960::triggerReadyState() noexcept {
-    Serial.println("About To Signal Ready");
     signalReady();
-    Serial.println("Ready Tripped");
     waitUntilReadySync();
-    Serial.println("Wait Complete");
     delayNanoseconds(200);
 }
 void
