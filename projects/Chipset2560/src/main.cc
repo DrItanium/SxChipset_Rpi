@@ -32,6 +32,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Pinout.h"
 #include "Setup.h"
 
+constexpr bool ThisDeviceHandlesI960Requests = false;
 constexpr bool EnableStateDebuggingPins = false;
 Deception::TwoWireBackingStore PCLink2(Wire, Deception::TWI_MemoryControllerIndex);
 using CacheAddress = __uint24;
@@ -508,23 +509,25 @@ configurePins() noexcept {
 }
 void
 setup() {
-    GPIOR0 = 0;
-    GPIOR1 = 0;
-    GPIOR2 = 0;
-    configurePins();
-    configureDataLinesForRead();
-    configureInterruptSources();
-    Serial.begin(115200);
-    Wire.begin();
-    Wire.setClock(Deception::TWI_ClockRate);
-    onboardCache.begin();
-    PCLink2.waitForBackingStoreIdle();
-    // okay now we need to setup the cache so that I can eliminate the valid
-    // bit. This is done by seeding the cache with teh first 4096 bytes
-    for (Address i = 0; i < DataCache::NumCacheBytes; i += DataCache::NumBytesPerLine) {
-        onboardCache.seed(PCLink2, i);
+    if constexpr (ThisDeviceHandlesI960Requests) {
+        GPIOR0 = 0;
+        GPIOR1 = 0;
+        GPIOR2 = 0;
+        configurePins();
+        configureDataLinesForRead();
+        configureInterruptSources();
+        Serial.begin(115200);
+        Wire.begin();
+        Wire.setClock(Deception::TWI_ClockRate);
+        onboardCache.begin();
+        PCLink2.waitForBackingStoreIdle();
+        // okay now we need to setup the cache so that I can eliminate the valid
+        // bit. This is done by seeding the cache with teh first 4096 bytes
+        for (Address i = 0; i < DataCache::NumCacheBytes; i += DataCache::NumBytesPerLine) {
+            onboardCache.seed(PCLink2, i);
+        }
+        digitalWrite<Pin::RESET, HIGH>();
     }
-    digitalWrite<Pin::RESET, HIGH>();
 }
 [[gnu::always_inline]]
 inline void 
@@ -536,37 +539,39 @@ waitForNewTransaction() noexcept {
 }
 void 
 loop() {
-    waitForNewTransaction();
-    {
-        if constexpr (EnableStateDebuggingPins) {
-            digitalWrite<Pin::TransactionStatus, LOW>();
-        }
+    if constexpr (ThisDeviceHandlesI960Requests) {
+        waitForNewTransaction();
         {
-            if (auto address = getAddress(); isReadOperation()) {
-                if constexpr (EnableStateDebuggingPins) {
-                    digitalWrite<Pin::ReadyWaitDone, HIGH>();
-                }
-                configureDataLinesForRead();
-                if (address.isIOOperation()) {
-                    doIOTransaction<true>(address);
-                } else {
-                    doMemoryTransaction<true>(address);
-                }
-            } else {
-                if constexpr (EnableStateDebuggingPins) {
-                    digitalWrite<Pin::ReadyWaitDone, LOW>();
-                }
-                configureDataLinesForWrite();
-                if (address.isIOOperation()) {
-                    doIOTransaction<false>(address);
-                } else {
-                    doMemoryTransaction<false>(address);
-                }
-
+            if constexpr (EnableStateDebuggingPins) {
+                digitalWrite<Pin::TransactionStatus, LOW>();
             }
-        }
-        if constexpr (EnableStateDebuggingPins) {
-            digitalWrite<Pin::TransactionStatus, HIGH>();
+            {
+                if (auto address = getAddress(); isReadOperation()) {
+                    if constexpr (EnableStateDebuggingPins) {
+                        digitalWrite<Pin::ReadyWaitDone, HIGH>();
+                    }
+                    configureDataLinesForRead();
+                    if (address.isIOOperation()) {
+                        doIOTransaction<true>(address);
+                    } else {
+                        doMemoryTransaction<true>(address);
+                    }
+                } else {
+                    if constexpr (EnableStateDebuggingPins) {
+                        digitalWrite<Pin::ReadyWaitDone, LOW>();
+                    }
+                    configureDataLinesForWrite();
+                    if (address.isIOOperation()) {
+                        doIOTransaction<false>(address);
+                    } else {
+                        doMemoryTransaction<false>(address);
+                    }
+
+                }
+            }
+            if constexpr (EnableStateDebuggingPins) {
+                digitalWrite<Pin::TransactionStatus, HIGH>();
+            }
         }
     }
 }
