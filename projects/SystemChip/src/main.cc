@@ -230,7 +230,7 @@ union [[gnu::packed]] SplitWord<uint16_t> {
     } ctl;
 };
 static constexpr uint32_t AddressInterfaceDirectionMask = 0x0000'0000;
-static constexpr uint32_t DataInterfaceDirectionMask = 0x1F00'FFFF;
+static constexpr uint32_t DataInterfaceDirectionMask = 0x1F80'FFFF;
 using SplitWord32 = SplitWord<uint32_t>;
 using SplitWord16 = SplitWord<uint16_t>;
 void setupMicroshell();
@@ -352,6 +352,7 @@ volatile bool _systemBooted = false;
 volatile bool _readySynchronized = false;
 volatile bool _adsTriggered = false;
 volatile bool _previousReadyState = true;
+volatile uint32_t _lastAddress = 0xFFFF'FFFF;
 void setupServers();
 void stateChange2560();
 struct [[gnu::packed]] Packet {
@@ -386,6 +387,9 @@ setup() {
     _systemBooted = false;
     setupHardware();
     _systemBooted = true;
+    delay(1000); // give us enough delay time
+    i960::pullCPUOutOfReset();
+    
 }
 
 void handleReceiveTop(int howMany);
@@ -514,11 +518,11 @@ TwoWireServer::sink() {
 
 
 
-TwoWireServer link0(Wire);
+TwoWireServer link0(Wire2);
 void 
 setupServers() {
-    //link0.begin(Deception::TWI_MemoryControllerIndex);
-    setupMicroshell();
+    link0.begin(Deception::TWI_MemoryControllerIndex);
+    //setupMicroshell();
 }
 void
 handleReceiveTop(int howMany) {
@@ -886,13 +890,21 @@ setupMicroshell() {
 
 void 
 loop() {
-    link0.process();
-    ush_service(&ush);
+    //link0.process();
+    //ush_service(&ush);
+    _readySynchronized = false;
     if (_adsTriggered) {
+        Serial.println("New Transaction");
         _adsTriggered = false;
         delayNanoseconds(200);
         i960::handleRequest();
+    } else {
+        auto newAddress = i960::readAddress();
+        if (newAddress != _lastAddress) {
+            Serial.printf("Address: 0x%x\n", newAddress);
+            _lastAddress = newAddress;
 
+        }
     }
 }
 
@@ -988,7 +1000,7 @@ configurePinModes() noexcept {
     pinMode(BE0, INPUT);
     pinMode(BE1, INPUT);
     pinMode(READY, OUTPUT);
-    pinMode(HOLD, OUTPUT);
+    pinMode(HOLD, INPUT);
     pinMode(HLDA, INPUT);
     pinMode(WR, INPUT);
     attachInterrupt(READY_SYNC, []() { _readySynchronized = true; }, FALLING);
@@ -1059,10 +1071,6 @@ i960::modifyControlSignals(std::function<void(SplitWord16&)> fn) {
     fn(sigs);
     writeControlSignals(sigs.full);
 }
-/*
-    void waitUntilReadySync() noexcept;
-    void signalReady() noexcept;
-    */
 bool
 i960::lowerByteEnabled() noexcept {
     return digitalRead(BE0) == LOW;
@@ -1164,6 +1172,7 @@ i960::handleRequest() {
         configureDataBusForWrite();
     }
     auto address = readAddress();
+    Serial.printf("Address: 0x%x\n", address);
     switch (address & 0xFF00'0000) {
         case 0x0000'0000:
             handleMemoryRequest(address);
