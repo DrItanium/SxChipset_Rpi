@@ -24,21 +24,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 #include <Arduino.h>
 #include <Wire.h>
-#include <EEPROM.h>
-#include <Deception.h>
 #include <microshell.h>
 
 
-void
-setupHardware() {
-    Serial.begin(9600);
-    Serial.println("Interface up");
-}
-void 
-setup() {
-    Serial.begin(9600);
-    Serial.println("Interface up");
-}
 
 
 
@@ -77,7 +65,7 @@ const struct ush_descriptor ush_desc = {
     .output_buffer = ushOutBuf,
     .output_buffer_size = sizeof(ushOutBuf),
     .path_max_length = PathMaxSize,
-    .hostname = "system_chip",
+    .hostname = "experimental2560",
 };
 #define FILE_DESCRIPTOR_ARGS struct ush_object* self, struct ush_file_descriptor const * file
 #define PASS_FILE_DESCRIPTOR_ARGS self, file
@@ -197,7 +185,16 @@ const struct ush_file_descriptor devFiles[] = {
         .description = nullptr,
         .help = nullptr,
         .exec = nullptr, 
-        .get_data = timeGetDataCallback,
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) noexcept {
+            static char timeBuf[16];
+            // read current time
+            auto currentTime = millis();
+            // convert
+            snprintf(timeBuf, sizeof(timeBuf), "%ld\r\n", currentTime);
+            timeBuf[sizeof(timeBuf) -1] = 0;
+            *data = (uint8_t*)timeBuf;
+            return strlen((char*)(*data));
+        },
     },
     {
         .name = "micros",
@@ -215,36 +212,471 @@ const struct ush_file_descriptor devFiles[] = {
             return strlen((char*)(*data));
         },
     },
-#if 0
+};
+unsigned int sendUint16(FILE_DESCRIPTOR_ARGS, uint8_t** data, uint16_t value) noexcept {
+    static char buf[16];
+    snprintf(buf, sizeof(buf), "%d\n", value);
+    buf[sizeof(buf) - 1] = 0;
+    *data = (uint8_t*)buf;
+    return strlen((char*)(*data));
+}
+unsigned int sendByte(FILE_DESCRIPTOR_ARGS, uint8_t** data, uint8_t value) noexcept {
+    return sendUint16(PASS_FILE_DESCRIPTOR_ARGS, data, value);
+}
+bool retrieveUint16(FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size, uint16_t& result) noexcept {
+    if (size < 1) {
+        return false;
+    }
+    (void)sscanf((char*)data, "%u", &result);
+    return true;
+}
+
+bool retrieveByte(FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size, uint8_t& result) noexcept {
+    uint16_t value = 0;
+    if (retrieveUint16(PASS_FILE_DESCRIPTOR_ARGS, data, size, value)) {
+        result = value;
+        return true;
+    }
+    return false;
+}
+const struct ush_file_descriptor timer1Files[] = {
     {
-        .name = "clkgen",
+        .name = "tccra",
         .description = nullptr,
         .help = nullptr,
         .exec = nullptr,
-        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) noexcept {
-            if (size < 1) {
-                return;
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendByte(PASS_FILE_DESCRIPTOR_ARGS, data, TCCR1A); },
+        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) { 
+            uint8_t result = 0;
+            if (retrieveByte(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) {
+                TCCR1A = result;
             }
-            float value = 0;
-            (void)sscanf((char*)data, "%f", &value);
-            ush_printf(self, "Frequency updated to %f\n", value);
-            analogWriteFrequency(CLK2, value);
-        },
+        }
     },
-#endif
+    {
+        .name = "tccrb",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendByte(PASS_FILE_DESCRIPTOR_ARGS, data, TCCR1B); },
+        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) { 
+            uint8_t result = 0;
+            if (retrieveByte(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) {
+                TCCR1B = result;
+            }
+        }
+    },
+    {
+        .name = "tccrc",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendByte(PASS_FILE_DESCRIPTOR_ARGS, data, TCCR1C); },
+        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) { 
+            uint8_t result = 0;
+            if (retrieveByte(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) {
+                TCCR1C = result;
+            }
+        }
+    },
+    {
+        .name = "tcnt",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendUint16(PASS_FILE_DESCRIPTOR_ARGS, data, TCNT1); },
+        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) { 
+            uint16_t result = 0;
+            if (retrieveUint16(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) {
+                TCNT1 = result;
+            }
+        }
+    },
+    {
+        .name = "icr",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendUint16(PASS_FILE_DESCRIPTOR_ARGS, data, ICR1); },
+        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) { 
+            uint16_t result = 0;
+            if (retrieveUint16(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) {
+                ICR1 = result;
+            }
+        }
+    },
+
+    {
+        .name = "ocra",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendUint16(PASS_FILE_DESCRIPTOR_ARGS, data, OCR1A); },
+        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) { 
+            uint16_t result = 0;
+            if (retrieveUint16(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) {
+                OCR1A = result;
+            }
+        }
+    },
+    {
+        .name = "ocrb",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendUint16(PASS_FILE_DESCRIPTOR_ARGS, data, OCR1B); },
+        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) { 
+            uint16_t result = 0;
+            if (retrieveUint16(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) {
+                OCR1B = result;
+            }
+        }
+    },
+    {
+        .name = "ocrc",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendUint16(PASS_FILE_DESCRIPTOR_ARGS, data, OCR1C); },
+        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) { 
+            uint16_t result = 0;
+            if (retrieveUint16(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) {
+                OCR1C = result;
+            }
+        }
+    },
+};
+const struct ush_file_descriptor timer3Files[] = {
+    {
+        .name = "tccra",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendByte(PASS_FILE_DESCRIPTOR_ARGS, data, TCCR3A); },
+        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) { 
+            uint8_t result = 0;
+            if (retrieveByte(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) {
+                TCCR3A = result;
+            }
+        }
+    },
+    {
+        .name = "tccrb",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendByte(PASS_FILE_DESCRIPTOR_ARGS, data, TCCR3B); },
+        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) { 
+            uint8_t result = 0;
+            if (retrieveByte(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) {
+                TCCR3B = result;
+            }
+        }
+    },
+    {
+        .name = "tccrc",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendByte(PASS_FILE_DESCRIPTOR_ARGS, data, TCCR3C); },
+        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) { 
+            uint8_t result = 0;
+            if (retrieveByte(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) {
+                TCCR3C = result;
+            }
+        }
+    },
+    {
+        .name = "tcnt",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendUint16(PASS_FILE_DESCRIPTOR_ARGS, data, TCNT3); },
+        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) { 
+            uint16_t result = 0;
+            if (retrieveUint16(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) {
+                TCNT3 = result;
+            }
+        }
+    },
+    {
+        .name = "icr",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendUint16(PASS_FILE_DESCRIPTOR_ARGS, data, ICR3); },
+        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) { 
+            uint16_t result = 0;
+            if (retrieveUint16(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) {
+                ICR3 = result;
+            }
+        }
+    },
+
+    {
+        .name = "ocra",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendUint16(PASS_FILE_DESCRIPTOR_ARGS, data, OCR3A); },
+        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) { 
+            uint16_t result = 0;
+            if (retrieveUint16(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) {
+                OCR3A = result;
+            }
+        }
+    },
+    {
+        .name = "ocrb",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendUint16(PASS_FILE_DESCRIPTOR_ARGS, data, OCR3B); },
+        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) { 
+            uint16_t result = 0;
+            if (retrieveUint16(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) {
+                OCR3B = result;
+            }
+        }
+    },
+    {
+        .name = "ocrc",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendUint16(PASS_FILE_DESCRIPTOR_ARGS, data, OCR3C); },
+        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) { 
+            uint16_t result = 0;
+            if (retrieveUint16(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) {
+                OCR3C = result;
+            }
+        }
+    },
+};
+const struct ush_file_descriptor timer4Files[] = {
+    {
+        .name = "tccra",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendByte(PASS_FILE_DESCRIPTOR_ARGS, data, TCCR4A); },
+        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) { 
+            uint8_t result = 0;
+            if (retrieveByte(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) {
+                TCCR4A = result;
+            }
+        }
+    },
+    {
+        .name = "tccrb",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendByte(PASS_FILE_DESCRIPTOR_ARGS, data, TCCR4B); },
+        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) { 
+            uint8_t result = 0;
+            if (retrieveByte(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) {
+                TCCR4B = result;
+            }
+        }
+    },
+    {
+        .name = "tccrc",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendByte(PASS_FILE_DESCRIPTOR_ARGS, data, TCCR4C); },
+        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) { 
+            uint8_t result = 0;
+            if (retrieveByte(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) {
+                TCCR4C = result;
+            }
+        }
+    },
+    {
+        .name = "tcnt",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendUint16(PASS_FILE_DESCRIPTOR_ARGS, data, TCNT4); },
+        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) { 
+            uint16_t result = 0;
+            if (retrieveUint16(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) {
+                TCNT4 = result;
+            }
+        }
+    },
+    {
+        .name = "icr",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendUint16(PASS_FILE_DESCRIPTOR_ARGS, data, ICR4); },
+        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) { 
+            uint16_t result = 0;
+            if (retrieveUint16(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) {
+                ICR4 = result;
+            }
+        }
+    },
+
+    {
+        .name = "ocra",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendUint16(PASS_FILE_DESCRIPTOR_ARGS, data, OCR4A); },
+        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) { 
+            uint16_t result = 0;
+            if (retrieveUint16(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) {
+                OCR4A = result;
+            }
+        }
+    },
+    {
+        .name = "ocrb",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendUint16(PASS_FILE_DESCRIPTOR_ARGS, data, OCR4B); },
+        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) { 
+            uint16_t result = 0;
+            if (retrieveUint16(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) {
+                OCR4B = result;
+            }
+        }
+    },
+    {
+        .name = "ocrc",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendUint16(PASS_FILE_DESCRIPTOR_ARGS, data, OCR4C); },
+        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) { 
+            uint16_t result = 0;
+            if (retrieveUint16(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) {
+                OCR4C = result;
+            }
+        }
+    },
 };
 
-void 
-rebootExecCallback(FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
-    /// @todo implement reboot at some point
-    ush_print(self, "error: reboot not supported");
-}
+const struct ush_file_descriptor timer5Files[] = {
+    {
+        .name = "tccra",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendByte(PASS_FILE_DESCRIPTOR_ARGS, data, TCCR5A); },
+        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) { 
+            uint8_t result = 0;
+            if (retrieveByte(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) {
+                TCCR5A = result;
+            }
+        }
+    },
+    {
+        .name = "tccrb",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendByte(PASS_FILE_DESCRIPTOR_ARGS, data, TCCR5B); },
+        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) { 
+            uint8_t result = 0;
+            if (retrieveByte(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) {
+                TCCR5B = result;
+            }
+        }
+    },
+    {
+        .name = "tccrc",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendByte(PASS_FILE_DESCRIPTOR_ARGS, data, TCCR5C); },
+        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) { 
+            uint8_t result = 0;
+            if (retrieveByte(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) {
+                TCCR5C = result;
+            }
+        }
+    },
+    {
+        .name = "tcnt",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendUint16(PASS_FILE_DESCRIPTOR_ARGS, data, TCNT5); },
+        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) { 
+            uint16_t result = 0;
+            if (retrieveUint16(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) {
+                TCNT5 = result;
+            }
+        }
+    },
+    {
+        .name = "icr",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendUint16(PASS_FILE_DESCRIPTOR_ARGS, data, ICR5); },
+        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) { 
+            uint16_t result = 0;
+            if (retrieveUint16(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) {
+                ICR5 = result;
+            }
+        }
+    },
+
+    {
+        .name = "ocra",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendUint16(PASS_FILE_DESCRIPTOR_ARGS, data, OCR5A); },
+        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) { 
+            uint16_t result = 0;
+            if (retrieveUint16(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) {
+                OCR5A = result;
+            }
+        }
+    },
+    {
+        .name = "ocrb",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendUint16(PASS_FILE_DESCRIPTOR_ARGS, data, OCR5B); },
+        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) { 
+            uint16_t result = 0;
+            if (retrieveUint16(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) {
+                OCR5B = result;
+            }
+        }
+    },
+    {
+        .name = "ocrc",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendUint16(PASS_FILE_DESCRIPTOR_ARGS, data, OCR5C); },
+        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) { 
+            uint16_t result = 0;
+            if (retrieveUint16(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) {
+                OCR5C = result;
+            }
+        }
+    },
+};
+
 const struct ush_file_descriptor cmdFiles[] = {
     {
         .name = "reboot",
         .description = "reboot device",
         .help = nullptr,
-        .exec = rebootExecCallback,
+        .exec = [](FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
+            ush_print(self, "error: reboot not supported");
+        },
     },
 
 };
@@ -254,17 +686,27 @@ struct ush_node_object root;
 struct ush_node_object dev;
 struct ush_node_object bin;
 struct ush_node_object cmd;
+struct ush_node_object timer1Dir;
+struct ush_node_object timer3Dir;
+struct ush_node_object timer4Dir;
+struct ush_node_object timer5Dir;
 
 
 
-void
-setupMicroshell() {
+void 
+setup() {
+    Serial.begin(9600);
+    Serial.println("Interface up");
     ush_init(&ush, &ush_desc);
 #define NELEM(obj) (sizeof(obj) / sizeof(obj[0]))
     ush_commands_add(&ush, &cmd, cmdFiles, NELEM(cmdFiles));
     ush_node_mount(&ush, "/", &root, rootFiles, NELEM(rootFiles));
-    ush_node_mount(&ush, "/dev", &dev, devFiles, NELEM(devFiles));
     ush_node_mount(&ush, "/bin", &bin, binFiles, NELEM(binFiles));
+    ush_node_mount(&ush, "/dev", &dev, devFiles, NELEM(devFiles));
+    ush_node_mount(&ush, "/dev/timer1", &timer1Dir, timer1Files, NELEM(timer1Files));
+    ush_node_mount(&ush, "/dev/timer3", &timer3Dir, timer3Files, NELEM(timer3Files));
+    ush_node_mount(&ush, "/dev/timer4", &timer4Dir, timer4Files, NELEM(timer4Files));
+    ush_node_mount(&ush, "/dev/timer5", &timer5Dir, timer5Files, NELEM(timer5Files));
 #undef NELEM
 }
 
