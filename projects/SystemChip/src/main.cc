@@ -83,32 +83,32 @@ enum class Pinout : int {
     D40,
     D41,
     // abstraction layer
-#define X(a, b) PI ## a = D ## b 
+#define X(from, to) PI ## from = D ## to 
 #define Y(x) X(x, x)
-    Y(0),
-    Y(1),
-    Y(2),
-    Y(3),
-    Y(4),
-    Y(5),
-    Y(6),
-    Y(7),
-    Y(8),
-    Y(9),
-    Y(10),
-    Y(11),
-    Y(12),
-    Y(13),
-    Y(14),
-    Y(15),
-    Y(16),
-    Y(17),
-    Y(18),
-    Y(19),
-    Y(20),
-    Y(21),
-    Y(22),
-    Y(23),
+    X(0, 0),
+    X(1, 1),
+    X(2, 2),
+    X(3, 3),
+    X(4, 4),
+    X(5, 5),
+    X(6, 6),
+    X(7, 7),
+    X(8, 8),
+    X(9, 9),
+    X(10, 10),
+    X(11, 11),
+    X(12, 12),
+    X(13, 13),
+    X(14, 14),
+    X(15, 15),
+    X(16, 16),
+    X(17, 17),
+    X(18, 18),
+    X(19, 19),
+    X(20, 20),
+    X(21, 21),
+    X(22, 22),
+    X(23, 23),
     X(24, 26),
     X(25, 27),
     X(26, 28),
@@ -131,19 +131,18 @@ enum class Pinout : int {
     SD5 = PI13,
     SD6 = PI14,
     SD7 = PI15,
-    FAIL = PI17,
-    RESET = PI18,
-    DEN = PI19,
     BE0 = PI20,
     BE1 = PI21,
     WR = PI22,
     BLAST = PI23,
     ADS = PI24,
-    READY = PI25,
-    TRANSLATOR_ENABLE = PI26,
-    READY_SYNC = PI27,
+    READY_SYNC = PI25,
+    RESET = PI26,
+    READY = PI27,
+    CLK2 = D33,
 };
 #define X(name) constexpr auto name = static_cast<int>( Pinout :: name )
+X(CLK2);
 X(SD0);
 X(SD1);
 X(SD2);
@@ -167,10 +166,7 @@ X(SA2);
 X(SA3);
 X(SA4);
 X(SA5);
-X(TRANSLATOR_ENABLE);
-X(DEN);
 X(RESET);
-X(FAIL);
 #undef X
 using Address = uint32_t;
 using RawCacheLineData = uint8_t*;
@@ -392,9 +388,6 @@ setup() {
     _adsTriggered = false;
     _readySynchronized = false;
     i960::pullCPUOutOfReset();
-    Serial.println("Checksum");
-    while (digitalRead(FAIL) == LOW);
-    Serial.println("Checksum Complete");
 }
 
 void handleReceiveTop(int howMany);
@@ -985,7 +978,6 @@ externalBusWrite8(uint8_t address, uint8_t value) noexcept {
 
 void
 configurePinModes() noexcept {
-    pinMode(TRANSLATOR_ENABLE, OUTPUT);
     pinMode(READY_SYNC, INPUT);
     pinMode(ADS, INPUT);
     pinMode(BLAST, INPUT);
@@ -993,11 +985,10 @@ configurePinModes() noexcept {
     pinMode(BE1, INPUT);
     pinMode(READY, OUTPUT);
     pinMode(WR, INPUT);
-    pinMode(DEN, INPUT);
     pinMode(RESET, OUTPUT);
-    pinMode(FAIL, INPUT_PULLUP);
+    analogWriteFrequency(CLK2, 10'000'000);
+    analogWrite(CLK2, 128);
     digitalWrite(READY, HIGH);
-    digitalWrite(TRANSLATOR_ENABLE, HIGH);
     i960::putCPUInReset();
     attachInterrupt(digitalPinToInterrupt(READY_SYNC), []() { _readySynchronized = true; }, FALLING);
     attachInterrupt(digitalPinToInterrupt(ADS), []() { _adsTriggered = true; }, RISING);
