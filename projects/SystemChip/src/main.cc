@@ -131,15 +131,15 @@ enum class Pinout : int {
     SD5 = PI13,
     SD6 = PI14,
     SD7 = PI15,
-    BE0 = PI20,
-    BE1 = PI21,
-    WR = PI22,
-    BLAST = PI23,
-    ADS = PI24,
-    READY_SYNC = PI25,
-    RESET = PI26,
-    READY = PI27,
+    READY_SYNC = D30,
+    READY = D31,
+    RESET = D32,
     CLK2 = D33,
+    ADS = D34,
+    BLAST = D35,
+    WR = D36,
+    BE1 = D37,
+    BE0 = D38,
 };
 #define X(name) constexpr auto name = static_cast<int>( Pinout :: name )
 X(CLK2);
@@ -385,11 +385,12 @@ setup() {
     setupHardware();
     _systemBooted = true;
     delay(1000); // give us enough delay time
+    attachInterrupt(digitalPinToInterrupt(READY_SYNC), []() { _readySynchronized = true; }, FALLING);
+    attachInterrupt(digitalPinToInterrupt(ADS), []() { _adsTriggered = true; }, RISING);
     _adsTriggered = false;
     _readySynchronized = false;
     i960::pullCPUOutOfReset();
-    attachInterrupt(digitalPinToInterrupt(READY_SYNC), []() { _readySynchronized = true; }, FALLING);
-    attachInterrupt(digitalPinToInterrupt(ADS), []() { _adsTriggered = true; }, RISING);
+    Serial.println("Pulled CPU out of reset");
 }
 
 void handleReceiveTop(int howMany);
@@ -899,6 +900,12 @@ loop() {
         Serial.println(i960::readAddress(), HEX);
         _adsTriggered = false;
         i960::handleRequest();
+    } else {
+        auto newAddress = i960::readAddress();
+        if (newAddress != _lastAddress) {
+            Serial.printf("Address: 0x%x\n", newAddress);
+            _lastAddress = newAddress;
+        }
     }
 }
 
@@ -981,8 +988,8 @@ externalBusWrite8(uint8_t address, uint8_t value) noexcept {
 void
 configurePinModes() noexcept {
     pinMode(READY_SYNC, INPUT);
-    pinMode(ADS, INPUT);
-    pinMode(BLAST, INPUT);
+    pinMode(ADS, INPUT_PULLUP);
+    pinMode(BLAST, INPUT_PULLUP);
     pinMode(BE0, INPUT);
     pinMode(BE1, INPUT);
     pinMode(READY, OUTPUT);
