@@ -131,6 +131,7 @@ enum class Pinout : int {
     SD5 = PI13,
     SD6 = PI14,
     SD7 = PI15,
+    RESET = PI18,
     DEN = PI19,
     BE0 = PI20,
     BE1 = PI21,
@@ -167,6 +168,7 @@ X(SA4);
 X(SA5);
 X(TRANSLATOR_ENABLE);
 X(DEN);
+X(RESET);
 #undef X
 using Address = uint32_t;
 using RawCacheLineData = uint8_t*;
@@ -222,8 +224,8 @@ union [[gnu::packed]] SplitWord<uint16_t> {
         T int3 : 1; // output
         T int2 : 1; // output
         T int1 : 1; // output
-        T int0 : 1; // output
-        T reset : 1; // output 
+        T int0 : 1; // output 
+        T reset : 1; // output (direct connect, treat as input)
         T ready : 1; // output (direct connect, treat as input)
         T hlda : 1; // input
         T fail : 1; // input
@@ -388,6 +390,9 @@ setup() {
     _adsTriggered = false;
     _readySynchronized = false;
     i960::pullCPUOutOfReset();
+    delayNanoseconds(100);
+    attachInterrupt(digitalPinToInterrupt(READY_SYNC), []() { _readySynchronized = true; }, FALLING);
+    attachInterrupt(digitalPinToInterrupt(ADS), []() { _adsTriggered = true; }, RISING);
 }
 
 void handleReceiveTop(int howMany);
@@ -892,9 +897,10 @@ loop() {
     //ush_service(&ush);
     _readySynchronized = false;
     if (_adsTriggered) {
+        Serial.println("New Transaction");
+        Serial.print("Address: 0x");
+        Serial.println(i960::readAddress(), HEX);
         _adsTriggered = false;
-        i960::handleRequest();
-    } else if (digitalRead(DEN) == LOW) {
         i960::handleRequest();
     }
 }
@@ -978,21 +984,22 @@ externalBusWrite8(uint8_t address, uint8_t value) noexcept {
 void
 configurePinModes() noexcept {
     pinMode(TRANSLATOR_ENABLE, OUTPUT);
-    digitalWrite(TRANSLATOR_ENABLE, HIGH);
-    pinMode(READY_SYNC, INPUT_PULLUP);
-    pinMode(ADS, INPUT_PULLUP);
+    pinMode(READY_SYNC, INPUT);
+    pinMode(ADS, INPUT);
     pinMode(BLAST, INPUT);
     pinMode(BE0, INPUT);
     pinMode(BE1, INPUT);
     pinMode(READY, OUTPUT);
     pinMode(WR, INPUT);
     pinMode(DEN, INPUT);
-    attachInterrupt(digitalPinToInterrupt(READY_SYNC), []() { _readySynchronized = true; }, FALLING);
-    attachInterrupt(digitalPinToInterrupt(ADS), []() { _adsTriggered = true; }, RISING);
+    pinMode(RESET, OUTPUT);
+    digitalWrite(READY, HIGH);
+    digitalWrite(TRANSLATOR_ENABLE, HIGH);
+    i960::putCPUInReset();
 }
 
 static constexpr uint32_t AddressInterfaceDirectionMask = 0x0000'0000;
-static constexpr uint32_t DataInterfaceDirectionMask = 0b0001'1111'1000'0000'1111'1111'1111'1111;
+static constexpr uint32_t DataInterfaceDirectionMask = 0b0000'1111'1000'0000'1111'1111'1111'1111;
 void 
 configureParallelInterface() noexcept {
     pinMode(SA0, OUTPUT);
@@ -1015,7 +1022,6 @@ configureParallelInterface() noexcept {
     defaultSignals.ctl.int1 = 0;
     defaultSignals.ctl.int2 = 0;
     defaultSignals.ctl.int3 = 1;
-    defaultSignals.ctl.reset = 0;
     defaultSignals.ctl.hold = 0;
     externalBusWrite<uint16_t>(0b001110, defaultSignals.full);
 }
@@ -1070,11 +1076,11 @@ i960::isReadOperation() noexcept {
 }
 void
 i960::putCPUInReset() noexcept {
-    modifyControlSignals([](auto& sigs) { sigs.ctl.reset = 0; });
+    digitalWrite(RESET, LOW);
 }
 void
 i960::pullCPUOutOfReset() noexcept {
-    modifyControlSignals([](auto& sigs) { sigs.ctl.reset = 1; });
+    digitalWrite(RESET, HIGH);
 }
 bool
 i960::isBurstLast() noexcept {
