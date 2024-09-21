@@ -131,6 +131,7 @@ enum class Pinout : int {
     SD5 = PI13,
     SD6 = PI14,
     SD7 = PI15,
+    FAIL = PI17,
     RESET = PI18,
     DEN = PI19,
     BE0 = PI20,
@@ -169,6 +170,7 @@ X(SA5);
 X(TRANSLATOR_ENABLE);
 X(DEN);
 X(RESET);
+X(FAIL);
 #undef X
 using Address = uint32_t;
 using RawCacheLineData = uint8_t*;
@@ -390,9 +392,9 @@ setup() {
     _adsTriggered = false;
     _readySynchronized = false;
     i960::pullCPUOutOfReset();
-    delayNanoseconds(100);
-    attachInterrupt(digitalPinToInterrupt(READY_SYNC), []() { _readySynchronized = true; }, FALLING);
-    attachInterrupt(digitalPinToInterrupt(ADS), []() { _adsTriggered = true; }, RISING);
+    Serial.println("Checksum");
+    while (digitalRead(FAIL) == LOW);
+    Serial.println("Checksum Complete");
 }
 
 void handleReceiveTop(int howMany);
@@ -993,9 +995,12 @@ configurePinModes() noexcept {
     pinMode(WR, INPUT);
     pinMode(DEN, INPUT);
     pinMode(RESET, OUTPUT);
+    pinMode(FAIL, INPUT_PULLUP);
     digitalWrite(READY, HIGH);
     digitalWrite(TRANSLATOR_ENABLE, HIGH);
     i960::putCPUInReset();
+    attachInterrupt(digitalPinToInterrupt(READY_SYNC), []() { _readySynchronized = true; }, FALLING);
+    attachInterrupt(digitalPinToInterrupt(ADS), []() { _adsTriggered = true; }, RISING);
 }
 
 static constexpr uint32_t AddressInterfaceDirectionMask = 0x0000'0000;
