@@ -26,7 +26,63 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Wire.h>
 #include <microshell.h>
 
+#define FILE_DESCRIPTOR_ARGS struct ush_object* self, struct ush_file_descriptor const * file
+#define PASS_FILE_DESCRIPTOR_ARGS self, file
+#define ByteFile(n, reg) { \
+        .name = n , \
+        .description = nullptr, \
+        .help = nullptr, \
+        .exec = nullptr, \
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) noexcept { \
+            return sendByte(PASS_FILE_DESCRIPTOR_ARGS, data, reg ); \
+        }, \
+        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) noexcept { \
+            uint8_t value = 0; \
+            if (retrieveByte(PASS_FILE_DESCRIPTOR_ARGS, data, size, value)) { \
+                reg = value; \
+            } \
+        }, \
+    }
+#define Uint16File(n, reg) { \
+        .name = n , \
+        .description = nullptr, \
+        .help = nullptr, \
+        .exec = nullptr, \
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendUint16(PASS_FILE_DESCRIPTOR_ARGS, data, reg ); }, \
+        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) {  \
+            uint16_t result = 0; \
+            if (retrieveUint16(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) { \
+                reg = result; \
+            } \
+        } \
+    }
 
+unsigned int sendUint16(FILE_DESCRIPTOR_ARGS, uint8_t** data, uint16_t value) noexcept {
+    static char buf[16];
+    snprintf(buf, sizeof(buf), "%d\n", value);
+    buf[sizeof(buf) - 1] = 0;
+    *data = (uint8_t*)buf;
+    return strlen((char*)(*data));
+}
+unsigned int sendByte(FILE_DESCRIPTOR_ARGS, uint8_t** data, uint8_t value) noexcept {
+    return sendUint16(PASS_FILE_DESCRIPTOR_ARGS, data, value);
+}
+bool retrieveUint16(FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size, uint16_t& result) noexcept {
+    if (size < 1) {
+        return false;
+    }
+    (void)sscanf((char*)data, "%u", &result);
+    return true;
+}
+
+bool retrieveByte(FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size, uint8_t& result) noexcept {
+    uint16_t value = 0;
+    if (retrieveUint16(PASS_FILE_DESCRIPTOR_ARGS, data, size, value)) {
+        result = value;
+        return true;
+    }
+    return false;
+}
 
 
 
@@ -67,8 +123,6 @@ const struct ush_descriptor ush_desc = {
     .path_max_length = PathMaxSize,
     .hostname = "experimental2560",
 };
-#define FILE_DESCRIPTOR_ARGS struct ush_object* self, struct ush_file_descriptor const * file
-#define PASS_FILE_DESCRIPTOR_ARGS self, file
 
 
 // info file get data callback
@@ -212,152 +266,20 @@ const struct ush_file_descriptor devFiles[] = {
             return strlen((char*)(*data));
         },
     },
+    ByteFile("gpio0", GPIOR0),
+    ByteFile("gpio1", GPIOR1),
+    ByteFile("gpio2", GPIOR2),
 };
-unsigned int sendUint16(FILE_DESCRIPTOR_ARGS, uint8_t** data, uint16_t value) noexcept {
-    static char buf[16];
-    snprintf(buf, sizeof(buf), "%d\n", value);
-    buf[sizeof(buf) - 1] = 0;
-    *data = (uint8_t*)buf;
-    return strlen((char*)(*data));
-}
-unsigned int sendByte(FILE_DESCRIPTOR_ARGS, uint8_t** data, uint8_t value) noexcept {
-    return sendUint16(PASS_FILE_DESCRIPTOR_ARGS, data, value);
-}
-bool retrieveUint16(FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size, uint16_t& result) noexcept {
-    if (size < 1) {
-        return false;
-    }
-    (void)sscanf((char*)data, "%u", &result);
-    return true;
-}
-
-bool retrieveByte(FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size, uint8_t& result) noexcept {
-    uint16_t value = 0;
-    if (retrieveUint16(PASS_FILE_DESCRIPTOR_ARGS, data, size, value)) {
-        result = value;
-        return true;
-    }
-    return false;
-}
 const struct ush_file_descriptor timer1Files[] = {
-    {
-        .name = "tccra",
-        .description = nullptr,
-        .help = nullptr,
-        .exec = nullptr,
-        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendByte(PASS_FILE_DESCRIPTOR_ARGS, data, TCCR1A); },
-        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) { 
-            uint8_t result = 0;
-            if (retrieveByte(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) {
-                TCCR1A = result;
-            }
-        }
-    },
-    {
-        .name = "tccrb",
-        .description = nullptr,
-        .help = nullptr,
-        .exec = nullptr,
-        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendByte(PASS_FILE_DESCRIPTOR_ARGS, data, TCCR1B); },
-        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) { 
-            uint8_t result = 0;
-            if (retrieveByte(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) {
-                TCCR1B = result;
-            }
-        }
-    },
-    {
-        .name = "tccrc",
-        .description = nullptr,
-        .help = nullptr,
-        .exec = nullptr,
-        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendByte(PASS_FILE_DESCRIPTOR_ARGS, data, TCCR1C); },
-        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) { 
-            uint8_t result = 0;
-            if (retrieveByte(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) {
-                TCCR1C = result;
-            }
-        }
-    },
-    {
-        .name = "tcnt",
-        .description = nullptr,
-        .help = nullptr,
-        .exec = nullptr,
-        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendUint16(PASS_FILE_DESCRIPTOR_ARGS, data, TCNT1); },
-        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) { 
-            uint16_t result = 0;
-            if (retrieveUint16(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) {
-                TCNT1 = result;
-            }
-        }
-    },
-    {
-        .name = "icr",
-        .description = nullptr,
-        .help = nullptr,
-        .exec = nullptr,
-        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendUint16(PASS_FILE_DESCRIPTOR_ARGS, data, ICR1); },
-        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) { 
-            uint16_t result = 0;
-            if (retrieveUint16(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) {
-                ICR1 = result;
-            }
-        }
-    },
-
-    {
-        .name = "ocra",
-        .description = nullptr,
-        .help = nullptr,
-        .exec = nullptr,
-        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendUint16(PASS_FILE_DESCRIPTOR_ARGS, data, OCR1A); },
-        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) { 
-            uint16_t result = 0;
-            if (retrieveUint16(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) {
-                OCR1A = result;
-            }
-        }
-    },
-    {
-        .name = "ocrb",
-        .description = nullptr,
-        .help = nullptr,
-        .exec = nullptr,
-        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendUint16(PASS_FILE_DESCRIPTOR_ARGS, data, OCR1B); },
-        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) { 
-            uint16_t result = 0;
-            if (retrieveUint16(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) {
-                OCR1B = result;
-            }
-        }
-    },
-    {
-        .name = "ocrc",
-        .description = nullptr,
-        .help = nullptr,
-        .exec = nullptr,
-        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendUint16(PASS_FILE_DESCRIPTOR_ARGS, data, OCR1C); },
-        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) { 
-            uint16_t result = 0;
-            if (retrieveUint16(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) {
-                OCR1C = result;
-            }
-        }
-    },
-    {
-        .name = "tifr",
-        .description = nullptr,
-        .help = nullptr,
-        .exec = nullptr,
-        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendByte(PASS_FILE_DESCRIPTOR_ARGS, data, TIFR1); },
-        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) { 
-            uint8_t result = 0;
-            if (retrieveByte(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) {
-                TIFR1 = result;
-            }
-        },
-    },
+    ByteFile("tccra", TCCR1A),
+    ByteFile("tccrb", TCCR1B),
+    ByteFile("tccrc", TCCR1C),
+    ByteFile("tifr", TIFR1),
+    Uint16File("tcnt", TCNT1),
+    Uint16File("icr", ICR1),
+    Uint16File("ocra", OCR1A),
+    Uint16File("ocrb", OCR1B),
+    Uint16File("ocrc", OCR1C),
 };
 const struct ush_file_descriptor timer3Files[] = {
     {
@@ -768,4 +690,7 @@ loop() {
 
 
 
+#undef Uint16File
+#undef ByteFile
+#undef PASS_FILE_DESCRIPTOR_ARGS
 #undef FILE_DESCRIPTOR_ARGS
