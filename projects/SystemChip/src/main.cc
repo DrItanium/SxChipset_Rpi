@@ -388,6 +388,8 @@ setup() {
     _adsTriggered = false;
     _readySynchronized = false;
     i960::pullCPUOutOfReset();
+    attachInterrupt(digitalPinToInterrupt(READY_SYNC), []() { _readySynchronized = true; }, FALLING);
+    attachInterrupt(digitalPinToInterrupt(ADS), []() { _adsTriggered = true; }, RISING);
 }
 
 void handleReceiveTop(int howMany);
@@ -990,8 +992,6 @@ configurePinModes() noexcept {
     analogWrite(CLK2, 128);
     digitalWrite(READY, HIGH);
     i960::putCPUInReset();
-    attachInterrupt(digitalPinToInterrupt(READY_SYNC), []() { _readySynchronized = true; }, FALLING);
-    attachInterrupt(digitalPinToInterrupt(ADS), []() { _adsTriggered = true; }, RISING);
 }
 
 static constexpr uint32_t AddressInterfaceDirectionMask = 0x0000'0000;
