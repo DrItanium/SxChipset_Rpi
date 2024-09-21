@@ -345,6 +345,19 @@ const struct ush_file_descriptor timer1Files[] = {
             }
         }
     },
+    {
+        .name = "tifr",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendByte(PASS_FILE_DESCRIPTOR_ARGS, data, TIFR1); },
+        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) { 
+            uint8_t result = 0;
+            if (retrieveByte(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) {
+                TIFR1 = result;
+            }
+        },
+    },
 };
 const struct ush_file_descriptor timer3Files[] = {
     {
@@ -452,6 +465,19 @@ const struct ush_file_descriptor timer3Files[] = {
             }
         }
     },
+    {
+        .name = "tifr",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendByte(PASS_FILE_DESCRIPTOR_ARGS, data, TIFR3); },
+        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) { 
+            uint8_t result = 0;
+            if (retrieveByte(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) {
+                TIFR3 = result;
+            }
+        },
+    },
 };
 const struct ush_file_descriptor timer4Files[] = {
     {
@@ -558,6 +584,19 @@ const struct ush_file_descriptor timer4Files[] = {
                 OCR4C = result;
             }
         }
+    },
+    {
+        .name = "tifr",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendByte(PASS_FILE_DESCRIPTOR_ARGS, data, TIFR4); },
+        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) { 
+            uint8_t result = 0;
+            if (retrieveByte(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) {
+                TIFR4 = result;
+            }
+        },
     },
 };
 
@@ -667,6 +706,19 @@ const struct ush_file_descriptor timer5Files[] = {
             }
         }
     },
+    {
+        .name = "tifr",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendByte(PASS_FILE_DESCRIPTOR_ARGS, data, TIFR5); },
+        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) { 
+            uint8_t result = 0;
+            if (retrieveByte(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) {
+                TIFR5 = result;
+            }
+        },
+    },
 };
 
 const struct ush_file_descriptor cmdFiles[] = {
@@ -678,7 +730,6 @@ const struct ush_file_descriptor cmdFiles[] = {
             ush_print(self, "error: reboot not supported");
         },
     },
-
 };
 
 
