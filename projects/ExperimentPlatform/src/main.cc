@@ -281,13 +281,32 @@ const struct ush_file_descriptor timer ## index ## Files [] = { \
     WordFile("ocra", OCR ## index ## A ), \
     WordFile("ocrb", OCR ## index ## B ), \
     WordFile("ocrc", OCR ## index ## C ), \
-}
+}; \
+struct ush_node_object timer ## index ## Dir 
 DefTimer(1);
 DefTimer(3);
 DefTimer(4);
 DefTimer(5);
 #undef DefTimer
-
+#define DefPort(id) \
+const struct ush_file_descriptor gpioPort ## id ## Files [] = { \
+    ByteFile("in", PIN ## id ), \
+    ByteFile("out", PORT ## id ), \
+    ByteFile("dir", DDR ## id ), \
+}; \
+struct ush_node_object gpioPort ## id ## Dir 
+DefPort(A);
+DefPort(B);
+DefPort(C);
+DefPort(D);
+DefPort(E);
+DefPort(F);
+DefPort(G);
+DefPort(H);
+DefPort(J);
+DefPort(K);
+DefPort(L);
+#undef DefPort
 const struct ush_file_descriptor cmdFiles[] = {
     {
         .name = "reboot",
@@ -304,16 +323,12 @@ struct ush_node_object root;
 struct ush_node_object dev;
 struct ush_node_object bin;
 struct ush_node_object cmd;
-struct ush_node_object timer1Dir;
-struct ush_node_object timer3Dir;
-struct ush_node_object timer4Dir;
-struct ush_node_object timer5Dir;
 
 
 
 void 
 setup() {
-    Serial.begin(9600);
+    Serial.begin(115200);
     Serial.println("Interface up");
     ush_init(&ush, &ush_desc);
 #define NELEM(obj) (sizeof(obj) / sizeof(obj[0]))
@@ -325,6 +340,20 @@ setup() {
     ush_node_mount(&ush, "/dev/timer3", &timer3Dir, timer3Files, NELEM(timer3Files));
     ush_node_mount(&ush, "/dev/timer4", &timer4Dir, timer4Files, NELEM(timer4Files));
     ush_node_mount(&ush, "/dev/timer5", &timer5Dir, timer5Files, NELEM(timer5Files));
+#define RegisterPort(path, id) \
+    ush_node_mount(&ush, path , & gpioPort ## id ## Dir , gpioPort ## id ## Files , NELEM( gpioPort ## id ## Files ))
+    RegisterPort("/dev/porta", A);
+    RegisterPort("/dev/portb", B);
+    RegisterPort("/dev/portc", C);
+    RegisterPort("/dev/portd", D);
+    RegisterPort("/dev/porte", E);
+    RegisterPort("/dev/portf", F);
+    RegisterPort("/dev/portg", G);
+    RegisterPort("/dev/porth", H);
+    RegisterPort("/dev/portj", J);
+    RegisterPort("/dev/portk", K);
+    RegisterPort("/dev/portl", L);
+#undef RegisterPort
 #undef NELEM
 }
 
