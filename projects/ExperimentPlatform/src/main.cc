@@ -224,10 +224,7 @@ const struct ush_file_descriptor devFiles[] = {
         .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) noexcept {
             // read current led state
             bool state = digitalRead(LED_BUILTIN);
-            // return pointer to data
-            *data = (uint8_t*)((state) ? "1\n" : "0\n");
-            // return data size
-            return strlen((char*)(*data));
+            return sendWord(PASS_FILE_DESCRIPTOR_ARGS, data, state ? 1 : 0);
         },
         .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) noexcept {
             if (size < 1) {
@@ -255,9 +252,9 @@ const struct ush_file_descriptor devFiles[] = {
         .exec = nullptr, 
         .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) noexcept { return sendDword(PASS_FILE_DESCRIPTOR_ARGS, data, micros()); },
     },
-    ByteFile("gpior0", GPIOR0),
-    ByteFile("gpior1", GPIOR1),
-    ByteFile("gpior2", GPIOR2),
+    ByteFile("gpr0", GPIOR0),
+    ByteFile("gpr1", GPIOR1),
+    ByteFile("gpr2", GPIOR2),
 #define AnalogFile(n, reg) { \
         .name = n ,  \
         .description = nullptr, \
