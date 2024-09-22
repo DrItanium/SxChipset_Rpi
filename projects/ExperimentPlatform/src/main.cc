@@ -24,7 +24,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 #include <Arduino.h>
 #include <Wire.h>
+#include <SPI.h>
 #include <microshell.h>
+
 
 #define FILE_DESCRIPTOR_ARGS struct ush_object* self, struct ush_file_descriptor const * file
 #define PASS_FILE_DESCRIPTOR_ARGS self, file
@@ -340,6 +342,7 @@ void
 setup() {
     Serial.begin(115200);
     Wire.begin();
+    SPI.begin();
     ush_init(&ush, &ush_desc);
 #define NELEM(obj) (sizeof(obj) / sizeof(obj[0]))
     ush_commands_add(&ush, &cmd, cmdFiles, NELEM(cmdFiles));
