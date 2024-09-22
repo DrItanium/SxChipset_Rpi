@@ -117,6 +117,7 @@ constexpr auto PathMaxSize = 128;
 
 char ushInBuf[BufferInSize];
 char ushOutBuf[BufferOutSize];
+uint32_t currentRandomSeed = 0;
 
 struct ush_object ush;
 const struct ush_io_interface ushInterface = {
@@ -162,11 +163,11 @@ const struct ush_file_descriptor rootFiles[] = {
         .help = nullptr,
         .exec = nullptr,
         .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) noexcept {
-            return fixedFileDataCallback(PASS_FILE_DESCRIPTOR_ARGS, data, "Teensy 4.1 System Chip\n");
+            return fixedFileDataCallback(PASS_FILE_DESCRIPTOR_ARGS, data, "ATMEGA2560 Experimental Platform\n");
         },
     }
 };
-
+#if 0
 const struct ush_file_descriptor cmdToggleLED{
     .name = "toggle",
     .description = "toggle led",
@@ -208,12 +209,46 @@ const struct ush_file_descriptor cmdFeedbackTest {
         }
     },
 };
+#endif
 
 
 const struct ush_file_descriptor binFiles[] = {
-    cmdToggleLED,
-    cmdSetLED,
-    cmdFeedbackTest,
+    //cmdToggleLED,
+    //cmdSetLED,
+    //cmdFeedbackTest,
+    {
+        .name = "inspect_port",
+        .description = "display stats about the given GPIO port by letter", 
+        .help = "usage: {a, b, c, d, e, f, g, h, j, k, l}\r\n",
+        .exec = [](FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
+            if (argc != 1) {
+                ush_print_status(self, USH_STATUS_ERROR_COMMAND_WRONG_ARGUMENTS);
+                return;
+            }
+            auto* arg1 = argv[1];
+#define X(letter) \
+            if (strcmp(arg1, #letter ) == 0) {  \
+                ush_printf(self, "Port %s statistics\r\n", arg1); \
+                ush_printf(self, "\tIN: 0x%x\r\n", PIN ## letter); \
+                ush_printf(self, "\tOUT: 0x%x\r\n", PORT ## letter); \
+                ush_printf(self, "\tDIR: 0x%x\r\n", DDR ## letter); \
+                return; \
+            } 
+            X(A)
+            X(B)
+            X(C)
+            X(D)
+            X(E)
+            X(F)
+            X(G)
+            X(H)
+            X(J)
+            X(K)
+            X(L)
+#undef X
+
+        },
+    },
 };
 
 
@@ -288,6 +323,13 @@ const struct ush_file_descriptor devFiles[] = {
         .exec = nullptr, 
         .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) noexcept { return sendDword(PASS_FILE_DESCRIPTOR_ARGS, data, random()); },
     },
+    {
+        .name = "urandom_seed",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr, 
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) noexcept { return sendDword(PASS_FILE_DESCRIPTOR_ARGS, data, currentRandomSeed); },
+    },
 };
 #define DefTimer(index) \
 const struct ush_file_descriptor timer ## index ## Files [] = { \
@@ -349,8 +391,8 @@ void
 setup() {
     Serial.begin(115200);
     // setup a random source
-    uint32_t newSeed = analogRead(A0);
-#define X(id) newSeed += analogRead ( id ) 
+    currentRandomSeed = analogRead(A0);
+#define X(id) currentRandomSeed += analogRead ( id ) 
     X(A1);
     X(A2);
     X(A3);
@@ -367,7 +409,7 @@ setup() {
     X(A14);
     X(A15);
 #undef X
-    randomSeed(newSeed);
+    randomSeed(currentRandomSeed);
     Wire.begin();
     SPI.begin();
     ush_init(&ush, &ush_desc);
