@@ -183,6 +183,7 @@ const struct ush_file_descriptor devFiles[] = {
     AnalogFile("ana14", A14),
     AnalogFile("ana15", A15),
 #undef AnalogFile
+#if 0
     {
         .name = "urandom",
         .description = nullptr,
@@ -197,6 +198,7 @@ const struct ush_file_descriptor devFiles[] = {
         .exec = nullptr, 
         .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) noexcept { return sendDword(PASS_FILE_DESCRIPTOR_ARGS, data, currentRandomSeed); },
     },
+#endif
 };
 #define DefTimer(index) \
 const struct ush_file_descriptor timer ## index ## Files [] = { \
