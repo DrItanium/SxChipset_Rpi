@@ -48,26 +48,33 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         .description = nullptr, \
         .help = nullptr, \
         .exec = nullptr, \
-        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendUint16(PASS_FILE_DESCRIPTOR_ARGS, data, reg ); }, \
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) { return sendWord(PASS_FILE_DESCRIPTOR_ARGS, data, reg ); }, \
         .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) {  \
             uint16_t result = 0; \
-            if (retrieveUint16(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) { \
+            if (retrieveWord(PASS_FILE_DESCRIPTOR_ARGS, data, size, result)) { \
                 reg = result; \
             } \
         } \
     }
 
-unsigned int sendUint16(FILE_DESCRIPTOR_ARGS, uint8_t** data, uint16_t value) noexcept {
+unsigned int sendDword(FILE_DESCRIPTOR_ARGS, uint8_t** data, uint32_t value) noexcept {
     static char buf[16];
-    snprintf(buf, sizeof(buf), "%d\n", value);
+    snprintf(buf, sizeof(buf), "%lu\n", value);
+    buf[sizeof(buf) - 1] = 0;
+    *data = (uint8_t*)buf;
+    return strlen((char*)(*data));
+}
+unsigned int sendWord(FILE_DESCRIPTOR_ARGS, uint8_t** data, uint16_t value) noexcept {
+    static char buf[16];
+    snprintf(buf, sizeof(buf), "%u\n", value);
     buf[sizeof(buf) - 1] = 0;
     *data = (uint8_t*)buf;
     return strlen((char*)(*data));
 }
 unsigned int sendByte(FILE_DESCRIPTOR_ARGS, uint8_t** data, uint8_t value) noexcept {
-    return sendUint16(PASS_FILE_DESCRIPTOR_ARGS, data, value);
+    return sendWord(PASS_FILE_DESCRIPTOR_ARGS, data, value);
 }
-bool retrieveUint16(FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size, uint16_t& result) noexcept {
+bool retrieveWord(FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size, uint16_t& result) noexcept {
     if (size < 1) {
         return false;
     }
@@ -77,7 +84,7 @@ bool retrieveUint16(FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size, uint16_t& 
 
 bool retrieveByte(FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size, uint8_t& result) noexcept {
     uint16_t value = 0;
-    if (retrieveUint16(PASS_FILE_DESCRIPTOR_ARGS, data, size, value)) {
+    if (retrieveWord(PASS_FILE_DESCRIPTOR_ARGS, data, size, value)) {
         result = value;
         return true;
     }
@@ -239,36 +246,42 @@ const struct ush_file_descriptor devFiles[] = {
         .description = nullptr,
         .help = nullptr,
         .exec = nullptr, 
-        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) noexcept {
-            static char timeBuf[16];
-            // read current time
-            auto currentTime = millis();
-            // convert
-            snprintf(timeBuf, sizeof(timeBuf), "%ld\r\n", currentTime);
-            timeBuf[sizeof(timeBuf) -1] = 0;
-            *data = (uint8_t*)timeBuf;
-            return strlen((char*)(*data));
-        },
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) noexcept { return sendDword(PASS_FILE_DESCRIPTOR_ARGS, data, millis()); },
     },
     {
         .name = "micros",
         .description = nullptr,
         .help = nullptr,
         .exec = nullptr, 
-        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) noexcept {
-            static char timeBuf[16];
-            // read current time
-            auto currentTime = micros();
-            // convert
-            snprintf(timeBuf, sizeof(timeBuf), "%ld\r\n", currentTime);
-            timeBuf[sizeof(timeBuf) -1] = 0;
-            *data = (uint8_t*)timeBuf;
-            return strlen((char*)(*data));
-        },
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) noexcept { return sendDword(PASS_FILE_DESCRIPTOR_ARGS, data, micros()); },
     },
-    ByteFile("gpio0", GPIOR0),
-    ByteFile("gpio1", GPIOR1),
-    ByteFile("gpio2", GPIOR2),
+    ByteFile("gpior0", GPIOR0),
+    ByteFile("gpior1", GPIOR1),
+    ByteFile("gpior2", GPIOR2),
+#define AnalogFile(n, reg) { \
+        .name = n ,  \
+        .description = nullptr, \
+        .help = nullptr, \
+        .exec = nullptr, \
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) noexcept { return sendWord(PASS_FILE_DESCRIPTOR_ARGS, data, analogRead( reg )); }, \
+    } 
+    AnalogFile("ana0", A0),
+    AnalogFile("ana1", A1),
+    AnalogFile("ana2", A2),
+    AnalogFile("ana3", A3),
+    AnalogFile("ana4", A4),
+    AnalogFile("ana5", A5),
+    AnalogFile("ana6", A6),
+    AnalogFile("ana7", A7),
+    AnalogFile("ana8", A8),
+    AnalogFile("ana9", A9),
+    AnalogFile("ana10", A10),
+    AnalogFile("ana11", A11),
+    AnalogFile("ana12", A12),
+    AnalogFile("ana13", A13),
+    AnalogFile("ana14", A14),
+    AnalogFile("ana15", A15),
+#undef AnalogFile
 };
 #define DefTimer(index) \
 const struct ush_file_descriptor timer ## index ## Files [] = { \
