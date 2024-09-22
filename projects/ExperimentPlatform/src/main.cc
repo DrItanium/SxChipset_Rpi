@@ -339,6 +339,7 @@ struct ush_node_object cmd;
 void 
 setup() {
     Serial.begin(115200);
+    Wire.begin();
     ush_init(&ush, &ush_desc);
 #define NELEM(obj) (sizeof(obj) / sizeof(obj[0]))
     ush_commands_add(&ush, &cmd, cmdFiles, NELEM(cmdFiles));
