@@ -381,8 +381,6 @@ loop() {
     ush_service(&ush);
 }
 
-
-
 #undef WordFile
 #undef ByteFile
 #undef PASS_FILE_DESCRIPTOR_ARGS
