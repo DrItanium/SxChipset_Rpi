@@ -414,7 +414,7 @@ const struct ush_file_descriptor cmdFiles[] = {
     },
     {
         .name = "randomNumber",
-        .description = "Generate a random number",
+        .description = nullptr,
         .help = "usage: randomNumber [max] [min] \r\n",
         .exec = [](FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
             /// @todo implement support for ranges
@@ -440,7 +440,49 @@ const struct ush_file_descriptor cmdFiles[] = {
 
             }
         },
-    }
+    },
+    {
+        .name = "cos",
+        .description = nullptr,
+        .help = "usage: cos [rad]\r\n",
+        .exec = [](FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
+            if (argc != 2) {
+                ush_print_status(self, USH_STATUS_ERROR_COMMAND_WRONG_ARGUMENTS);
+                return;
+            }
+            float rad = 0.0f;
+            (void)sscanf(argv[1], "%f", &rad);
+            ush_printf(self, "%f\r\n", cos(rad));
+        },
+    },
+    {
+        .name = "sin",
+        .description = nullptr,
+        .help = "usage: sin [rad]\r\n",
+        .exec = [](FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
+            if (argc != 2) {
+                ush_print_status(self, USH_STATUS_ERROR_COMMAND_WRONG_ARGUMENTS);
+                return;
+            }
+            float rad = 0.0f;
+            (void)sscanf(argv[1], "%f", &rad);
+            ush_printf(self, "%f\r\n", sin(rad));
+        },
+    },
+    {
+        .name = "tan",
+        .description = nullptr,
+        .help = "usage: tan [rad]\r\n",
+        .exec = [](FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
+            if (argc != 2) {
+                ush_print_status(self, USH_STATUS_ERROR_COMMAND_WRONG_ARGUMENTS);
+                return;
+            }
+            float rad = 0.0f;
+            (void)sscanf(argv[1], "%f", &rad);
+            ush_printf(self, "%f\r\n", tan(rad));
+        },
+    },
 };
 
 
