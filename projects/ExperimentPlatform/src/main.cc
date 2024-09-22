@@ -216,39 +216,6 @@ const struct ush_file_descriptor binFiles[] = {
     //cmdToggleLED,
     //cmdSetLED,
     //cmdFeedbackTest,
-    {
-        .name = "inspect_port",
-        .description = "display stats about the given GPIO port by letter", 
-        .help = "usage: {a, b, c, d, e, f, g, h, j, k, l}\r\n",
-        .exec = [](FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
-            if (argc != 1) {
-                ush_print_status(self, USH_STATUS_ERROR_COMMAND_WRONG_ARGUMENTS);
-                return;
-            }
-            auto* arg1 = argv[1];
-#define X(letter) \
-            if (strcmp(arg1, #letter ) == 0) {  \
-                ush_printf(self, "Port %s statistics\r\n", arg1); \
-                ush_printf(self, "\tIN: 0x%x\r\n", PIN ## letter); \
-                ush_printf(self, "\tOUT: 0x%x\r\n", PORT ## letter); \
-                ush_printf(self, "\tDIR: 0x%x\r\n", DDR ## letter); \
-                return; \
-            } 
-            X(A)
-            X(B)
-            X(C)
-            X(D)
-            X(E)
-            X(F)
-            X(G)
-            X(H)
-            X(J)
-            X(K)
-            X(L)
-#undef X
-
-        },
-    },
 };
 
 
@@ -377,6 +344,103 @@ const struct ush_file_descriptor cmdFiles[] = {
             ush_print(self, "error: reboot not supported");
         },
     },
+    {
+        .name = "analogRead",
+        .description = "read from one of the analog pins",
+        .help = "usage: analogRead A[0-15]\r\n",
+        .exec = [](FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
+            if (argc != 2) {
+                ush_print_status(self, USH_STATUS_ERROR_COMMAND_WRONG_ARGUMENTS);
+                return;
+            }
+            auto* arg1 = argv[1];
+#define X(letter) \
+            if (strcmp(arg1, #letter ) == 0) {  \
+                ush_printf(self, "%d\r\n", analogRead ( letter ) ); \
+                return; \
+            } 
+            X(A0);
+            X(A1);
+            X(A2);
+            X(A3);
+            X(A4);
+            X(A5);
+            X(A6);
+            X(A7);
+            X(A8);
+            X(A9);
+            X(A10);
+            X(A11);
+            X(A12);
+            X(A13);
+            X(A14);
+            X(A15);
+#undef X
+            ush_printf(self, "Analog pin '%s' specified!\r\n", arg1);
+        },
+    },
+    {
+        .name = "lsport",
+        .description = "display port register contents", 
+        .help = "usage: lsport {A-L}\r\n",
+        .exec = [](FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
+            if (argc != 2) {
+                ush_print_status(self, USH_STATUS_ERROR_COMMAND_WRONG_ARGUMENTS);
+                return;
+            }
+            auto* arg1 = argv[1];
+#define X(letter) \
+            if (strcmp(arg1, #letter ) == 0) {  \
+                ush_printf(self, "\tIN: 0x%x\r\n", PIN ## letter); \
+                ush_printf(self, "\tOUT: 0x%x\r\n", PORT ## letter); \
+                ush_printf(self, "\tDIR: 0x%x\r\n", DDR ## letter); \
+                return; \
+            } 
+            X(A)
+            X(B)
+            X(C)
+            X(D)
+            X(E)
+            X(F)
+            X(G)
+            X(H)
+            X(J)
+            X(K)
+            X(L)
+#undef X
+            ush_printf(self, "unknown port %s specified!\r\n", arg1);
+
+        },
+    },
+    {
+        .name = "randomNumber",
+        .description = "Generate a random number",
+        .help = "usage: randomNumber [max] [min] \r\n",
+        .exec = [](FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
+            /// @todo implement support for ranges
+            switch (argc) {
+                case 1:
+                    ush_printf(self, "%ld\r\n", random());
+                    break;
+                case 2: {
+                            long max = 0;
+                            (void)sscanf(argv[1], "%ld", &max);
+                            ush_printf(self, "%ld\r\n", random(max));
+                            break;
+                        }
+                default: {
+                             long max = 0;
+                             long min = 0;
+                             (void)sscanf(argv[1], "%ld", &max);
+                             (void)sscanf(argv[2], "%ld", &min);
+                             ush_printf(self, "%ld\r\n", random(min, max));
+                             break;
+                          }
+
+
+            }
+        },
+    }
 };
 
 
