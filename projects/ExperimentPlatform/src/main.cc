@@ -341,6 +341,26 @@ struct ush_node_object cmd;
 void 
 setup() {
     Serial.begin(115200);
+    // setup a random source
+    uint32_t newSeed = analogRead(A0);
+#define X(id) newSeed += analogRead ( id ) 
+    X(A1);
+    X(A2);
+    X(A3);
+    X(A4);
+    X(A5);
+    X(A6);
+    X(A7);
+    X(A8);
+    X(A9);
+    X(A10);
+    X(A11);
+    X(A12);
+    X(A13);
+    X(A14);
+    X(A15);
+#undef X
+    randomSeed(newSeed);
     Wire.begin();
     SPI.begin();
     ush_init(&ush, &ush_desc);
