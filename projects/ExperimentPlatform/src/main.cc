@@ -118,6 +118,7 @@ constexpr auto PathMaxSize = 128;
 char ushInBuf[BufferInSize];
 char ushOutBuf[BufferOutSize];
 uint32_t currentRandomSeed = 0;
+char hostname[16] = "atmega2560";
 
 struct ush_object ush;
 const struct ush_io_interface ushInterface = {
@@ -131,117 +132,16 @@ const struct ush_descriptor ush_desc = {
     .output_buffer = ushOutBuf,
     .output_buffer_size = sizeof(ushOutBuf),
     .path_max_length = PathMaxSize,
-    .hostname = "experimental2560",
+    .hostname = hostname,
 };
 
 
-// info file get data callback
-size_t
-fixedFileDataCallback(FILE_DESCRIPTOR_ARGS, uint8_t** data, const char* info) noexcept {
-    *data = (uint8_t*)info;
-    return strlen(info);
-}
+const struct ush_file_descriptor rootFiles[] = { };
 
 
-// time file get data callback
-size_t
-timeGetDataCallback(FILE_DESCRIPTOR_ARGS, uint8_t** data) noexcept {
-    static char timeBuf[16];
-    // read current time
-    auto currentTime = millis();
-    // convert
-    snprintf(timeBuf, sizeof(timeBuf), "%ld\r\n", currentTime);
-    timeBuf[sizeof(timeBuf) -1] = 0;
-    *data = (uint8_t*)timeBuf;
-    return strlen((char*)(*data));
-}
-
-const struct ush_file_descriptor rootFiles[] = {
-    {
-        .name = "info.txt", 
-        .description = nullptr,
-        .help = nullptr,
-        .exec = nullptr,
-        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) noexcept {
-            return fixedFileDataCallback(PASS_FILE_DESCRIPTOR_ARGS, data, "ATMEGA2560 Experimental Platform\n");
-        },
-    }
-};
-#if 0
-const struct ush_file_descriptor cmdToggleLED{
-    .name = "toggle",
-    .description = "toggle led",
-    .help = "usage: toggle\n",
-    .exec = [](FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
-        digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
-    },
-};
-
-const struct ush_file_descriptor cmdSetLED {
-        .name = "set", 
-        .description = "set led",
-        .help = "usage: set {0,1}\r\n",
-        .exec = [](FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
-            if (argc != 0) {
-                ush_print_status(self, USH_STATUS_ERROR_COMMAND_WRONG_ARGUMENTS);
-                return;
-            }
-
-            if (strcmp(argv[1], "1") == 0) {
-                digitalWrite(LED_BUILTIN, HIGH);
-            } else if (strcmp(argv[1], "0") == 0) {
-                digitalWrite(LED_BUILTIN, LOW);
-            } else {
-                // return predefined error message
-                ush_print_status(self, USH_STATUS_ERROR_COMMAND_WRONG_ARGUMENTS);
-                return;
-            }
-        },
-};
-
-const struct ush_file_descriptor cmdFeedbackTest {
-    .name = "feedback",
-    .description = "display what was passed in",
-    .help = "usage: feedback ...\n",
-    .exec = [](FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
-        for (int i = 0; i < argc; ++i) {
-            ush_printf(self, "\t%d: %s\n", i, argv[i]);
-        }
-    },
-};
-#endif
-
-
-const struct ush_file_descriptor binFiles[] = {
-    //cmdToggleLED,
-    //cmdSetLED,
-    //cmdFeedbackTest,
-};
 
 
 const struct ush_file_descriptor devFiles[] = {
-    {
-        .name = "led", 
-        .description = nullptr,
-        .help = nullptr,
-        .exec = nullptr,
-        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) noexcept {
-            // read current led state
-            bool state = digitalRead(LED_BUILTIN);
-            return sendWord(PASS_FILE_DESCRIPTOR_ARGS, data, state ? 1 : 0);
-        },
-        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) noexcept {
-            if (size < 1) {
-                return;
-            }
-            
-            if (data[0] == '1') {
-                digitalWrite(LED_BUILTIN, HIGH);
-            } else if (data[0] == '0') {
-                digitalWrite(LED_BUILTIN, LOW);
-            }
-        },
-    },
     {
         .name = "time", 
         .description = nullptr,
@@ -337,16 +237,8 @@ DefPort(L);
 #undef DefPort
 const struct ush_file_descriptor cmdFiles[] = {
     {
-        .name = "reboot",
-        .description = "reboot device",
-        .help = nullptr,
-        .exec = [](FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
-            ush_print(self, "error: reboot not supported");
-        },
-    },
-    {
         .name = "analogRead",
-        .description = "read from one of the analog pins",
+        .description = nullptr,
         .help = "usage: analogRead A[0-15]\r\n",
         .exec = [](FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
             if (argc != 2) {
@@ -376,12 +268,11 @@ const struct ush_file_descriptor cmdFiles[] = {
             X(A14);
             X(A15);
 #undef X
-            ush_printf(self, "Analog pin '%s' specified!\r\n", arg1);
         },
     },
     {
         .name = "lsport",
-        .description = "display port register contents", 
+        .description = nullptr,
         .help = "usage: lsport {A-L}\r\n",
         .exec = [](FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
             if (argc != 2) {
@@ -408,16 +299,14 @@ const struct ush_file_descriptor cmdFiles[] = {
             X(K)
             X(L)
 #undef X
-            ush_printf(self, "unknown port %s specified!\r\n", arg1);
 
         },
     },
     {
-        .name = "randomNumber",
+        .name = "rand",
         .description = nullptr,
-        .help = "usage: randomNumber [max] [min] \r\n",
+        .help = "usage: rand [max] [min] \r\n",
         .exec = [](FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
-            /// @todo implement support for ranges
             switch (argc) {
                 case 1:
                     ush_printf(self, "%ld\r\n", random());
@@ -488,7 +377,6 @@ const struct ush_file_descriptor cmdFiles[] = {
 
 struct ush_node_object root;
 struct ush_node_object dev;
-struct ush_node_object bin;
 struct ush_node_object cmd;
 
 
@@ -522,7 +410,6 @@ setup() {
 #define NELEM(obj) (sizeof(obj) / sizeof(obj[0]))
     ush_commands_add(&ush, &cmd, cmdFiles, NELEM(cmdFiles));
     ush_node_mount(&ush, "/", &root, rootFiles, NELEM(rootFiles));
-    ush_node_mount(&ush, "/bin", &bin, binFiles, NELEM(binFiles));
     ush_node_mount(&ush, "/dev", &dev, devFiles, NELEM(devFiles));
     ush_node_mount(&ush, "/dev/timer1", &timer1Dir, timer1Files, NELEM(timer1Files));
     ush_node_mount(&ush, "/dev/timer3", &timer3Dir, timer3Files, NELEM(timer3Files));
