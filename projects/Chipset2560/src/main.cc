@@ -31,6 +31,35 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Types.h"
 #include "Pinout.h"
 #include "Setup.h"
+namespace Pins {
+    constexpr auto INT960_0 = Pin::PortB4;
+    constexpr auto INT960_1 = Pin::PortB5;
+    constexpr auto INT960_2 = Pin::PortB6;
+    constexpr auto INT960_3 = Pin::PortB7;
+    constexpr auto ReadyWaitDone = Pin::PortD5;
+    constexpr auto CacheLineLookup = Pin::PortD6;
+    constexpr auto TransactionStatus = Pin::PortD7;
+    constexpr auto BE0 = Pin::PortE2;
+    constexpr auto BE1 = Pin::PortE3;
+    constexpr auto ADS = Pin::PortE4;
+    constexpr auto BLAST = Pin::PortE5;
+    constexpr auto HLDA = Pin::PortE6;
+    constexpr auto READY_SYNC_IN = Pin::PortE7;
+    constexpr auto HOLD = Pin::PortG0;
+    constexpr auto LOCK = Pin::PortG1;
+    constexpr auto RESET = Pin::PortG2;
+    constexpr auto FAIL = Pin::PortG3;
+    constexpr auto READY = Pin::PortG4;
+    constexpr auto WR = Pin::PortG5;
+}
+namespace Ports {
+    constexpr auto DataLower = Port::C;
+    constexpr auto DataUpper = Port::F;
+    constexpr auto AddressLowest = Port::K;
+    constexpr auto AddressLower = Port::A;
+    constexpr auto AddressHigher = Port::J;
+    constexpr auto AddressHighest = Port::L;
+}
 
 constexpr bool ThisDeviceHandlesI960Requests = false;
 constexpr bool EnableStateDebuggingPins = false;
@@ -100,7 +129,7 @@ template<bool wait = true>
 [[gnu::always_inline]] 
 inline void 
 signalReady() noexcept {
-    toggle<Pin::READY>();
+    toggle<Pins::READY>();
     if constexpr (wait) {
         waitForReady();
     }
@@ -110,28 +139,28 @@ signalReady() noexcept {
 [[nodiscard]]
 inline bool 
 lowerByteEnabled() noexcept {
-    return digitalRead<Pin::BE0>() == LOW;
+    return digitalRead<Pins::BE0>() == LOW;
 }
 
 [[gnu::always_inline]]
 [[nodiscard]]
 inline bool 
 upperByteEnabled() noexcept {
-    return digitalRead<Pin::BE1>() == LOW;
+    return digitalRead<Pins::BE1>() == LOW;
 }
 
 [[gnu::always_inline]]
 [[nodiscard]]
 inline uint8_t 
 lowerData() noexcept {
-    return getInputRegister<Port::DataLower>();
+    return getInputRegister<Ports::DataLower>();
 }
 
 [[gnu::always_inline]]
 [[nodiscard]]
 inline uint8_t 
 upperData() noexcept {
-    return getInputRegister<Port::DataUpper>();
+    return getInputRegister<Ports::DataUpper>();
 }
 
 [[gnu::always_inline]]
@@ -150,12 +179,12 @@ data() noexcept {
 [[gnu::always_inline]]
 inline void
 setUpperData(uint8_t value) noexcept {
-    getOutputRegister<Port::DataUpper>() = value;
+    getOutputRegister<Ports::DataUpper>() = value;
 }
 [[gnu::always_inline]]
 inline void
 setLowerData(uint8_t value) noexcept {
-    getOutputRegister<Port::DataLower>() = value;
+    getOutputRegister<Ports::DataLower>() = value;
 }
 [[gnu::always_inline]]
 inline void
@@ -168,8 +197,8 @@ template<uint16_t value>
 [[gnu::always_inline]]
 inline void
 setDataDirection() noexcept {
-    getDirectionRegister<Port::DataLower>() = static_cast<uint8_t>(value);
-    getDirectionRegister<Port::DataUpper>() = static_cast<uint8_t>(value >> 8);
+    getDirectionRegister<Ports::DataLower>() = static_cast<uint8_t>(value);
+    getDirectionRegister<Ports::DataUpper>() = static_cast<uint8_t>(value >> 8);
 }
 
 [[gnu::always_inline]]
@@ -185,10 +214,10 @@ configureDataLinesForWrite() noexcept {
 }
 
 [[gnu::always_inline]] inline bool isReadOperation() noexcept {
-    return digitalRead<Pin::WR>() == LOW;
+    return digitalRead<Pins::WR>() == LOW;
 }
 [[gnu::always_inline]] inline bool isLastWordOfTransaction() noexcept {
-    return digitalRead<Pin::BLAST>() == LOW;
+    return digitalRead<Pins::BLAST>() == LOW;
 }
 template<bool isReadOperation>
 void
@@ -296,12 +325,12 @@ inline
 void
 doMemoryTransaction(SplitWord32 address) noexcept {
     if constexpr (EnableStateDebuggingPins) {
-        digitalWrite<Pin::CacheLineLookup, LOW>();
+        digitalWrite<Pins::CacheLineLookup, LOW>();
     }
     auto& line = onboardCache.find(PCLink2, address.lo24);
     auto* ptr = line.getLineData(address.getCacheOffset());
     if constexpr (EnableStateDebuggingPins) {
-        digitalWrite<Pin::CacheLineLookup, HIGH>();
+        digitalWrite<Pins::CacheLineLookup, HIGH>();
     }
     if constexpr (readOperation) {
         uint16_t* ptr16 = reinterpret_cast<uint16_t*>(ptr);
@@ -462,50 +491,50 @@ inline
 SplitWord32
 getAddress() noexcept {
     return { 
-        getInputRegister<Port::AddressLowest>(),
-        getInputRegister<Port::AddressLower>(),
-        getInputRegister<Port::AddressHigher>(),
-        getInputRegister<Port::AddressHighest>()
+        getInputRegister<Ports::AddressLowest>(),
+        getInputRegister<Ports::AddressLower>(),
+        getInputRegister<Ports::AddressHigher>(),
+        getInputRegister<Ports::AddressHighest>()
     };
 }
 
 void
 configurePins() noexcept {
-    pinMode(Pin::CacheLineLookup, OUTPUT);
-    pinMode(Pin::TransactionStatus, OUTPUT);
-    pinMode(Pin::ReadyWaitDone, OUTPUT);
-    digitalWrite<Pin::ReadyWaitDone, HIGH>();
-    digitalWrite<Pin::TransactionStatus, HIGH>();
-    digitalWrite<Pin::CacheLineLookup, HIGH>();
-    pinMode(Pin::RESET, OUTPUT);
-    digitalWrite<Pin::RESET, LOW>();
-    pinMode(Pin::INT960_0, OUTPUT);
-    pinMode(Pin::INT960_1, OUTPUT);
-    pinMode(Pin::INT960_2, OUTPUT);
-    pinMode(Pin::INT960_3, OUTPUT);
-    pinMode(Pin::BE0, INPUT);
-    pinMode(Pin::BE1, INPUT);
-    pinMode(Pin::ADS, INPUT);
-    pinMode(Pin::BLAST, INPUT);
-    pinMode(Pin::HLDA, INPUT);
-    pinMode(Pin::READY_SYNC_IN, INPUT);
-    pinMode(Pin::HOLD, OUTPUT);
-    pinMode(Pin::LOCK, INPUT);
-    pinMode(Pin::FAIL, INPUT);
-    pinMode(Pin::READY, OUTPUT);
-    pinMode(Pin::WR, INPUT);
+    pinMode(Pins::CacheLineLookup, OUTPUT);
+    pinMode(Pins::TransactionStatus, OUTPUT);
+    pinMode(Pins::ReadyWaitDone, OUTPUT);
+    digitalWrite<Pins::ReadyWaitDone, HIGH>();
+    digitalWrite<Pins::TransactionStatus, HIGH>();
+    digitalWrite<Pins::CacheLineLookup, HIGH>();
+    pinMode(Pins::RESET, OUTPUT);
+    digitalWrite<Pins::RESET, LOW>();
+    pinMode(Pins::INT960_0, OUTPUT);
+    pinMode(Pins::INT960_1, OUTPUT);
+    pinMode(Pins::INT960_2, OUTPUT);
+    pinMode(Pins::INT960_3, OUTPUT);
+    pinMode(Pins::BE0, INPUT);
+    pinMode(Pins::BE1, INPUT);
+    pinMode(Pins::ADS, INPUT);
+    pinMode(Pins::BLAST, INPUT);
+    pinMode(Pins::HLDA, INPUT);
+    pinMode(Pins::READY_SYNC_IN, INPUT);
+    pinMode(Pins::HOLD, OUTPUT);
+    pinMode(Pins::LOCK, INPUT);
+    pinMode(Pins::FAIL, INPUT);
+    pinMode(Pins::READY, OUTPUT);
+    pinMode(Pins::WR, INPUT);
     // deactivate interrupts
-    digitalWrite<Pin::INT960_0, HIGH>();
-    digitalWrite<Pin::INT960_1, LOW>();
-    digitalWrite<Pin::INT960_2, LOW>();
-    digitalWrite<Pin::INT960_3, HIGH>();
-    digitalWrite<Pin::HOLD, LOW>();
-    digitalWrite<Pin::READY, HIGH>();
+    digitalWrite<Pins::INT960_0, HIGH>();
+    digitalWrite<Pins::INT960_1, LOW>();
+    digitalWrite<Pins::INT960_2, LOW>();
+    digitalWrite<Pins::INT960_3, HIGH>();
+    digitalWrite<Pins::HOLD, LOW>();
+    digitalWrite<Pins::READY, HIGH>();
 
-    getDirectionRegister<Port::AddressLowest>() = 0;
-    getDirectionRegister<Port::AddressLower>() = 0;
-    getDirectionRegister<Port::AddressHigher>() = 0;
-    getDirectionRegister<Port::AddressHighest>() = 0;
+    getDirectionRegister<Ports::AddressLowest>() = 0;
+    getDirectionRegister<Ports::AddressLower>() = 0;
+    getDirectionRegister<Ports::AddressHigher>() = 0;
+    getDirectionRegister<Ports::AddressHighest>() = 0;
 }
 void
 setup() {
@@ -526,7 +555,7 @@ setup() {
         for (Address i = 0; i < DataCache::NumCacheBytes; i += DataCache::NumBytesPerLine) {
             onboardCache.seed(PCLink2, i);
         }
-        digitalWrite<Pin::RESET, HIGH>();
+        digitalWrite<Pins::RESET, HIGH>();
     }
 }
 [[gnu::always_inline]]
@@ -543,12 +572,12 @@ loop() {
         waitForNewTransaction();
         {
             if constexpr (EnableStateDebuggingPins) {
-                digitalWrite<Pin::TransactionStatus, LOW>();
+                digitalWrite<Pins::TransactionStatus, LOW>();
             }
             {
                 if (auto address = getAddress(); isReadOperation()) {
                     if constexpr (EnableStateDebuggingPins) {
-                        digitalWrite<Pin::ReadyWaitDone, HIGH>();
+                        digitalWrite<Pins::ReadyWaitDone, HIGH>();
                     }
                     configureDataLinesForRead();
                     if (address.isIOOperation()) {
@@ -558,7 +587,7 @@ loop() {
                     }
                 } else {
                     if constexpr (EnableStateDebuggingPins) {
-                        digitalWrite<Pin::ReadyWaitDone, LOW>();
+                        digitalWrite<Pins::ReadyWaitDone, LOW>();
                     }
                     configureDataLinesForWrite();
                     if (address.isIOOperation()) {
@@ -570,7 +599,7 @@ loop() {
                 }
             }
             if constexpr (EnableStateDebuggingPins) {
-                digitalWrite<Pin::TransactionStatus, HIGH>();
+                digitalWrite<Pins::TransactionStatus, HIGH>();
             }
         }
     }

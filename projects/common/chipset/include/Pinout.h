@@ -61,43 +61,6 @@ Count = NUM_DIGITAL_PINS,
 #endif
 
     SD_EN = PortB0,
-    // SCK = PortB1,
-    // MOSI = PortB2,
-    // MISO = PortB3,
-    INT960_0 = PortB4,
-    INT960_1 = PortB5,
-    INT960_2 = PortB6,
-    INT960_3 = PortB7,
-
-    // SCL = PortD0,
-    // SDA = PortD1,
-    //RXD1 = PortD2,
-    //TXD1 = PortD3,
-    ReadyWaitDone = PortD5,
-    CacheLineLookup = PortD6,
-    TransactionStatus = PortD7,
-    
-
-    //RXD0 = PortE0,
-    //TXD0 = PortE1,
-    BE0 = PortE2,
-    BE1 = PortE3,
-    ADS = PortE4,
-    BLAST = PortE5,
-    HLDA = PortE6,
-    READY_SYNC_IN = PortE7,
-
-
-    HOLD = PortG0,
-    LOCK = PortG1,
-    RESET = PortG2,
-    FAIL = PortG3,
-    READY = PortG4,
-    WR = PortG5,
-
-    //RXD2 = PortH0,
-    //TXD2 = PortH1,
-
 };
 enum class Port : byte {
     // stop at mega2560 tier
@@ -105,13 +68,6 @@ enum class Port : byte {
 #include "AVRPorts.def"
 #undef X
     None,
-
-    DataLower = C,
-    DataUpper = F,
-    AddressLowest = K,
-    AddressLower = A,
-    AddressHigher = J,
-    AddressHighest = L,
 };
 constexpr auto numberOfAvailablePins() noexcept {
     return 0 
