@@ -140,6 +140,58 @@ using PortInputRegister = volatile byte&;
 using PortDirectionRegister = volatile byte&;
 using PinState = decltype(LOW);
 using PinDirection = decltype(OUTPUT);
+template<Pin pin>
+constexpr bool isAnalogPin = false;
+#define X(idx) template<> constexpr bool isAnalogPin<Pin:: Analog ## idx > = true
+#ifdef PIN_A0
+X(0);
+#endif
+#ifdef PIN_A1
+X(1);
+#endif
+#ifdef PIN_A2
+X(2);
+#endif
+#ifdef PIN_A3
+X(3);
+#endif
+#ifdef PIN_A4
+X(4);
+#endif
+#ifdef PIN_A5
+X(5);
+#endif
+#ifdef PIN_A6
+X(6);
+#endif
+#ifdef PIN_A7
+X(7);
+#endif
+#ifdef PIN_A8
+X(8);
+#endif
+#ifdef PIN_A9
+X(9);
+#endif
+#ifdef PIN_A10
+X(10);
+#endif
+#ifdef PIN_A11
+X(11);
+#endif
+#ifdef PIN_A12
+X(12);
+#endif
+#ifdef PIN_A13
+X(13);
+#endif
+#ifdef PIN_A14
+X(14);
+#endif
+#ifdef PIN_A15
+X(15);
+#endif
+#undef X
 struct FakeGPIOPort {
     uint8_t direction;
     uint8_t output;
@@ -193,7 +245,11 @@ constexpr auto IsPhysicalPin_v = isPhysicalPin(pin);
 inline PortOutputRegister 
 getOutputRegister(Port port) noexcept {
     switch (port) {
+#ifdef MEGACOREX
+#define X(name) case Port :: name : return VPORT ## name . OUT;
+#else
 #define X(name) case Port :: name : return PORT ## name ;
+#endif
 #include "AVRPorts.def"
 #undef X
         default: 
@@ -227,7 +283,11 @@ getOutputRegister(Pin pin) noexcept {
 inline PortInputRegister 
 getInputRegister(Port port) noexcept {
     switch (port) {
+#ifdef MEGACOREX
+#define X(name) case Port :: name : return VPORT ## name . IN ;
+#else
 #define X(name) case Port :: name : return PIN ## name ;
+#endif
 #include "AVRPorts.def"
 #undef X
         default: 
@@ -259,7 +319,11 @@ getInputRegister(Pin pin) noexcept {
 inline PortDirectionRegister 
 getDirectionRegister(Port port) noexcept {
     switch (port) {
+#ifdef MEGACOREX
+#define X(name) case Port:: name : return VPORT ## name . DIR ;
+#else
 #define X(name) case Port:: name : return DDR ## name ;
+#endif
 #include "AVRPorts.def"
 #undef X
         default: 
@@ -381,6 +445,13 @@ pulse() noexcept {
 inline decltype(auto) analogRead(Pin pin) noexcept {
     return ::analogRead(static_cast<byte>(pin));
 }
+template<Pin pin>
+inline decltype(auto) analogRead() noexcept {
+    static_assert(isAnalogPin<pin>, "Provided pin is not an analog pin!");
+    return analogRead(pin);
+}
+
+
 
 
 #endif // end CHIPSET2560_PINOUT_H
