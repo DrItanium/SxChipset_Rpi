@@ -96,18 +96,27 @@ Count = NUM_DIGITAL_PINS,
 #ifdef PIN_A11
     Analog11 = PIN_A11,
 #endif
+#if NUM_ANALOG_INPUTS > 12
 #ifdef PIN_A12
     Analog12 = PIN_A12,
 #endif
+#endif  // 13 entries
+#if NUM_ANALOG_INPUTS > 13
 #ifdef PIN_A13
     Analog13 = PIN_A13,
 #endif
+#endif // 14 entries
+#if NUM_ANALOG_INPUTS > 14
 #ifdef PIN_A14
     Analog14 = PIN_A14,
-#endif
+#endif 
+#endif // 15 entries
+#if NUM_ANALOG_INPUTS > 15
 #ifdef PIN_A15
     Analog15 = PIN_A15,
-#endif
+#endif // A15
+#endif // 16 inputs
+
 };
 enum class Port : byte {
     // stop at mega2560 tier
@@ -140,58 +149,75 @@ using PortInputRegister = volatile byte&;
 using PortDirectionRegister = volatile byte&;
 using PinState = decltype(LOW);
 using PinDirection = decltype(OUTPUT);
-template<Pin pin>
-constexpr bool isAnalogPin = false;
-#define X(idx) template<> constexpr bool isAnalogPin<Pin:: Analog ## idx > = true
+constexpr bool isAnalogPin(Pin p) noexcept {
+    switch (p) {
+#define X(idx) case Pin:: Analog ## idx : return true
 #ifdef PIN_A0
-X(0);
+        X(0);
 #endif
 #ifdef PIN_A1
-X(1);
+        X(1);
 #endif
 #ifdef PIN_A2
-X(2);
+        X(2);
 #endif
 #ifdef PIN_A3
-X(3);
+        X(3);
 #endif
 #ifdef PIN_A4
-X(4);
+        X(4);
 #endif
 #ifdef PIN_A5
-X(5);
+        X(5);
 #endif
 #ifdef PIN_A6
-X(6);
+        X(6);
 #endif
 #ifdef PIN_A7
-X(7);
+        X(7);
 #endif
 #ifdef PIN_A8
-X(8);
+        X(8);
 #endif
 #ifdef PIN_A9
-X(9);
+        X(9);
 #endif
 #ifdef PIN_A10
-X(10);
+        X(10);
 #endif
 #ifdef PIN_A11
-X(11);
+        X(11);
 #endif
+#if NUM_ANALOG_INPUTS > 12
 #ifdef PIN_A12
-X(12);
+        X(12);
 #endif
+#endif
+#if NUM_ANALOG_INPUTS > 13
 #ifdef PIN_A13
-X(13);
+        X(13);
 #endif
+#endif
+#if NUM_ANALOG_INPUTS > 14
 #ifdef PIN_A14
-X(14);
+        X(14);
 #endif
+#endif
+#if NUM_ANALOG_INPUTS > 15
 #ifdef PIN_A15
-X(15);
+        X(15);
+#endif
 #endif
 #undef X
+
+        default:
+            return false;
+    }
+}
+
+template<Pin pin>
+constexpr auto isAnalogPin_v = isAnalogPin(pin);
+
 struct FakeGPIOPort {
     uint8_t direction;
     uint8_t output;
@@ -222,7 +248,11 @@ constexpr bool validPort(Port port) noexcept {
 [[gnu::always_inline]]
 [[nodiscard]] constexpr decltype(auto) getPinMask(Pin pin) noexcept {
     switch (pin) {
+#ifdef MEGACOREX
+#define X(port, offset) case Pin :: Port ## port ## offset : return PIN ## offset ## _bm ; 
+#else
 #define X(port, offset) case Pin :: Port ## port ## offset : return _BV ( P ## port ## offset) ;
+#endif
 #include "AVRPins.def"
 #undef X
         default:
@@ -442,15 +472,29 @@ pulse() noexcept {
     toggle<pin>();
 }
 
+[[gnu::always_inline]]
 inline decltype(auto) analogRead(Pin pin) noexcept {
     return ::analogRead(static_cast<byte>(pin));
 }
 template<Pin pin>
+[[gnu::always_inline]]
 inline decltype(auto) analogRead() noexcept {
-    static_assert(isAnalogPin<pin>, "Provided pin is not an analog pin!");
+    static_assert(isAnalogPin_v<pin>, "Provided pin is not an analog pin!");
     return analogRead(pin);
 }
 
+#ifdef MEGACOREX
+[[gnu::always_inline]]
+inline decltype(auto) 
+digitalReadFast(Pin pin) noexcept {
+    return ::digitalReadFast(static_cast<byte>(pin));
+}
+[[gnu::always_inline]]
+inline void 
+digitalWriteFast(Pin pin, PinState state) noexcept {
+    ::digitalWriteFast(static_cast<byte>(pin), state);
+}
+#endif  // end defined MEGACOREX
 
 
 
