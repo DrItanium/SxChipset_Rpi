@@ -1,0 +1,6 @@
+{
+	"name": "chipset",
+	"version" : "1",
+	"description" : "Atmega2560 Chipset Common Code",
+	"keywords" : "chipset"
+}
