@@ -348,8 +348,6 @@ setup() {
     X(A15);
 #undef X
     randomSeed(currentRandomSeed);
-    Wire.begin();
-    SPI.begin();
     ush_init(&ush, &ush_desc);
 #define NELEM(obj) (sizeof(obj) / sizeof(obj[0]))
     ush_commands_add(&ush, &cmd, cmdFiles, NELEM(cmdFiles));
