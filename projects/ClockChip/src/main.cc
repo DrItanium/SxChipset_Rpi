@@ -23,6 +23,7 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 #include <Arduino.h>
+#include <Pinout.h>
 #include <Event.h>
 #include <Logic.h>
 #include <Wire.h>
@@ -36,31 +37,31 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 // PORTA contains all useful stuff so keep it reserved for that
 // the sodium connector board uses Serial2 for printing out messages
-constexpr auto DEBUG_TXD = PIN_PA0;
-constexpr auto DEBUG_RXD = PIN_PA1;
-constexpr auto TWI_SDA = PIN_PA2;
-constexpr auto TWI_SCL = PIN_PA3;
-constexpr auto SPI_MOSI = PIN_PA4;
-constexpr auto SPI_MISO = PIN_PA5;
-constexpr auto SPI_SCK = PIN_PA6;
-constexpr auto CLKOUT = PIN_PA7;
-constexpr auto CLK960_2 = PIN_PC2;
-constexpr auto SensorChannel0 = PIN_PD0;
-constexpr auto SensorChannel1 = PIN_PD1;
-constexpr auto SensorChannel2 = PIN_PD2;
-constexpr auto SensorChannel3 = PIN_PD3;
-constexpr auto SensorChannel4 = PIN_PD4;
-constexpr auto SensorChannel5 = PIN_PD5;
-constexpr auto SensorChannel6 = PIN_PD6;
-constexpr auto SensorChannel7 = PIN_PD7;
-constexpr auto CLK960_1 = PIN_PF2;
-constexpr auto SensorPOT0 = PIN_PF3;
-constexpr auto SensorPOT1 = PIN_PF4;
-constexpr auto SensorPOT2 = PIN_PF5;
-constexpr auto ClockConfigurationBit = PIN_PF6;
+constexpr auto DEBUG_TXD = Pin::PortA0;
+constexpr auto DEBUG_RXD = Pin::PortA1;
+constexpr auto TWI_SDA = Pin::PortA2;
+constexpr auto TWI_SCL = Pin::PortA3;
+constexpr auto SPI_MOSI = Pin::PortA4;
+constexpr auto SPI_MISO = Pin::PortA5;
+constexpr auto SPI_SCK = Pin::PortA6;
+constexpr auto CLKOUT = Pin::PortA7;
+constexpr auto CLK960_2 = Pin::PortC2;
+constexpr auto SensorChannel0 = Pin::PortD0;
+constexpr auto SensorChannel1 = Pin::PortD1;
+constexpr auto SensorChannel2 = Pin::PortD2;
+constexpr auto SensorChannel3 = Pin::PortD3;
+constexpr auto SensorChannel4 = Pin::PortD4;
+constexpr auto SensorChannel5 = Pin::PortD5;
+constexpr auto SensorChannel6 = Pin::PortD6;
+constexpr auto SensorChannel7 = Pin::PortD7;
+constexpr auto CLK960_1 = Pin::PortF2;
+constexpr auto SensorPOT0 = Pin::PortF3;
+constexpr auto SensorPOT1 = Pin::PortF4;
+constexpr auto SensorPOT2 = Pin::PortF5;
+constexpr auto ClockConfigurationBit = Pin::PortF6;
 
 constexpr auto NumberOfAnalogChannels = 11;
-using AnalogChannelKind = decltype(PIN_PD0);
+using AnalogChannelKind = decltype(Pin::PortD0);
 constexpr AnalogChannelKind AnalogChannels[NumberOfAnalogChannels] {
     SensorChannel0,
     SensorChannel1,

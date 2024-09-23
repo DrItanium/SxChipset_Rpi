@@ -32,6 +32,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Pinout.h"
 #include "Setup.h"
 namespace Pins {
+    constexpr auto SD_EN = Pin::PortB0;
     constexpr auto INT960_0 = Pin::PortB4;
     constexpr auto INT960_1 = Pin::PortB5;
     constexpr auto INT960_2 = Pin::PortB6;

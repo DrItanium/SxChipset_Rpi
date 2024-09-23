@@ -60,7 +60,54 @@ Count = NUM_DIGITAL_PINS,
     LED = LED_BUILTIN,
 #endif
 
-    SD_EN = PortB0,
+#ifdef PIN_A0
+    Analog0 = PIN_A0,
+#endif
+#ifdef PIN_A1
+    Analog1 = PIN_A1,
+#endif
+#ifdef PIN_A2
+    Analog2 = PIN_A2,
+#endif
+#ifdef PIN_A3
+    Analog3 = PIN_A3,
+#endif
+#ifdef PIN_A4
+    Analog4 = PIN_A4,
+#endif
+#ifdef PIN_A5
+    Analog5 = PIN_A5,
+#endif
+#ifdef PIN_A6
+    Analog6 = PIN_A6,
+#endif
+#ifdef PIN_A7
+    Analog7 = PIN_A7,
+#endif
+#ifdef PIN_A8
+    Analog8 = PIN_A8,
+#endif
+#ifdef PIN_A9
+    Analog9 = PIN_A9,
+#endif
+#ifdef PIN_A10
+    Analog10 = PIN_A10,
+#endif
+#ifdef PIN_A11
+    Analog11 = PIN_A11,
+#endif
+#ifdef PIN_A12
+    Analog12 = PIN_A12,
+#endif
+#ifdef PIN_A13
+    Analog13 = PIN_A13,
+#endif
+#ifdef PIN_A14
+    Analog14 = PIN_A14,
+#endif
+#ifdef PIN_A15
+    Analog15 = PIN_A15,
+#endif
 };
 enum class Port : byte {
     // stop at mega2560 tier
@@ -330,5 +377,10 @@ pulse() noexcept {
     toggle<pin>();
     toggle<pin>();
 }
+
+inline decltype(auto) analogRead(Pin pin) noexcept {
+    return ::analogRead(static_cast<byte>(pin));
+}
+
 
 #endif // end CHIPSET2560_PINOUT_H
