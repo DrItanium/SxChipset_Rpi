@@ -31,10 +31,12 @@ namespace {
     volatile bool basicDevicesConfigured = false;
 }
 void
-begin() noexcept {
+begin(uint32_t serialRate, uint32_t twiRate) noexcept {
     if (!basicDevicesConfigured) {
         basicDevicesConfigured = true;
+        Serial.begin(serialRate);
         Wire.begin();
+        Wire.setClock(twiRate);
         SPI.begin();
     }
 }

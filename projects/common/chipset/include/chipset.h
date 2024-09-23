@@ -31,7 +31,7 @@ namespace chipset {
     /**
      * @brief configure the default devices including Wire and SPI
      */
-    void begin() noexcept;
+    void begin(uint32_t serialBaudRate = 115200, uint32_t wireClockRate = 100'000) noexcept;
     bool configured() noexcept;
 } // end namespace chipset
 #endif // end LIBCHIPSET_H__
