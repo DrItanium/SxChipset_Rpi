@@ -22,6 +22,9 @@
 #if defined(PORTH)
     X(H)
 #endif
+#if defined(PORTI)
+	X(I)
+#endif
 #if defined(PORTJ)
     X(J)
 #endif
