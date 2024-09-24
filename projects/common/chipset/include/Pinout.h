@@ -215,6 +215,13 @@ constexpr bool isAnalogPin(Pin p) noexcept {
     }
 }
 
+constexpr bool hasPWM(Pin p) noexcept {
+    return digitalPinHasPWM(static_cast<byte>(p));
+}
+
+template<Pin pin>
+constexpr auto hasPWM_v = hasPWM(pin);
+
 template<Pin pin>
 constexpr auto isAnalogPin_v = isAnalogPin(pin);
 
@@ -245,6 +252,9 @@ constexpr bool validPort(Port port) noexcept {
             return false;
     }
 }
+template<Port port>
+constexpr bool validPort_v = validPort(port);
+
 [[gnu::always_inline]]
 [[nodiscard]] constexpr decltype(auto) getPinMask(Pin pin) noexcept {
     switch (pin) {
