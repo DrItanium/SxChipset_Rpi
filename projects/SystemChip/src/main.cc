@@ -385,17 +385,25 @@ setupHardware() {
     // servers should be setup last to prevent race conditions
     setupServers();
 }
+void
+readySignalTriggered() noexcept {
+    _readySynchronized = true;
+}
+void
+addressStateEnter() noexcept {
+    _adsTriggered = true;
+}
 void 
 setup() {
     _systemBooted = false;
     setupHardware();
     _systemBooted = true;
     delay(1000); // give us enough delay time
-    attachInterrupt(digitalPinToInterrupt(READY_SYNC), []() { _readySynchronized = true; }, FALLING);
-    attachInterrupt(digitalPinToInterrupt(ADS), []() { _adsTriggered = true; }, RISING);
+    i960::pullCPUOutOfReset();
+    attachInterrupt(digitalPinToInterrupt(READY_SYNC), readySignalTriggered, RISING);
+    attachInterrupt(digitalPinToInterrupt(ADS), addressStateEnter, RISING);
     _adsTriggered = false;
     _readySynchronized = false;
-    i960::pullCPUOutOfReset();
     Serial.println("Pulled CPU out of reset");
 }
 
