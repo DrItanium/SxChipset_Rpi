@@ -85,34 +85,34 @@ enum class Pinout : int {
     // abstraction layer
 #define X(from, to) PI ## from = D ## to 
 #define Y(x) X(x, x)
-    X(2, 0),
-    X(3, 1),
-    X(4, 2),
-    X(14, 3),
-    X(15, 4),
-    X(18, 5),
-    X(17, 6),
-    X(27, 7),
-    X(23, 8),
-    X(22, 9),
-    X(24, 10),
-    X(10, 11),
-    X(25, 12),
-    X(9, 13),
-    X(8, 14),
-    X(11, 15),
-    X(7, 16),
-    X(1, 17),
-    X(0, 18),
-    X(5, 19),
-    X(12, 20),
-    X(6, 21),
-    X(13, 22),
-    X(16, 23),
-    X(19, 26),
-    X(20, 27),
-    X(26, 28),
-    X(21, 29),
+    Y(0),
+    Y(1),
+    Y(2),
+    Y(3),
+    Y(4),
+    Y(5),
+    Y(6),
+    Y(7),
+    Y(8),
+    Y(9),
+    Y(10),
+    Y(11),
+    Y(12),
+    Y(13),
+    Y(14),
+    Y(15),
+    Y(16),
+    Y(17),
+    Y(18),
+    Y(19),
+    Y(20),
+    Y(21),
+    Y(22),
+    Y(23),
+    X(24, 36),
+    X(25, 37),
+    X(26, 40),
+    X(27, 41),
 #undef Y
 #undef X
     SA5 = PI0,
@@ -131,18 +131,24 @@ enum class Pinout : int {
     SD5 = PI13,
     SD6 = PI14,
     SD7 = PI15,
-    READY_SYNC = D30,
-    READY = D31,
-    RESET = D32,
-    CLK2 = D33,
-    ADS = D34,
-    BLAST = D35,
-    WR = D36,
-    BE1 = D37,
-    BE0 = D38,
+    INT960_0 = PI16,
+    INT960_1 = PI17,
+    INT960_2 = PI18,
+    INT960_3 = PI19,
+    READY_SYNC = PI20,
+    ADS = PI21,
+    BLAST = PI22,
+    WR = PI23,
+    BE1 = PI24,
+    BE0 = PI25,
+    READY = PI26,
+    RESET = PI27,
 };
 #define X(name) constexpr auto name = static_cast<int>( Pinout :: name )
-X(CLK2);
+X(INT960_0);
+X(INT960_1);
+X(INT960_2);
+X(INT960_3);
 X(SD0);
 X(SD1);
 X(SD2);
@@ -709,23 +715,6 @@ const struct ush_file_descriptor devFiles[] = {
             return strlen((char*)(*data));
         },
     },
-#if 0
-    {
-        .name = "clkgen",
-        .description = nullptr,
-        .help = nullptr,
-        .exec = nullptr,
-        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) noexcept {
-            if (size < 1) {
-                return;
-            }
-            float value = 0;
-            (void)sscanf((char*)data, "%f", &value);
-            ush_printf(self, "Frequency updated to %f\n", value);
-            analogWriteFrequency(CLK2, value);
-        },
-    },
-#endif
 };
 
 void 
@@ -995,8 +984,14 @@ configurePinModes() noexcept {
     pinMode(READY, OUTPUT);
     pinMode(WR, INPUT);
     pinMode(RESET, OUTPUT);
-    analogWriteFrequency(CLK2, 10'000'000);
-    analogWrite(CLK2, 128);
+    pinMode(INT960_0, OUTPUT);
+    pinMode(INT960_1, OUTPUT);
+    pinMode(INT960_2, OUTPUT);
+    pinMode(INT960_3, OUTPUT);
+    digitalWrite(INT960_0, HIGH);
+    digitalWrite(INT960_1, LOW);
+    digitalWrite(INT960_2, LOW);
+    digitalWrite(INT960_3, HIGH);
     digitalWrite(READY, HIGH);
     i960::putCPUInReset();
 }
