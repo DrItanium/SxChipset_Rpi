@@ -506,6 +506,4 @@ digitalWriteFast(Pin pin, PinState state) noexcept {
 }
 #endif  // end defined MEGACOREX
 
-
-
 #endif // end CHIPSET2560_PINOUT_H
