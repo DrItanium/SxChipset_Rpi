@@ -26,6 +26,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Wire.h>
 #include <SPI.h>
 #include <Deception.h>
+#include <SD.h>
 
 
 #include "Types.h"
@@ -37,9 +38,6 @@ namespace Pins {
     constexpr auto INT960_1 = Pin::PortB5;
     constexpr auto INT960_2 = Pin::PortB6;
     constexpr auto INT960_3 = Pin::PortB7;
-    constexpr auto ReadyWaitDone = Pin::PortD5;
-    constexpr auto CacheLineLookup = Pin::PortD6;
-    constexpr auto TransactionStatus = Pin::PortD7;
     constexpr auto BE0 = Pin::PortE2;
     constexpr auto BE1 = Pin::PortE3;
     constexpr auto ADS = Pin::PortE4;
@@ -62,7 +60,6 @@ namespace Ports {
     constexpr auto AddressHighest = Port::L;
 }
 
-constexpr bool EnableStateDebuggingPins = false;
 Deception::TwoWireBackingStore PCLink2(Wire, Deception::TWI_MemoryControllerIndex);
 using CacheAddress = __uint24;
 //using CacheAddress = uint32_t;
@@ -327,14 +324,8 @@ template<bool readOperation>
 inline
 void
 doMemoryTransaction(SplitWord32 address) noexcept {
-    if constexpr (EnableStateDebuggingPins) {
-        digitalWrite<Pins::CacheLineLookup, LOW>();
-    }
     auto& line = onboardCache.find(PCLink2, address.lo24);
     auto* ptr = line.getLineData(address.getCacheOffset());
-    if constexpr (EnableStateDebuggingPins) {
-        digitalWrite<Pins::CacheLineLookup, HIGH>();
-    }
     if constexpr (readOperation) {
         uint16_t* ptr16 = reinterpret_cast<uint16_t*>(ptr);
         auto val = ptr16[0];
@@ -503,12 +494,6 @@ getAddress() noexcept {
 
 void
 configurePins() noexcept {
-    pinMode(Pins::CacheLineLookup, OUTPUT);
-    pinMode(Pins::TransactionStatus, OUTPUT);
-    pinMode(Pins::ReadyWaitDone, OUTPUT);
-    digitalWrite<Pins::ReadyWaitDone, HIGH>();
-    digitalWrite<Pins::TransactionStatus, HIGH>();
-    digitalWrite<Pins::CacheLineLookup, HIGH>();
     pinMode(Pins::RESET, OUTPUT);
     digitalWrite<Pins::RESET, LOW>();
     pinMode(Pins::INT960_0, OUTPUT);
@@ -573,14 +558,8 @@ void
 loop() {
     waitForNewTransaction();
     {
-        if constexpr (EnableStateDebuggingPins) {
-            digitalWrite<Pins::TransactionStatus, LOW>();
-        }
         {
             if (auto address = getAddress(); isReadOperation()) {
-                if constexpr (EnableStateDebuggingPins) {
-                    digitalWrite<Pins::ReadyWaitDone, HIGH>();
-                }
                 configureDataLinesForRead();
                 if (address.isIOOperation()) {
                     doIOTransaction<true>(address);
@@ -588,9 +567,6 @@ loop() {
                     doMemoryTransaction<true>(address);
                 }
             } else {
-                if constexpr (EnableStateDebuggingPins) {
-                    digitalWrite<Pins::ReadyWaitDone, LOW>();
-                }
                 configureDataLinesForWrite();
                 if (address.isIOOperation()) {
                     doIOTransaction<false>(address);
@@ -599,9 +575,6 @@ loop() {
                 }
 
             }
-        }
-        if constexpr (EnableStateDebuggingPins) {
-            digitalWrite<Pins::TransactionStatus, HIGH>();
         }
     }
 }
