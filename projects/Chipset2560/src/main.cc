@@ -38,24 +38,25 @@ namespace Pins {
     constexpr auto INT960_1 = Pin::PortB5;
     constexpr auto INT960_2 = Pin::PortB6;
     constexpr auto INT960_3 = Pin::PortB7;
-    constexpr auto BE0 = Pin::PortE2;
-    constexpr auto BE1 = Pin::PortE3;
+    constexpr auto BE0 = Pin::PortD4;
+    constexpr auto BE1 = Pin::PortD5;
+    constexpr auto BLAST = Pin::PortD6;
+    constexpr auto WR = Pin::PortD7;
+    constexpr auto RESET = Pin::PortE2;
+    constexpr auto HOLD = Pin::PortE3;
     constexpr auto ADS = Pin::PortE4;
-    constexpr auto BLAST = Pin::PortE5;
-    constexpr auto HLDA = Pin::PortE6;
+    constexpr auto HLDA = Pin::PortE5;
+    // PortE6 uncommitted
     constexpr auto READY_SYNC_IN = Pin::PortE7;
-    constexpr auto HOLD = Pin::PortG0;
-    constexpr auto LOCK = Pin::PortG1;
-    constexpr auto RESET = Pin::PortG2;
-    constexpr auto FAIL = Pin::PortG3;
+    constexpr auto TEENSY_CS = Pin::PortG3;
     constexpr auto READY = Pin::PortG4;
-    constexpr auto WR = Pin::PortG5;
+    // PortG5 uncommitted
 }
 namespace Ports {
     constexpr auto DataLower = Port::C;
     constexpr auto DataUpper = Port::F;
-    constexpr auto AddressLowest = Port::K;
-    constexpr auto AddressLower = Port::A;
+    constexpr auto AddressLowest = Port::H;
+    constexpr auto AddressLower = Port::K;
     constexpr auto AddressHigher = Port::J;
     constexpr auto AddressHighest = Port::L;
 }
@@ -507,8 +508,8 @@ configurePins() noexcept {
     pinMode(Pins::HLDA, INPUT);
     pinMode(Pins::READY_SYNC_IN, INPUT);
     pinMode(Pins::HOLD, OUTPUT);
-    pinMode(Pins::LOCK, INPUT);
-    pinMode(Pins::FAIL, INPUT);
+    //pinMode(Pins::LOCK, INPUT);
+    //pinMode(Pins::FAIL, INPUT);
     pinMode(Pins::READY, OUTPUT);
     pinMode(Pins::WR, INPUT);
     // deactivate interrupts
