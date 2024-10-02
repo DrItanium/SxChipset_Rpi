@@ -62,7 +62,7 @@ namespace Ports {
     constexpr auto AddressHighest = Port::L;
 }
 
-constexpr bool ThisDeviceHandlesI960Requests = false;
+constexpr bool ThisDeviceHandlesI960Requests = true;
 constexpr bool EnableStateDebuggingPins = false;
 Deception::TwoWireBackingStore PCLink2(Wire, Deception::TWI_MemoryControllerIndex);
 using CacheAddress = __uint24;

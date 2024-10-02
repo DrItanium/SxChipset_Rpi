@@ -218,8 +218,15 @@ namespace Deception {
             using BackingStore_t = typename Line_t::BackingStore_t;
             static constexpr auto NumBytesPerLine = Line_t::NumBytes;
             static constexpr auto NumCacheBytes = NumLines * NumBytesPerLine;
+            template<bool useOldIndexComputation = false>
             static constexpr uint8_t computeIndex(Address_t input) noexcept {
-                return (static_cast<uint16_t>(input) >> Line_t::ShiftAmount) & LineMask;
+                if constexpr (useOldIndexComputation) {
+                    return (static_cast<uint16_t>(input) >> Line_t::ShiftAmount) & LineMask;
+                } else {
+                    uint8_t base = static_cast<uint8_t>(input >> 8) & LineMask;
+                    uint8_t offset = static_cast<uint8_t>(input);
+                    return base + offset;
+                }
             }
             static constexpr uint8_t computeOffset(uint8_t input) noexcept {
                 return Line_t::computeByteOffset(input);
@@ -251,6 +258,7 @@ namespace Deception {
         private:
             Line_t lines[NumLines];
     };
+
 
 } // end namespace Deception
 #endif // end DECEPTION_H__
