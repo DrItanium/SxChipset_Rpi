@@ -219,13 +219,82 @@ namespace Deception {
             static constexpr auto NumBytesPerLine = Line_t::NumBytes;
             static constexpr auto NumCacheBytes = NumLines * NumBytesPerLine;
             template<bool useOldIndexComputation = false>
+            [[gnu::used]]
             static constexpr uint8_t computeIndex(Address_t input) noexcept {
                 if constexpr (useOldIndexComputation) {
                     return (static_cast<uint16_t>(input) >> Line_t::ShiftAmount) & LineMask;
                 } else {
-                    uint8_t base = static_cast<uint8_t>(input >> 8) & LineMask;
+                    // In order to eliminate the expensive right shifts that
+                    // come with the old design, we treat the lower 16-bits of
+                    // the address as two 8-bit numbers that are combined
+                    // through either add or xor (right now it is add). 
+                    //
+                    // What is going on is that the index is now the lower byte
+                    // and the lowest 4 bits of the key are now in the lowest
+                    // byte.
+                    //
+                    // So if you have 0xFDEDABCD you first get 0xFDEDABC0 and
+                    // then we take the lower half and use it to compute the
+                    // index. So we would have 0xABC0. Since the original index
+                    // 0xBC required multiple expensive shift operations to
+                    // extract we need to do something different. So now we
+                    // treat 0xAB as the index (the compiler does not need to
+                    // do anything since it will already be stored in a
+                    // collection of registers) with the lowest byte (0xC0)
+                    // being the offset. At this point we will then just
+                    // combine the two numbers together (which also requires no
+                    // register movement). The result is the cache index. 
+                    //
+                    // This is _much_ faster overall because of its lack of
+                    // register movement. It does mean that key compares have
+                    // to compare the entire key (not a subset). The base must
+                    // be included since you cannot eliminate it from the
+                    // number (since we could reconstruct). 
+                    //
+                    // This isn't actually an issue since I have been storing
+                    // the key as the full base address with no modification.
+                    // This is not only much faster but also can be expanded to
+                    // control how the comparison operation works. 
+                    //
+                    // This modification has the side effect of cache lines
+                    // being used in a different order than previously. So,
+                    // 0x0000 will translate to line 0 in the cache. 0x0010
+                    // will translate to line 16 in the cache. And so on, the
+                    // combination should also prevent some forms of thrashing
+                    // that happen on 4k boundaries. 
+                    //
+                    // This is very important because one of the alignment
+                    // directives in the i960 assembler is to align it to 4k
+                    // boundaries. It also means that copying from addresses
+                    // like 0x1000 to an address like 0x2000 will no longer
+                    // collide. Instead, the lines will be stashed within the
+                    // cache at different offsets (0x10 and 0x20 respectively). 
+                    //
+                    // Obviously, thrashing can still happen but the
+                    // rearrangement of the lowest 4bits of the key and the
+                    // index should eliminate some of the nastiest problems.
+                    //
+                    //
+                    // This design is also just as robust with larger cache
+                    // lines too. The masking is just a little different. We
+                    // just have a different mask overall. 
+                    //
+                    // With a 32-byte cache line, the lowest 5-bits are ignored
+                    // but we also have 128 cache lines. Thus we need to mask
+                    // out the index at the end.
+                    //
+                    // We do not care if the key bits leak into the base index
+                    // with this design since we are going to mask it down at
+                    // the end. If you use a 256 entry cache then there is no
+                    // extra step for masking but even with that being said. It
+                    // is a very simple mask operation
+                    uint8_t base = static_cast<uint8_t>(input >> 8);
+                    // we assume that the masking of the offset already took
+                    // place.
                     uint8_t offset = static_cast<uint8_t>(input);
-                    return base + offset;
+                    // we only perform the masking at the end to make sure that
+                    // the index isn't out of bounds
+                    return (base ^ offset) & LineMask;
                 }
             }
             static constexpr uint8_t computeOffset(uint8_t input) noexcept {
