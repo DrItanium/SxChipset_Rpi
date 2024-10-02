@@ -295,6 +295,15 @@ namespace Deception {
                     // we only perform the masking at the end to make sure that
                     // the index isn't out of bounds
                     return (base ^ offset) & LineMask;
+
+                    // This optimization only really works up to 256 entries in
+                    // size. So if we increase the cache line size then the
+                    // size of the cache can also increase as well. Up to 256
+                    // bytes per line by 256 lines. Which is 64k in size. Then
+                    // the actual offset requires no effort at all. 
+                    //
+                    // With 128 byte lines, we just have a spread of 128
+                    // between.
                 }
             }
             static constexpr uint8_t computeOffset(uint8_t input) noexcept {
