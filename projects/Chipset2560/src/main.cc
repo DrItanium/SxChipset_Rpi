@@ -524,6 +524,22 @@ configurePins() noexcept {
     getDirectionRegister<Ports::AddressLower>() = 0;
     getDirectionRegister<Ports::AddressHigher>() = 0;
     getDirectionRegister<Ports::AddressHighest>() = 0;
+    // no wait states
+    bitClear(XMCRA, SRW11);
+    bitClear(XMCRA, SRW10);
+    bitClear(XMCRA, SRW01);
+    bitClear(XMCRA, SRW00);
+    // half and half sector limits (doesn't really matter since it will an
+    // 8-bit space
+    bitClear(XMCRA, SRL0);
+    bitClear(XMCRA, SRL1);
+    bitSet(XMCRA, SRL2); 
+    // no high address bits!
+    bitSet(XMCRB, XMM0); 
+    bitSet(XMCRB, XMM1); 
+    bitSet(XMCRB, XMM2); 
+    bitClear(XMCRB, XMBK); // no bus keeper
+    bitSet(XMCRA, SRE); // enable the EBI
 }
 void
 setup() {
