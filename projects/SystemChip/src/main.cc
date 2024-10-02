@@ -115,64 +115,8 @@ enum class Pinout : int {
     X(27, 41),
 #undef Y
 #undef X
-    SA5 = PI0,
-    SA4 = PI1,
-    SA3 = PI2,
-    SA2 = PI3,
-    SA1 = PI4,
-    SA0 = PI5,
-    SOE = PI6,
-    SWE = PI7,
-    SD0 = PI8,
-    SD1 = PI9,
-    SD2 = PI10,
-    SD3 = PI11,
-    SD4 = PI12,
-    SD5 = PI13,
-    SD6 = PI14,
-    SD7 = PI15,
-    INT960_0 = PI16,
-    INT960_1 = PI17,
-    INT960_2 = PI18,
-    INT960_3 = PI19,
-    READY_SYNC = PI20,
-    ADS = PI21,
-    BLAST = PI22,
-    WR = PI23,
-    BE1 = PI24,
-    BE0 = PI25,
-    READY = PI26,
-    RESET = PI27,
 };
 #define X(name) constexpr auto name = static_cast<int>( Pinout :: name )
-X(INT960_0);
-X(INT960_1);
-X(INT960_2);
-X(INT960_3);
-X(SD0);
-X(SD1);
-X(SD2);
-X(SD3);
-X(SD4);
-X(SD5);
-X(SD6);
-X(SD7);
-X(READY_SYNC);
-X(READY);
-X(ADS);
-X(BLAST);
-X(BE0);
-X(BE1);
-X(WR);
-X(SOE);
-X(SWE);
-X(SA0);
-X(SA1);
-X(SA2);
-X(SA3);
-X(SA4);
-X(SA5);
-X(RESET);
 #undef X
 using Address = uint32_t;
 using RawCacheLineData = uint8_t*;
