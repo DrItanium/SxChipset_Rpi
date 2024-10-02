@@ -219,7 +219,6 @@ namespace Deception {
             static constexpr auto NumBytesPerLine = Line_t::NumBytes;
             static constexpr auto NumCacheBytes = NumLines * NumBytesPerLine;
             template<bool useOldIndexComputation = false>
-            [[gnu::used]]
             static constexpr uint8_t computeIndex(Address_t input) noexcept {
                 if constexpr (useOldIndexComputation) {
                     return (static_cast<uint16_t>(input) >> Line_t::ShiftAmount) & LineMask;
