@@ -289,7 +289,7 @@ namespace Deception {
                     // extra step for masking but even with that being said. It
                     // is a very simple mask operation
                     uint8_t base = static_cast<uint8_t>(input >> 8);
-                    // we assume that the masking of the offset already took
+                    // we assume that the masking of the line offset already took
                     // place.
                     uint8_t offset = static_cast<uint8_t>(input);
                     // we only perform the masking at the end to make sure that
