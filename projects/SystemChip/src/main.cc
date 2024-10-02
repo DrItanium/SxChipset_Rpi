@@ -189,54 +189,6 @@ MEMORY_POOL_SECTION uint8_t memory960[MemoryPoolSize];
 static_assert(MemoryPoolSize <= MaxMemoryPoolSize, "Requested memory capacity is too large!");
 static_assert(MemoryPoolSize >= MinimumPoolSize, "Requested memory capacity will not fit a default boot image!");
 
-union [[gnu::packed]] DataInterfaceInput {
-    struct {
-        uint8_t d0 : 1;
-        uint8_t d1 : 1;
-        uint8_t d2 : 1;
-        uint8_t d3 : 1;
-        uint8_t d4 : 1;
-        uint8_t d5 : 1;
-        uint8_t d6 : 1;
-        uint8_t d7 : 1;
-    };
-    uint8_t full;
-};
-template<typename T>
-union [[gnu::packed]] SplitWord {
-    T full;
-    static constexpr auto NumberOfBytes = sizeof(T)/sizeof(uint8_t);
-    uint8_t bytes[NumberOfBytes];
-    static_assert(NumberOfBytes < 32);
-};
-
-template<>
-union [[gnu::packed]] SplitWord<uint16_t> {
-    using T = uint16_t;
-    T full;
-    static constexpr auto NumberOfBytes = sizeof(T)/sizeof(uint8_t);
-    uint8_t bytes[NumberOfBytes];
-    struct {
-        T be1 : 1; // input
-        T be0: 1; // input
-        T wr: 1; // input
-        T den : 1; // input
-        T blast : 1; // input
-        T ads : 1; // input 
-        T lock : 1; // open drain (treat as input for now)
-        T hold : 1; // output (direct connect, treat as input)
-        T int3 : 1; // output
-        T int2 : 1; // output
-        T int1 : 1; // output
-        T int0 : 1; // output 
-        T reset : 1; // output (direct connect, treat as input)
-        T ready : 1; // output (direct connect, treat as input)
-        T hlda : 1; // input
-        T fail : 1; // input
-    } ctl;
-};
-using SplitWord32 = SplitWord<uint32_t>;
-using SplitWord16 = SplitWord<uint16_t>;
 void setupMicroshell();
 
 void 
