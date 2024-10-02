@@ -293,7 +293,7 @@ namespace Deception {
                     uint8_t offset = static_cast<uint8_t>(input);
                     // we only perform the masking at the end to make sure that
                     // the index isn't out of bounds
-                    return (base ^ offset) & LineMask;
+                    return (base + offset) & LineMask;
 
                     // This optimization only really works up to 256 entries in
                     // size. So if we increase the cache line size then the
