@@ -68,6 +68,8 @@ constexpr auto CacheLineCount = 256;
 using CacheLine = Deception::CacheLine16<CacheAddress, Deception::TwoWireBackingStore>;
 using DataCache = Deception::DirectMappedCache<CacheLineCount, CacheLine>;
 DataCache onboardCache;
+static_assert(sizeof(CacheLine) <= 32);
+[[gnu::address(0xFF00)]] volatile CacheLine externalCacheLine;
 union [[gnu::packed]] SplitWord32 {
     uint8_t bytes[sizeof(uint32_t) / sizeof(uint8_t)];
     uint16_t halves[sizeof(uint32_t) / sizeof(uint16_t)];
@@ -492,38 +494,8 @@ getAddress() noexcept {
         getInputRegister<Ports::AddressHighest>()
     };
 }
-
-void
-configurePins() noexcept {
-    pinMode(Pins::RESET, OUTPUT);
-    digitalWrite<Pins::RESET, LOW>();
-    pinMode(Pins::INT960_0, OUTPUT);
-    pinMode(Pins::INT960_1, OUTPUT);
-    pinMode(Pins::INT960_2, OUTPUT);
-    pinMode(Pins::INT960_3, OUTPUT);
-    pinMode(Pins::BE0, INPUT);
-    pinMode(Pins::BE1, INPUT);
-    pinMode(Pins::ADS, INPUT);
-    pinMode(Pins::BLAST, INPUT);
-    pinMode(Pins::HLDA, INPUT);
-    pinMode(Pins::READY_SYNC_IN, INPUT);
-    pinMode(Pins::HOLD, OUTPUT);
-    //pinMode(Pins::LOCK, INPUT);
-    //pinMode(Pins::FAIL, INPUT);
-    pinMode(Pins::READY, OUTPUT);
-    pinMode(Pins::WR, INPUT);
-    // deactivate interrupts
-    digitalWrite<Pins::INT960_0, HIGH>();
-    digitalWrite<Pins::INT960_1, LOW>();
-    digitalWrite<Pins::INT960_2, LOW>();
-    digitalWrite<Pins::INT960_3, HIGH>();
-    digitalWrite<Pins::HOLD, LOW>();
-    digitalWrite<Pins::READY, HIGH>();
-
-    getDirectionRegister<Ports::AddressLowest>() = 0;
-    getDirectionRegister<Ports::AddressLower>() = 0;
-    getDirectionRegister<Ports::AddressHigher>() = 0;
-    getDirectionRegister<Ports::AddressHighest>() = 0;
+void 
+configureExternalBus() noexcept {
     // no wait states
     bitClear(XMCRA, SRW11);
     bitClear(XMCRA, SRW10);
@@ -540,6 +512,38 @@ configurePins() noexcept {
     bitSet(XMCRB, XMM2); 
     bitClear(XMCRB, XMBK); // no bus keeper
     bitSet(XMCRA, SRE); // enable the EBI
+}
+
+void
+configurePins() noexcept {
+    pinMode(Pins::RESET, OUTPUT);
+    digitalWrite<Pins::RESET, LOW>();
+    pinMode(Pins::INT960_0, OUTPUT);
+    pinMode(Pins::INT960_1, OUTPUT);
+    pinMode(Pins::INT960_2, OUTPUT);
+    pinMode(Pins::INT960_3, OUTPUT);
+    pinMode(Pins::BE0, INPUT);
+    pinMode(Pins::BE1, INPUT);
+    pinMode(Pins::ADS, INPUT);
+    pinMode(Pins::BLAST, INPUT);
+    pinMode(Pins::HLDA, INPUT);
+    pinMode(Pins::READY_SYNC_IN, INPUT);
+    pinMode(Pins::HOLD, OUTPUT);
+    pinMode(Pins::READY, OUTPUT);
+    pinMode(Pins::WR, INPUT);
+    // deactivate interrupts
+    digitalWrite<Pins::INT960_0, HIGH>();
+    digitalWrite<Pins::INT960_1, LOW>();
+    digitalWrite<Pins::INT960_2, LOW>();
+    digitalWrite<Pins::INT960_3, HIGH>();
+    digitalWrite<Pins::HOLD, LOW>();
+    digitalWrite<Pins::READY, HIGH>();
+
+    getDirectionRegister<Ports::AddressLowest>() = 0;
+    getDirectionRegister<Ports::AddressLower>() = 0;
+    getDirectionRegister<Ports::AddressHigher>() = 0;
+    getDirectionRegister<Ports::AddressHighest>() = 0;
+    configureExternalBus();
 }
 void
 setup() {
