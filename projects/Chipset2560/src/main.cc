@@ -27,11 +27,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <SPI.h>
 #include <Deception.h>
 #include <SD.h>
+#include <RTClib.h>
 
 
 #include "Types.h"
 #include "Pinout.h"
 #include "Setup.h"
+// use a ds3231 chip
+RTC_DS3231 rtc;
 namespace Pins {
     constexpr auto SD_EN = Pin::PortB0;
     constexpr auto INT960_0 = Pin::PortB4;
@@ -48,9 +51,11 @@ namespace Pins {
     constexpr auto HLDA = Pin::PortE5;
     constexpr auto LOCK = Pin::PortE6;
     constexpr auto READY_SYNC_IN = Pin::PortE7;
-    constexpr auto TEENSY_CS = Pin::PortG3;
     constexpr auto READY = Pin::PortG4;
+    // PortG3 uncommitted
     // PortG5 uncommitted
+    // PortD2 uncommitted
+    // PortD3 uncommitted
 }
 namespace Ports {
     constexpr auto DataLower = Port::C;
@@ -545,6 +550,15 @@ configurePins() noexcept {
     getDirectionRegister<Ports::AddressHighest>() = 0;
     configureExternalBus();
 }
+const char *daysOfTheWeek[] {
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+};
 void
 setup() {
     GPIOR0 = 0;
@@ -554,17 +568,40 @@ setup() {
     configureDataLinesForRead();
     configureInterruptSources();
     Serial.begin(115200);
+    Serial.println(F("SERIAL UP @ 115200"));
     //Serial1.begin(9600);
     SPI.begin();
     Wire.begin();
-    Wire.setClock(Deception::TWI_ClockRate);
+    //Wire.setClock(Deception::TWI_ClockRate);
     onboardCache.begin();
+#if 0
     PCLink2.waitForBackingStoreIdle();
     // okay now we need to setup the cache so that I can eliminate the valid
     // bit. This is done by seeding the cache with teh first 4096 bytes
     for (Address i = 0; i < DataCache::NumCacheBytes; i += DataCache::NumBytesPerLine) {
         Serial.printf(F("Seeding 0x%lx\n"), i);
         onboardCache.seed(PCLink2, i);
+    }
+#endif
+    Serial.println(F("Setting up RTC"));
+    // setup the RTC
+    if (!rtc.begin()) {
+        Serial.println(F("Couldn't find RTC"));
+        Serial.flush();
+    } else {
+        if (rtc.lostPower()) {
+            Serial.println(F("RTC lost power, setting time"));
+
+            rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+        }
+
+        DateTime now = rtc.now();
+        Serial.printf(F("%d/%d/%d (%s) %d:%d:%d\n"), now.year(), now.month(), now.day(), daysOfTheWeek[now.dayOfTheWeek()], now.hour(), now.minute(), now.second());
+        Serial.printf(F(" since midnight 1/1/1970 = %lds = %ldd\n"), now.unixtime(), now.unixtime() / 86400L);
+    }
+    while (true) {
+        // do nothing after this point for now
+        delay(1000);
     }
     digitalWrite<Pins::RESET, HIGH>();
 }
