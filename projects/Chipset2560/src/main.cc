@@ -29,7 +29,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <SD.h>
 #include <RTClib.h>
 #include <SparkFun_Alphanumeric_Display.h>
-#include <SparkFun_MAX1704x_Fuel_Gauge_Arduino_Library.h>
+#include <Adafruit_Si7021.h>
 
 #include "Types.h"
 #include "Pinout.h"
@@ -61,7 +61,7 @@ struct OptionalDevice {
 // use a ds3231 chip
 OptionalDevice<RTC_DS3231> rtc;
 OptionalDevice<HT16K33> numericDisplay;
-OptionalDevice<SFE_MAX1704X> lipo{MAX1704X_MAX17048};
+OptionalDevice<Adafruit_Si7021> sensor_si7021;
 namespace Pins {
     constexpr auto SD_EN = Pin::PortB0;
     constexpr auto INT960_0 = Pin::PortB4;
@@ -636,19 +636,36 @@ setup() {
         numericDisplay->printChar('t', 3);
         numericDisplay->updateDisplay();
     }
-    if (!lipo.begin()) {
-        Serial.println(F("MAX17043 not detected. No battery found!"));
+    if (!sensor_si7021.begin()) {
+        Serial.println(F("Si7021 Sensor not found!"));
     } else {
-        Serial.println(F("MAX17043 detected!"));
-        lipo->quickStart();
-        lipo->setThreshold(20); // set alert threshold to 20%
+        Serial.print(F("Found model "));
+        switch (sensor_si7021->getModel()) {
+            case SI_Engineering_Samples: 
+                Serial.print(F("SI engineering samples")); 
+                break;
+            case SI_7013: 
+                Serial.print(F("Si7013")); 
+                break;
+            case SI_7020: 
+                Serial.print(F("Si7020")); 
+                break;
+            case SI_7021: 
+                Serial.print(F("Si7021")); 
+                break;
+            default: 
+                Serial.print(F("Unknown")); 
+                break;
+        }
+        Serial.printf(F(" Rev(%d) Serial #"), sensor_si7021->getRevision());
+        Serial.print(sensor_si7021->sernum_a, HEX);
+        Serial.println(sensor_si7021->sernum_b, HEX);
 
-        auto voltage = lipo->getVoltage();
-        auto stateOfChange = lipo->getSOC();
-        auto alert = lipo->getAlert();
-        Serial.printf(F("Voltage: %f V\n"), voltage);
-        Serial.printf(F("Percentage: %f %\n"), stateOfChange);
-        Serial.printf(F("Alert: %d\n"), alert);
+        Serial.println();
+        Serial.print(F("Humidity:    ")); 
+        Serial.print(sensor_si7021->readHumidity(), 2);
+        Serial.print(F("\tTemperature:    ")); 
+        Serial.println(sensor_si7021->readTemperature(), 2);
     }
     while (true) {
         // do nothing after this point for now
