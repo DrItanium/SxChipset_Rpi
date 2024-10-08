@@ -61,7 +61,7 @@ struct OptionalDevice {
 // use a ds3231 chip
 OptionalDevice<RTC_DS3231> rtc;
 OptionalDevice<HT16K33> numericDisplay;
-OptionalDevice<SFE_MAX1704X> lipo;
+OptionalDevice<SFE_MAX1704X> lipo{MAX1704X_MAX17048};
 namespace Pins {
     constexpr auto SD_EN = Pin::PortB0;
     constexpr auto INT960_0 = Pin::PortB4;
@@ -635,6 +635,20 @@ setup() {
         numericDisplay->printChar('o', 2);
         numericDisplay->printChar('t', 3);
         numericDisplay->updateDisplay();
+    }
+    if (!lipo.begin()) {
+        Serial.println(F("MAX17043 not detected. No battery found!"));
+    } else {
+        Serial.println(F("MAX17043 detected!"));
+        lipo->quickStart();
+        lipo->setThreshold(20); // set alert threshold to 20%
+
+        auto voltage = lipo->getVoltage();
+        auto stateOfChange = lipo->getSOC();
+        auto alert = lipo->getAlert();
+        Serial.printf(F("Voltage: %f V\n"), voltage);
+        Serial.printf(F("Percentage: %f %\n"), stateOfChange);
+        Serial.printf(F("Alert: %d\n"), alert);
     }
     while (true) {
         // do nothing after this point for now
