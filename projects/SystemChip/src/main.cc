@@ -115,23 +115,23 @@ enum class Pinout : int {
     X(27, 41),
 #undef Y
 #undef X
-    AD0 = PI0,
-    AD1 = PI1,
-    AD2 = PI2,
-    AD3 = PI3,
-    AD4 = PI4,
-    AD5 = PI5,
-    AD6 = PI6,
-    AD7 = PI7,
-    WR = PI8,
-    RD = PI9,
-    COMM_SPI_CS = PI10,
-    COMM_SPI_MOSI = PI11,
-    COMM_SPI_MISO = PI12,
-    COMM_SPI_SCK = PI13,
-    COMM_TX = PI14, // TX3
-    COMM_RX = PI15, // RX3
-    ALE = PI16,
+    //AD0 = PI0,
+    //AD1 = PI1,
+    //AD2 = PI2,
+    //AD3 = PI3,
+    //AD4 = PI4,
+    //AD5 = PI5,
+    //AD6 = PI6,
+    //AD7 = PI7,
+    //WR = PI8,
+    //RD = PI9,
+    //COMM_SPI_CS = PI10,
+    //COMM_SPI_MOSI = PI11,
+    //COMM_SPI_MISO = PI12,
+    //COMM_SPI_SCK = PI13,
+    //COMM_TX = PI14, // TX3
+    //COMM_RX = PI15, // RX3
+    //ALE = PI16,
 };
 #define X(name) constexpr auto name = static_cast<int>( Pinout :: name )
 X(AD0);
@@ -214,8 +214,9 @@ struct [[gnu::packed]] Packet {
     uint8_t data[];
 };
 
-void
-setupHardware() {
+void 
+setup() {
+    _systemBooted = false;
 #define X(item, baud, wait) item . begin (baud ) ; \
     if constexpr (wait) { \
         while (! item ) { \
@@ -223,7 +224,7 @@ setupHardware() {
         } \
     }
     X(Serial, 9600, true);
-    X(Serial3, 9600, false);
+    //X(Serial3, 9600, false);
 #undef X
     Serial.println("Interface up");
     setupMemoryPool();
@@ -232,11 +233,6 @@ setupHardware() {
     setupSDCard();
     // servers should be setup last to prevent race conditions
     setupServers();
-}
-void 
-setup() {
-    _systemBooted = false;
-    setupHardware();
     _systemBooted = true;
 }
 
