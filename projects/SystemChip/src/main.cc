@@ -134,18 +134,18 @@ enum class Pinout : int {
     //ALE = PI16,
 };
 #define X(name) constexpr auto name = static_cast<int>( Pinout :: name )
-X(AD0);
-X(AD1);
-X(AD2);
-X(AD3);
-X(AD4);
-X(AD5);
-X(AD6);
-X(AD7);
-X(WR);
-X(RD);
-X(COMM_SPI_CS);
-X(ALE);
+//X(AD0);
+//X(AD1);
+//X(AD2);
+//X(AD3);
+//X(AD4);
+//X(AD5);
+//X(AD6);
+//X(AD7);
+//X(WR);
+//X(RD);
+//X(COMM_SPI_CS);
+//X(ALE);
 #undef X
 using Address = uint32_t;
 using RawCacheLineData = uint8_t*;
