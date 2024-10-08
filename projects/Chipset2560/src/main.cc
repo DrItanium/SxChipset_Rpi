@@ -30,6 +30,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <RTClib.h>
 #include <SparkFun_Alphanumeric_Display.h>
 #include <Adafruit_Si7021.h>
+#include <Adafruit_APDS9960.h>
 
 #include "Types.h"
 #include "Pinout.h"
@@ -62,6 +63,7 @@ struct OptionalDevice {
 OptionalDevice<RTC_DS3231> rtc;
 OptionalDevice<HT16K33> numericDisplay;
 OptionalDevice<Adafruit_Si7021> sensor_si7021;
+OptionalDevice<Adafruit_APDS9960> apds;
 namespace Pins {
     constexpr auto SD_EN = Pin::PortB0;
     constexpr auto INT960_0 = Pin::PortB4;
@@ -666,6 +668,19 @@ setup() {
         Serial.print(sensor_si7021->readHumidity(), 2);
         Serial.print(F("\tTemperature:    ")); 
         Serial.println(sensor_si7021->readTemperature(), 2);
+    }
+    if (!apds.begin()) {
+        Serial.println(F("Failed to initialize APDS9960! Please check your wiring"));
+    } else {
+        Serial.println(F("APDS9960 initialized!"));
+        // enabling the color sensor
+        apds->enableColor(true);
+        uint16_t r, g, b, c;
+        while (!apds->colorDataReady()) {
+            delay(5);
+        }
+        apds->getColorData(&r, &g, &b, &c);
+        Serial.printf(F("red: %d green: %d blue: %d clear: %d\n"), r, g, b, c);
     }
     while (true) {
         // do nothing after this point for now
