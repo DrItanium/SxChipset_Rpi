@@ -28,13 +28,40 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Deception.h>
 #include <SD.h>
 #include <RTClib.h>
-
+#include <SparkFun_Alphanumeric_Display.h>
+#include <SparkFun_MAX1704x_Fuel_Gauge_Arduino_Library.h>
 
 #include "Types.h"
 #include "Pinout.h"
 #include "Setup.h"
+template<typename T>
+struct OptionalDevice {
+    public:
+        template<typename ... Args>
+        OptionalDevice(Args&& ... args) : _device(args...) { }
+        constexpr bool valid() const noexcept {
+            return _valid;
+        }
+        T& get() noexcept {
+            return _device;
+        }
+        template<typename ... Args>
+        bool begin(Args&& ... args) noexcept {
+            _valid = _device.begin(args...);
+            return _valid;
+        }
+        T& operator*() const noexcept { return _device; }
+        T* operator->() noexcept { return &_device; }
+        const T* operator->() const noexcept { return &_device; }
+        explicit operator bool() const noexcept { return _valid; }
+    private:
+        bool _valid = false;
+        T _device;
+};
 // use a ds3231 chip
-RTC_DS3231 rtc;
+OptionalDevice<RTC_DS3231> rtc;
+OptionalDevice<HT16K33> numericDisplay;
+OptionalDevice<SFE_MAX1704X> lipo;
 namespace Pins {
     constexpr auto SD_EN = Pin::PortB0;
     constexpr auto INT960_0 = Pin::PortB4;
@@ -589,15 +616,25 @@ setup() {
         Serial.println(F("Couldn't find RTC"));
         Serial.flush();
     } else {
-        if (rtc.lostPower()) {
+        if (rtc->lostPower()) {
             Serial.println(F("RTC lost power, setting time"));
 
-            rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+            rtc->adjust(DateTime(F(__DATE__), F(__TIME__)));
         }
 
-        DateTime now = rtc.now();
+        DateTime now = rtc->now();
         Serial.printf(F("%d/%d/%d (%s) %d:%d:%d\n"), now.year(), now.month(), now.day(), daysOfTheWeek[now.dayOfTheWeek()], now.hour(), now.minute(), now.second());
         Serial.printf(F(" since midnight 1/1/1970 = %lds = %ldd\n"), now.unixtime(), now.unixtime() / 86400L);
+    }
+    if (!numericDisplay.begin()) {
+        Serial.println(F("Alphanumeric Display did not acknowledge!"));
+    } else {
+        Serial.println(F("Alphanumeric Display did acknowledge!"));
+        numericDisplay->printChar('B', 0);
+        numericDisplay->printChar('o', 1);
+        numericDisplay->printChar('o', 2);
+        numericDisplay->printChar('t', 3);
+        numericDisplay->updateDisplay();
     }
     while (true) {
         // do nothing after this point for now
