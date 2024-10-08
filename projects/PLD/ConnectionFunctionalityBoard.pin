@@ -1,0 +1,29 @@
+
+
+ Pin # | Name     | Pin Type
+-----------------------------
+   1   | CLK      | Clock/Input
+   2   | ADS      | Input
+   3   | BLAST    | Input
+   4   | DEN      | Input
+   5   | WR       | Input
+   6   | LOCK     | Input
+   7   | HLDA     | Input
+   8   | FAIL     | Input
+   9   | PE2      | Input
+  10   | PE3      | Input
+  11   | PG4      | Input
+  12   | GND      | GND
+  13   | NC       | Input
+  14   | PE7      | Output
+  15   | PE6      | Output
+  16   | PE5      | Output
+  17   | PE4      | Output
+  18   | PG5      | NC
+  19   | HOLD     | Output
+  20   | RESET    | Output
+  21   | STG0     | Output
+  22   | STG1     | Output
+  23   | READY    | Output
+  24   | VCC      | VCC
+
