@@ -46,7 +46,7 @@ namespace Pins {
     constexpr auto HOLD = Pin::PortE3;
     constexpr auto ADS = Pin::PortE4;
     constexpr auto HLDA = Pin::PortE5;
-    // PortE6 uncommitted
+    constexpr auto LOCK = Pin::PortE6;
     constexpr auto READY_SYNC_IN = Pin::PortE7;
     constexpr auto TEENSY_CS = Pin::PortG3;
     constexpr auto READY = Pin::PortG4;
@@ -69,7 +69,7 @@ using CacheLine = Deception::CacheLine16<CacheAddress, Deception::TwoWireBacking
 using DataCache = Deception::DirectMappedCache<CacheLineCount, CacheLine>;
 DataCache onboardCache;
 static_assert(sizeof(CacheLine) <= 32);
-[[gnu::address(0xFF00)]] volatile CacheLine externalCacheLine;
+//[[gnu::address(0xFF00)]] volatile CacheLine externalCacheLine;
 union [[gnu::packed]] SplitWord32 {
     uint8_t bytes[sizeof(uint32_t) / sizeof(uint8_t)];
     uint16_t halves[sizeof(uint32_t) / sizeof(uint16_t)];
@@ -554,7 +554,7 @@ setup() {
     configureDataLinesForRead();
     configureInterruptSources();
     Serial.begin(115200);
-    Serial1.begin(9600);
+    //Serial1.begin(9600);
     SPI.begin();
     Wire.begin();
     Wire.setClock(Deception::TWI_ClockRate);
@@ -563,6 +563,7 @@ setup() {
     // okay now we need to setup the cache so that I can eliminate the valid
     // bit. This is done by seeding the cache with teh first 4096 bytes
     for (Address i = 0; i < DataCache::NumCacheBytes; i += DataCache::NumBytesPerLine) {
+        Serial.printf(F("Seeding 0x%lx\n"), i);
         onboardCache.seed(PCLink2, i);
     }
     digitalWrite<Pins::RESET, HIGH>();

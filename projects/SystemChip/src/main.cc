@@ -115,8 +115,37 @@ enum class Pinout : int {
     X(27, 41),
 #undef Y
 #undef X
+    AD0 = PI0,
+    AD1 = PI1,
+    AD2 = PI2,
+    AD3 = PI3,
+    AD4 = PI4,
+    AD5 = PI5,
+    AD6 = PI6,
+    AD7 = PI7,
+    WR = PI8,
+    RD = PI9,
+    COMM_SPI_CS = PI10,
+    COMM_SPI_MOSI = PI11,
+    COMM_SPI_MISO = PI12,
+    COMM_SPI_SCK = PI13,
+    COMM_TX = PI14, // TX3
+    COMM_RX = PI15, // RX3
+    ALE = PI16,
 };
 #define X(name) constexpr auto name = static_cast<int>( Pinout :: name )
+X(AD0);
+X(AD1);
+X(AD2);
+X(AD3);
+X(AD4);
+X(AD5);
+X(AD6);
+X(AD7);
+X(WR);
+X(RD);
+X(COMM_SPI_CS);
+X(ALE);
 #undef X
 using Address = uint32_t;
 using RawCacheLineData = uint8_t*;
@@ -194,6 +223,7 @@ setupHardware() {
         } \
     }
     X(Serial, 9600, true);
+    X(Serial3, 9600, false);
 #undef X
     Serial.println("Interface up");
     setupMemoryPool();
@@ -336,7 +366,7 @@ TwoWireServer::sink() {
 
 
 
-TwoWireServer link0(Wire2);
+TwoWireServer link0(Wire1);
 void 
 setupServers() {
     link0.begin(Deception::TWI_MemoryControllerIndex);
