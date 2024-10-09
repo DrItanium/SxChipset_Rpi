@@ -33,6 +33,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Adafruit_APDS9960.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1351.h>
+#include <Adafruit_LTR390.h>
 
 #include "Types.h"
 #include "Pinout.h"
@@ -140,6 +141,7 @@ OptionalDevice<Adafruit_SSD1351> tft(
         static_cast<int>(Pins::DISPLAY_TCS), 
         static_cast<int>(Pins::DISPLAY_DC),
         static_cast<int>(Pins::DISPLAY_RESET));
+OptionalDevice<Adafruit_LTR390> ltr;
 
 Deception::TwoWireBackingStore PCLink2(Wire, Deception::TWI_MemoryControllerIndex);
 using CacheAddress = __uint24;
@@ -736,6 +738,49 @@ setup() {
     for(uint8_t c = 0; c < 8; ++c) {
         tft->fillRect(0, tft->height() * c / 8, tft->width(), tft->height() / 8,
                 pgm_read_word(&colors[c]));
+    }
+
+    if (!ltr.begin()) {
+        Serial.println(F("Couldn't find LTR sensor!"));
+    } else {
+        Serial.println(F("Found LTR sensor!"));
+
+        ltr->setMode(LTR390_MODE_UVS);
+        if (ltr->getMode() == LTR390_MODE_ALS) {
+            Serial.println(F("In ALS mode"));
+        } else {
+            Serial.println(F("In UVS mode"));
+        }
+
+        ltr->setGain(LTR390_GAIN_3);
+        Serial.print(F("Gain : "));
+        switch (ltr->getGain()) {
+            case LTR390_GAIN_1: 
+                Serial.println(1); 
+                break;
+            case LTR390_GAIN_3: 
+                Serial.println(3); 
+                break;
+            case LTR390_GAIN_6: 
+                Serial.println(6); 
+                break;
+            case LTR390_GAIN_9: 
+                Serial.println(9); 
+                break;
+            case LTR390_GAIN_18: 
+                Serial.println(18); 
+                break;
+            default:
+                Serial.println('?');
+                break;
+        }
+
+        ltr->setThresholds(100, 1000);
+        ltr->configInterrupt(true, LTR390_MODE_UVS);
+        while (!ltr->newDataAvailable()) {
+            delay(100);
+        }
+        Serial.printf(F("UV data: %d\n"), ltr->readUVS());
     }
     while (true) {
         // do nothing after this point for now
