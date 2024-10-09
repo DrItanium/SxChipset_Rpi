@@ -31,39 +31,22 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <SparkFun_Alphanumeric_Display.h>
 #include <Adafruit_Si7021.h>
 #include <Adafruit_APDS9960.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1351.h>
 
 #include "Types.h"
 #include "Pinout.h"
 #include "Setup.h"
-template<typename T>
-struct OptionalDevice {
-    public:
-        template<typename ... Args>
-        OptionalDevice(Args&& ... args) : _device(args...) { }
-        constexpr bool valid() const noexcept {
-            return _valid;
-        }
-        T& get() noexcept {
-            return _device;
-        }
-        template<typename ... Args>
-        bool begin(Args&& ... args) noexcept {
-            _valid = _device.begin(args...);
-            return _valid;
-        }
-        T& operator*() const noexcept { return _device; }
-        T* operator->() noexcept { return &_device; }
-        const T* operator->() const noexcept { return &_device; }
-        explicit operator bool() const noexcept { return _valid; }
-    private:
-        bool _valid = false;
-        T _device;
-};
-// use a ds3231 chip
-OptionalDevice<RTC_DS3231> rtc;
-OptionalDevice<HT16K33> numericDisplay;
-OptionalDevice<Adafruit_Si7021> sensor_si7021;
-OptionalDevice<Adafruit_APDS9960> apds;
+constexpr auto ScreenWidth = 128;
+constexpr auto ScreenHeight = 128;
+constexpr auto ColorBlack = 0x0000;
+constexpr auto ColorBlue = 0x001F;
+constexpr auto ColorRed = 0xF800;
+constexpr auto ColorGreen = 0x07E0;
+constexpr auto ColorCyan = 0x07FF;
+constexpr auto ColorMagenta = 0xF81F;
+constexpr auto ColorYellow = 0xFFE0;
+constexpr auto ColorWhite = 0xFFFF;
 namespace Pins {
     constexpr auto SD_EN = Pin::PortB0;
     constexpr auto INT960_0 = Pin::PortB4;
@@ -81,10 +64,11 @@ namespace Pins {
     constexpr auto LOCK = Pin::PortE6;
     constexpr auto READY_SYNC_IN = Pin::PortE7;
     constexpr auto READY = Pin::PortG4;
-    // PortG3 uncommitted
+    constexpr auto DISPLAY_DC = Pin::PortG3;
+    constexpr auto DISPLAY_RESET = Pin::PortD3;
+    constexpr auto DISPLAY_TCS = Pin::PortD2;
+    
     // PortG5 uncommitted
-    // PortD2 uncommitted
-    // PortD3 uncommitted
 }
 namespace Ports {
     constexpr auto DataLower = Port::C;
@@ -94,6 +78,68 @@ namespace Ports {
     constexpr auto AddressHigher = Port::J;
     constexpr auto AddressHighest = Port::L;
 }
+
+template<typename T>
+struct OptionalDevice {
+    public:
+        template<typename ... Args>
+        OptionalDevice(Args ... args) : _device(args...) { }
+        constexpr bool valid() const noexcept {
+            return _valid;
+        }
+        auto& get() noexcept {
+            return _device;
+        }
+        template<typename ... Args>
+        bool begin(Args&& ... args) noexcept {
+            _valid = _device.begin(args...);
+            return _valid;
+        }
+        auto& operator*() const noexcept { return _device; }
+        auto* operator->() noexcept { return &_device; }
+        const auto* operator->() const noexcept { return &_device; }
+        explicit operator bool() const noexcept { return _valid; }
+    private:
+        bool _valid = false;
+        T _device;
+};
+template<>
+struct OptionalDevice<Adafruit_SSD1351> {
+    public:
+        template<typename ... Args>
+        OptionalDevice(Args&& ... args) : _device(args...) { }
+        constexpr bool valid() const noexcept {
+            return _valid;
+        }
+        auto& get() noexcept {
+            return _device;
+        }
+        template<typename ... Args>
+        bool begin(Args&& ... args) noexcept {
+            _valid = true;
+            _device.begin(args...);
+            return _valid;
+        }
+        auto& operator*() const noexcept { return _device; }
+        auto* operator->() noexcept { return &_device; }
+        const auto* operator->() const noexcept { return &_device; }
+        explicit operator bool() const noexcept { return _valid; }
+    private:
+        bool _valid = false;
+        Adafruit_SSD1351 _device;
+};
+// use a ds3231 chip
+OptionalDevice<RTC_DS3231> rtc;
+OptionalDevice<HT16K33> numericDisplay;
+OptionalDevice<Adafruit_Si7021> sensor_si7021;
+OptionalDevice<Adafruit_APDS9960> apds;
+OptionalDevice<Adafruit_SSD1351> tft(
+        ScreenWidth, 
+        ScreenHeight, 
+        &SPI,
+        static_cast<int>(Pins::DISPLAY_TCS), 
+        static_cast<int>(Pins::DISPLAY_DC),
+        static_cast<int>(Pins::DISPLAY_RESET));
 
 Deception::TwoWireBackingStore PCLink2(Wire, Deception::TWI_MemoryControllerIndex);
 using CacheAddress = __uint24;
@@ -598,7 +644,6 @@ setup() {
     configureInterruptSources();
     Serial.begin(115200);
     Serial.println(F("SERIAL UP @ 115200"));
-    //Serial1.begin(9600);
     SPI.begin();
     Wire.begin();
     //Wire.setClock(Deception::TWI_ClockRate);
@@ -681,6 +726,16 @@ setup() {
         }
         apds->getColorData(&r, &g, &b, &c);
         Serial.printf(F("red: %d green: %d blue: %d clear: %d\n"), r, g, b, c);
+    }
+    tft.begin();
+    Serial.println(F("TFT Bringup"));
+    tft->fillRect(0, 0, 128, 128, ColorBlack );
+    static const uint16_t PROGMEM colors[] =
+    { ColorRed, ColorYellow, ColorGreen, ColorCyan, ColorBlue, ColorMagenta, ColorBlack, ColorWhite};
+
+    for(uint8_t c = 0; c < 8; ++c) {
+        tft->fillRect(0, tft->height() * c / 8, tft->width(), tft->height() / 8,
+                pgm_read_word(&colors[c]));
     }
     while (true) {
         // do nothing after this point for now
