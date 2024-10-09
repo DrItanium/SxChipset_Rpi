@@ -400,6 +400,48 @@ doIOTransaction(SplitWord32 address) noexcept {
                 doNothingOperation<readOperation>();
             }
             break;
+        case 0x100: // UVS
+            if constexpr (readOperation) {
+                send32BitConstant(ltr->readUVS());
+            } else {
+                doNothingOperation<readOperation>();
+            }
+            break;
+        case 0x104: // ALS
+            if constexpr (readOperation) {
+                send32BitConstant(ltr->readALS());
+            } else {
+                doNothingOperation<readOperation>();
+            }
+            break;
+        case 0x108: // LTR.Mode
+            if constexpr (readOperation) {
+                send32BitConstant(ltr->getMode());
+            } else {
+                doNothingOperation<readOperation>();
+            }
+            break;
+        case 0x10C: // LTR.Gain
+            if constexpr (readOperation) {
+                send32BitConstant(ltr->getGain());
+            } else {
+                doNothingOperation<readOperation>();
+            }
+            break;
+        case 0x110: // LTR.Resolution
+            if constexpr (readOperation) {
+                send32BitConstant(ltr->getResolution());
+            } else {
+                doNothingOperation<readOperation>();
+            }
+            break;
+        case 0x114: // LTR.newDataAvailable
+            if constexpr (readOperation) {
+                send32BitConstant(ltr->newDataAvailable() ? 0xFFFF'FFFF : 0x0000'0000);
+            } else {
+                doNothingOperation<readOperation>();
+            }
+            break;
         default:
             doNothingOperation<readOperation>();
             break;
@@ -782,10 +824,12 @@ setup() {
         }
         Serial.printf(F("UV data: %d\n"), ltr->readUVS());
     }
+#if 0
     while (true) {
         // do nothing after this point for now
         delay(1000);
     }
+#endif
     digitalWrite<Pins::RESET, HIGH>();
 }
 [[gnu::always_inline]]
