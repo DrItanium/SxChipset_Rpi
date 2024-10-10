@@ -114,8 +114,8 @@ class PSRAMBackingStore {
 };
 
 PSRAMBackingStore psramMemory(SPI);
-//Deception::TwoWireBackingStore PCLink2(Wire, Deception::TWI_MemoryControllerIndex);
-using PrimaryBackingStore = PSRAMBackingStore;
+Deception::TwoWireBackingStore PCLink2(Wire, Deception::TWI_MemoryControllerIndex);
+using PrimaryBackingStore = Deception::TwoWireBackingStore;
 using CacheAddress = __uint24;
 //using CacheAddress = uint32_t;
 constexpr auto CacheLineCount = 256;
@@ -430,7 +430,7 @@ template<bool readOperation>
 inline
 void
 doMemoryTransaction(SplitWord32 address) noexcept {
-    auto& line = onboardCache.find(psramMemory, address.lo24);
+    auto& line = onboardCache.find(PCLink2, address.lo24);
     auto* ptr = line.getLineData(address.getCacheOffset());
     if constexpr (readOperation) {
         uint16_t* ptr16 = reinterpret_cast<uint16_t*>(ptr);
@@ -675,19 +675,10 @@ setup() {
     Serial.println(F("SERIAL UP @ 115200"));
     SPI.begin();
     Wire.begin();
-    //Wire.setClock(Deception::TWI_ClockRate);
+    Wire.setClock(Deception::TWI_ClockRate);
     onboardCache.begin();
-    psramMemory.begin();
-    installInitialBootImage();
-#if 0
-    PCLink2.waitForBackingStoreIdle();
-    // okay now we need to setup the cache so that I can eliminate the valid
-    // bit. This is done by seeding the cache with teh first 4096 bytes
-    for (Address i = 0; i < DataCache::NumCacheBytes; i += DataCache::NumBytesPerLine) {
-        Serial.printf(F("Seeding 0x%lx\n"), i);
-        onboardCache.seed(PCLink2, i);
-    }
-#endif
+    //psramMemory.begin();
+    //installInitialBootImage();
     Serial.println(F("Setting up RTC"));
     // setup the RTC
     if (!rtc.begin()) {
@@ -807,6 +798,13 @@ setup() {
         delay(1000);
     }
 #endif
+    PCLink2.waitForBackingStoreIdle();
+    // okay now we need to setup the cache so that I can eliminate the valid
+    // bit. This is done by seeding the cache with teh first 4096 bytes
+    for (Address i = 0; i < DataCache::NumCacheBytes; i += DataCache::NumBytesPerLine) {
+        Serial.printf(F("Seeding 0x%lx\n"), i);
+        onboardCache.seed(PCLink2, i);
+    }
     digitalWrite<Pins::RESET, HIGH>();
 }
 [[gnu::always_inline]]

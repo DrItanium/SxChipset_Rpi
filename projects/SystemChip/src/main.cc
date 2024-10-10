@@ -362,7 +362,7 @@ TwoWireServer::sink() {
 
 
 
-TwoWireServer link0(Wire);
+TwoWireServer link0(Wire2);
 void 
 setupServers() {
     link0.begin(Deception::TWI_MemoryControllerIndex);
