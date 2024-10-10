@@ -31,23 +31,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <SparkFun_Alphanumeric_Display.h>
 #include <Adafruit_Si7021.h>
 #include <Adafruit_APDS9960.h>
-#include <Adafruit_GFX.h>
-//#include <Adafruit_SSD1351.h>
 #include <Adafruit_LTR390.h>
 
 #include "Types.h"
 #include "Pinout.h"
 #include "Setup.h"
-constexpr auto ScreenWidth = 128;
-constexpr auto ScreenHeight = 128;
-constexpr auto ColorBlack = 0x0000;
-constexpr auto ColorBlue = 0x001F;
-constexpr auto ColorRed = 0xF800;
-constexpr auto ColorGreen = 0x07E0;
-constexpr auto ColorCyan = 0x07FF;
-constexpr auto ColorMagenta = 0xF81F;
-constexpr auto ColorYellow = 0xFFE0;
-constexpr auto ColorWhite = 0xFFFF;
+void installInitialBootImage();
+void configurePSRAM();
 namespace Pins {
     constexpr auto SD_EN = Pin::PortB0;
     constexpr auto INT960_0 = Pin::PortB4;
@@ -111,6 +101,19 @@ OptionalDevice<Adafruit_Si7021> sensor_si7021;
 OptionalDevice<Adafruit_APDS9960> apds;
 OptionalDevice<Adafruit_LTR390> ltr;
 
+class PSRAMBackingStore {
+    public:
+        using SPIDevice = decltype(SPI);
+        PSRAMBackingStore(SPIDevice& link) : _link(link) { }
+        void begin() noexcept;
+        size_t read(Address addr, uint8_t* storage, size_t count) noexcept;
+        size_t write(Address addr, uint8_t* storage, size_t count) noexcept;
+        void waitForBackingStoreIdle() noexcept { }
+    private:
+        SPIDevice& _link;
+};
+
+PSRAMBackingStore psramMemory(SPI);
 Deception::TwoWireBackingStore PCLink2(Wire, Deception::TWI_MemoryControllerIndex);
 using CacheAddress = __uint24;
 //using CacheAddress = uint32_t;
@@ -617,6 +620,12 @@ void
 configurePins() noexcept {
     pinMode(Pins::RESET, OUTPUT);
     digitalWrite<Pins::RESET, LOW>();
+    pinMode(Pins::PSRAM_EN, OUTPUT);
+    digitalWrite<Pins::PSRAM_EN, HIGH>();
+    pinMode(Pins::PSRAM_A0, OUTPUT);
+    digitalWrite<Pins::PSRAM_A0, LOW>();
+    pinMode(Pins::PSRAM_A1, OUTPUT);
+    digitalWrite<Pins::PSRAM_A1, LOW>();
     pinMode(Pins::INT960_0, OUTPUT);
     pinMode(Pins::INT960_1, OUTPUT);
     pinMode(Pins::INT960_2, OUTPUT);
@@ -667,6 +676,8 @@ setup() {
     Wire.begin();
     //Wire.setClock(Deception::TWI_ClockRate);
     onboardCache.begin();
+    psramMemory.begin();
+    installInitialBootImage();
 #if 0
     PCLink2.waitForBackingStoreIdle();
     // okay now we need to setup the cache so that I can eliminate the valid
@@ -830,3 +841,35 @@ loop() {
     }
 }
 
+
+void
+PSRAMBackingStore::begin() noexcept {
+    auto activatePSRAM = [this]() {
+        digitalWrite<Pins::PSRAM_EN, LOW>();
+        _link.transfer(0x99);
+        digitalWrite<Pins::PSRAM_EN, HIGH>();
+        digitalWrite<Pins::PSRAM_EN, LOW>();
+        _link.transfer(0x66);
+        digitalWrite<Pins::PSRAM_EN, HIGH>();
+    };
+    delay(1000); // make sure that the waiting duration is enough for powerup
+    _link.beginTransaction(SPISettings{5'000'000, MSBFIRST, SPI_MODE0});
+    digitalWrite<Pins::PSRAM_A0, LOW>();
+    digitalWrite<Pins::PSRAM_A1, LOW>();
+    activatePSRAM();
+    digitalWrite<Pins::PSRAM_A0, HIGH>();
+    digitalWrite<Pins::PSRAM_A1, LOW>();
+    activatePSRAM();
+    digitalWrite<Pins::PSRAM_A0, LOW>();
+    digitalWrite<Pins::PSRAM_A1, HIGH>();
+    activatePSRAM();
+    digitalWrite<Pins::PSRAM_A0, HIGH>();
+    digitalWrite<Pins::PSRAM_A1, HIGH>();
+    activatePSRAM();
+    // we need to go through and enable a
+    _link.endTransaction();
+}
+void
+installInitialBootImage() noexcept {
+
+}
