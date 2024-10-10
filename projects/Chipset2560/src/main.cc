@@ -876,3 +876,51 @@ void
 installInitialBootImage() noexcept {
 
 }
+
+size_t
+PSRAMBackingStore::read(Address addr, uint8_t* storage, size_t count) noexcept {
+    if (static_cast<uint8_t>(addr >> 24) & 0b0000'0001) {
+        digitalWrite<Pins::PSRAM_A1, HIGH>();
+    } else {
+        digitalWrite<Pins::PSRAM_A1, LOW>();
+    }
+    if (static_cast<uint8_t>(addr >> 16) & 0b1000'0000) {
+        digitalWrite<Pins::PSRAM_A0, HIGH>();
+    } else {
+        digitalWrite<Pins::PSRAM_A0, LOW>();
+    }
+    _link.beginTransaction(SPISettings{5'000'000, MSBFIRST, SPI_MODE0});
+    digitalWrite<Pins::PSRAM_EN, LOW>();
+    _link.transfer(0x03);
+    _link.transfer(static_cast<uint8_t>(addr >> 16));
+    _link.transfer(static_cast<uint8_t>(addr >> 8));
+    _link.transfer(static_cast<uint8_t>(addr));
+    _link.transfer(storage, count);
+    digitalWrite<Pins::PSRAM_EN, HIGH>();
+    _link.endTransaction();
+    return count;
+}
+
+size_t
+PSRAMBackingStore::write(Address addr, uint8_t* storage, size_t count) noexcept {
+    if (static_cast<uint8_t>(addr >> 24) & 0b0000'0001) {
+        digitalWrite<Pins::PSRAM_A1, HIGH>();
+    } else {
+        digitalWrite<Pins::PSRAM_A1, LOW>();
+    }
+    if (static_cast<uint8_t>(addr >> 16) & 0b1000'0000) {
+        digitalWrite<Pins::PSRAM_A0, HIGH>();
+    } else {
+        digitalWrite<Pins::PSRAM_A0, LOW>();
+    }
+    _link.beginTransaction(SPISettings{5'000'000, MSBFIRST, SPI_MODE0});
+    digitalWrite<Pins::PSRAM_EN, LOW>();
+    _link.transfer(0x02);
+    _link.transfer(static_cast<uint8_t>(addr >> 16));
+    _link.transfer(static_cast<uint8_t>(addr >> 8));
+    _link.transfer(static_cast<uint8_t>(addr));
+    _link.transfer(storage, count);
+    digitalWrite<Pins::PSRAM_EN, HIGH>();
+    _link.endTransaction();
+    return count;
+}
