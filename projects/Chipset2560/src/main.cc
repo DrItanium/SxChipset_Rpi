@@ -114,11 +114,12 @@ class PSRAMBackingStore {
 };
 
 PSRAMBackingStore psramMemory(SPI);
-Deception::TwoWireBackingStore PCLink2(Wire, Deception::TWI_MemoryControllerIndex);
+//Deception::TwoWireBackingStore PCLink2(Wire, Deception::TWI_MemoryControllerIndex);
+using PrimaryBackingStore = PSRAMBackingStore;
 using CacheAddress = __uint24;
 //using CacheAddress = uint32_t;
 constexpr auto CacheLineCount = 256;
-using CacheLine = Deception::CacheLine16<CacheAddress, Deception::TwoWireBackingStore>;
+using CacheLine = Deception::CacheLine16<CacheAddress, PrimaryBackingStore>;
 using DataCache = Deception::DirectMappedCache<CacheLineCount, CacheLine>;
 DataCache onboardCache;
 static_assert(sizeof(CacheLine) <= 32);
@@ -429,7 +430,7 @@ template<bool readOperation>
 inline
 void
 doMemoryTransaction(SplitWord32 address) noexcept {
-    auto& line = onboardCache.find(PCLink2, address.lo24);
+    auto& line = onboardCache.find(psramMemory, address.lo24);
     auto* ptr = line.getLineData(address.getCacheOffset());
     if constexpr (readOperation) {
         uint16_t* ptr16 = reinterpret_cast<uint16_t*>(ptr);
@@ -868,6 +869,8 @@ PSRAMBackingStore::begin() noexcept {
     activatePSRAM();
     // we need to go through and enable a
     _link.endTransaction();
+    digitalWrite<Pins::PSRAM_A0, LOW>();
+    digitalWrite<Pins::PSRAM_A1, LOW>();
 }
 void
 installInitialBootImage() noexcept {
