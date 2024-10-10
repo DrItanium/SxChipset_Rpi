@@ -32,7 +32,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Adafruit_Si7021.h>
 #include <Adafruit_APDS9960.h>
 #include <Adafruit_GFX.h>
-#include <Adafruit_SSD1351.h>
+//#include <Adafruit_SSD1351.h>
 #include <Adafruit_LTR390.h>
 
 #include "Types.h"
@@ -65,9 +65,9 @@ namespace Pins {
     constexpr auto LOCK = Pin::PortE6;
     constexpr auto READY_SYNC_IN = Pin::PortE7;
     constexpr auto READY = Pin::PortG4;
-    constexpr auto DISPLAY_DC = Pin::PortG3;
-    constexpr auto DISPLAY_RESET = Pin::PortD3;
-    constexpr auto DISPLAY_TCS = Pin::PortD2;
+    constexpr auto PSRAM_EN = Pin::PortG3;
+    constexpr auto PSRAM_A0 = Pin::PortD2;
+    constexpr auto PSRAM_A1 = Pin::PortD3;
     
     // PortG5 uncommitted
 }
@@ -104,43 +104,11 @@ struct OptionalDevice {
         bool _valid = false;
         T _device;
 };
-template<>
-struct OptionalDevice<Adafruit_SSD1351> {
-    public:
-        template<typename ... Args>
-        OptionalDevice(Args&& ... args) : _device(args...) { }
-        constexpr bool valid() const noexcept {
-            return _valid;
-        }
-        auto& get() noexcept {
-            return _device;
-        }
-        template<typename ... Args>
-        bool begin(Args&& ... args) noexcept {
-            _valid = true;
-            _device.begin(args...);
-            return _valid;
-        }
-        auto& operator*() const noexcept { return _device; }
-        auto* operator->() noexcept { return &_device; }
-        const auto* operator->() const noexcept { return &_device; }
-        explicit operator bool() const noexcept { return _valid; }
-    private:
-        bool _valid = false;
-        Adafruit_SSD1351 _device;
-};
 // use a ds3231 chip
 OptionalDevice<RTC_DS3231> rtc;
 OptionalDevice<HT16K33> numericDisplay;
 OptionalDevice<Adafruit_Si7021> sensor_si7021;
 OptionalDevice<Adafruit_APDS9960> apds;
-OptionalDevice<Adafruit_SSD1351> tft(
-        ScreenWidth, 
-        ScreenHeight, 
-        &SPI,
-        static_cast<int>(Pins::DISPLAY_TCS), 
-        static_cast<int>(Pins::DISPLAY_DC),
-        static_cast<int>(Pins::DISPLAY_RESET));
 OptionalDevice<Adafruit_LTR390> ltr;
 
 Deception::TwoWireBackingStore PCLink2(Wire, Deception::TWI_MemoryControllerIndex);
@@ -400,42 +368,49 @@ doIOTransaction(SplitWord32 address) noexcept {
                 doNothingOperation<readOperation>();
             }
             break;
-        case 0x100: // UVS
+        case 0x100: // LTR.available
+            if constexpr (readOperation) {
+                send32BitConstant(ltr ? 0xFFFF'FFFF : 0x0000'0000);
+            } else {
+                doNothingOperation<readOperation>();
+            }
+            break;
+        case 0x104: // UVS
             if constexpr (readOperation) {
                 send32BitConstant(ltr->readUVS());
             } else {
                 doNothingOperation<readOperation>();
             }
             break;
-        case 0x104: // ALS
+        case 0x108: // ALS
             if constexpr (readOperation) {
                 send32BitConstant(ltr->readALS());
             } else {
                 doNothingOperation<readOperation>();
             }
             break;
-        case 0x108: // LTR.Mode
+        case 0x10C: // LTR.Mode
             if constexpr (readOperation) {
                 send32BitConstant(ltr->getMode());
             } else {
                 doNothingOperation<readOperation>();
             }
             break;
-        case 0x10C: // LTR.Gain
+        case 0x110: // LTR.Gain
             if constexpr (readOperation) {
                 send32BitConstant(ltr->getGain());
             } else {
                 doNothingOperation<readOperation>();
             }
             break;
-        case 0x110: // LTR.Resolution
+        case 0x114: // LTR.Resolution
             if constexpr (readOperation) {
                 send32BitConstant(ltr->getResolution());
             } else {
                 doNothingOperation<readOperation>();
             }
             break;
-        case 0x114: // LTR.newDataAvailable
+        case 0x118: // LTR.newDataAvailable
             if constexpr (readOperation) {
                 send32BitConstant(ltr->newDataAvailable() ? 0xFFFF'FFFF : 0x0000'0000);
             } else {
@@ -770,16 +745,6 @@ setup() {
         }
         apds->getColorData(&r, &g, &b, &c);
         Serial.printf(F("red: %d green: %d blue: %d clear: %d\n"), r, g, b, c);
-    }
-    tft.begin();
-    Serial.println(F("TFT Bringup"));
-    tft->fillRect(0, 0, 128, 128, ColorBlack );
-    static const uint16_t PROGMEM colors[] =
-    { ColorRed, ColorYellow, ColorGreen, ColorCyan, ColorBlue, ColorMagenta, ColorBlack, ColorWhite};
-
-    for(uint8_t c = 0; c < 8; ++c) {
-        tft->fillRect(0, tft->height() * c / 8, tft->width(), tft->height() / 8,
-                pgm_read_word(&colors[c]));
     }
 
     if (!ltr.begin()) {
