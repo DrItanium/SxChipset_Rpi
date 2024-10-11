@@ -843,19 +843,7 @@ loop() {
 
 void
 PSRAMBackingStore::begin() noexcept {
-    auto activatePSRAM = [this]() {
-        union Id {
-            uint64_t full;
-            struct {
-                uint32_t eidLo;
-                uint16_t eidHi;
-                uint8_t kgd;
-                uint8_t mfid;
-            };
-            uint8_t bytes[8];
-        };
-        Id tmp;
-        tmp.full = 0;
+    auto activatePSRAM = [this](bool pullID, bool performSanityChecking) {
         digitalWrite<Pins::PSRAM_EN, LOW>();
         _link.transfer(0x99);
         digitalWrite<Pins::PSRAM_EN, HIGH>();
@@ -863,35 +851,51 @@ PSRAMBackingStore::begin() noexcept {
         _link.transfer(0x66);
         digitalWrite<Pins::PSRAM_EN, HIGH>();
         delay(100);
-        digitalWrite<Pins::PSRAM_EN, LOW>();
-        _link.transfer(0x9f);
-        _link.transfer(0);
-        _link.transfer(0);
-        _link.transfer(0);
-        _link.transfer(tmp.bytes, 8);
-        digitalWrite<Pins::PSRAM_EN, HIGH>();
-        delay(100);
-        Serial.printf(F("MFID: 0x%x, KGD: 0x%x, EIDHi: 0x%x, EIDLo: 0x%lx\n"), tmp.mfid, tmp.kgd, tmp.eidHi, tmp.eidLo);
-        // now we need to do some amount of sanity checking to see if we can do
-        // a read and write operation
-        uint8_t storage[16] = { 0 };
-        uint8_t storage2[16] = { 0 };
-        for (int i = 0; i < 16; ++i) {
-            storage[i] = random();
-            storage2[i] = storage[i];
+        if (pullID) {
+            union Id {
+                uint64_t full;
+                struct {
+                    uint32_t eidLo;
+                    uint16_t eidHi;
+                    uint8_t kgd;
+                    uint8_t mfid;
+                };
+                uint8_t bytes[8];
+            };
+            Id tmp;
+            tmp.full = 0;
+            digitalWrite<Pins::PSRAM_EN, LOW>();
+            _link.transfer(0x9f);
+            _link.transfer(0);
+            _link.transfer(0);
+            _link.transfer(0);
+            _link.transfer(tmp.bytes, 8);
+            digitalWrite<Pins::PSRAM_EN, HIGH>();
+            delay(100);
+            Serial.printf(F("MFID: 0x%x, KGD: 0x%x, EIDHi: 0x%x, EIDLo: 0x%lx\n"), tmp.mfid, tmp.kgd, tmp.eidHi, tmp.eidLo);
         }
-        (void)write(0, storage, 16);
-        for (int i = 0; i < 16; ++i) {
-            storage[i] = 0;
-        }
-        (void)read(0, storage, 16);
-        for (int i = 0; i < 16; ++i) {
-            auto against = storage2[i];
-            auto compare = storage[i];
-            if (against != compare) {
-                Serial.printf(F("@0x%x: (in)0x%x != (control)0x%x\n"), i, compare, against);
-            } else {
-                Serial.printf(F("@0x%x: (in)0x%x == (control)0x%x\n"), i, compare, against);
+        if (performSanityChecking) {
+            // now we need to do some amount of sanity checking to see if we can do
+            // a read and write operation
+            uint8_t storage[16] = { 0 };
+            uint8_t storage2[16] = { 0 };
+            for (int i = 0; i < 16; ++i) {
+                storage[i] = random();
+                storage2[i] = storage[i];
+            }
+            (void)write(0, storage, 16);
+            for (int i = 0; i < 16; ++i) {
+                storage[i] = 0;
+            }
+            (void)read(0, storage, 16);
+            for (int i = 0; i < 16; ++i) {
+                auto against = storage2[i];
+                auto compare = storage[i];
+                if (against != compare) {
+                    Serial.printf(F("@0x%x: (in)0x%x != (control)0x%x\n"), i, compare, against);
+                } else {
+                    Serial.printf(F("@0x%x: (in)0x%x == (control)0x%x\n"), i, compare, against);
+                }
             }
         }
         
@@ -900,16 +904,16 @@ PSRAMBackingStore::begin() noexcept {
     _link.beginTransaction(SPISettings{5'000'000, MSBFIRST, SPI_MODE0});
     digitalWrite<Pins::PSRAM_A0, LOW>();
     digitalWrite<Pins::PSRAM_A1, LOW>();
-    activatePSRAM();
+    activatePSRAM(true, true);
     digitalWrite<Pins::PSRAM_A0, HIGH>();
     digitalWrite<Pins::PSRAM_A1, LOW>();
-    activatePSRAM();
+    activatePSRAM(true, true);
     digitalWrite<Pins::PSRAM_A0, LOW>();
     digitalWrite<Pins::PSRAM_A1, HIGH>();
-    activatePSRAM();
+    activatePSRAM(true, true);
     digitalWrite<Pins::PSRAM_A0, HIGH>();
     digitalWrite<Pins::PSRAM_A1, HIGH>();
-    activatePSRAM();
+    activatePSRAM(true, true);
     // we need to go through and enable a
     _link.endTransaction();
     digitalWrite<Pins::PSRAM_A0, LOW>();
