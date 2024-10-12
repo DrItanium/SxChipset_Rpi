@@ -656,15 +656,6 @@ configurePins() noexcept {
     getDirectionRegister<Ports::AddressHighest>() = 0;
     configureExternalBus();
 }
-const char *daysOfTheWeek[] {
-    "Sunday",
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-};
 void setupExternalDevices() noexcept;
 void
 setup() {
@@ -702,12 +693,10 @@ setupExternalDevices() noexcept {
     } else {
         if (rtc->lostPower()) {
             Serial.println(F("RTC lost power, setting time"));
-
             rtc->adjust(DateTime(F(__DATE__), F(__TIME__)));
         }
 
         DateTime now = rtc->now();
-        Serial.printf(F("%d/%d/%d (%s) %d:%d:%d\n"), now.year(), now.month(), now.day(), daysOfTheWeek[now.dayOfTheWeek()], now.hour(), now.minute(), now.second());
         Serial.printf(F(" since midnight 1/1/1970 = %lds = %ldd\n"), now.unixtime(), now.unixtime() / 86400L);
     }
     if (!numericDisplay.begin()) {
@@ -894,9 +883,7 @@ PSRAMBackingStore::begin() noexcept {
                 auto compare = storage[i];
                 if (against != compare) {
                     Serial.printf(F("@0x%x: (in)0x%x != (control)0x%x\n"), i, compare, against);
-                } else {
-                    Serial.printf(F("@0x%x: (in)0x%x == (control)0x%x\n"), i, compare, against);
-                }
+                } 
             }
         }
         
@@ -924,34 +911,31 @@ PSRAMBackingStore::begin() noexcept {
 void
 installInitialBootImage() noexcept {
     if (!SD.begin(static_cast<int>(Pins::SD_EN))) {
-        Serial.println("No SDCard found!");
+        Serial.println(F("No SDCard found!"));
     } else {
-        Serial.println("Found an SDCard, will try to transfer the contents of prog.bin to onboard psram");
-        auto f = SD.open("prog.bin", FILE_READ); 
+        Serial.println(F("Found an SDCard, will try to transfer the contents of prog.bin to onboard psram"));
+        auto f = SD.open(F("prog.bin"), FILE_READ); 
         if (!f) {
-            Serial.println("Could not open prog.bin...skipping!");
+            Serial.println(F("Could not open prog.bin...skipping!"));
         } else {
-            Serial.println("Found prog.bin...");
+            Serial.println(F("Found prog.bin..."));
             if (f.size() <= 0x100000) {
-                Serial.println("Transferring prog.bin to memory");
+                Serial.println(F("Transferring prog.bin to memory"));
                 static constexpr auto ByteCount = 16;
                 uint8_t dataBytes[ByteCount] = { 0 };
                 for (uint32_t i = 0; i < f.size(); i+=ByteCount) {
                     auto count = f.read(dataBytes, ByteCount);
                     psramMemory.write(i, dataBytes, count);
                 }
-                Serial.println("Transfer complete!");
-                Serial.println("Header Contents:");
+                Serial.println(F("Transfer complete!"));
+                Serial.println(F("Header Contents:"));
                 psramMemory.read(0, dataBytes, ByteCount);
                 auto* header = reinterpret_cast<uint32_t*>(dataBytes);
                 for (size_t i = 0; i < (ByteCount / sizeof(uint32_t)); ++i) {
-                    Serial.print("\t0x");
-                    Serial.print(i, HEX);
-                    Serial.print(": 0x");
-                    Serial.println(header[i], HEX);
+                    Serial.printf(F("\t0x%x: 0x%x\n"), i, header[i]);
                 }
             } else {
-                Serial.println("prog.bin is too large to fit in 16 megabytes!");
+                Serial.println(F("prog.bin is too large to fit in 16 megabytes!"));
             }
             f.close();
         }
