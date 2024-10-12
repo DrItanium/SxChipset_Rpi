@@ -119,14 +119,15 @@ using TWIBackingStore = Deception::TwoWireBackingStore;
 using TWICacheAddress = __uint24;
 using PSRAMBackingStore = PSRAMBackingStore;
 using PSRAMCacheAddress = uint32_t;
-#if 0
-using PrimaryBackingStore = TWIBackingStore;
-using CacheAddress = TWICacheAddress;
-#define CommunicationPrimitive PCLink2
-#else
+#define USE_PSRAM 
+#ifdef USE_PSRAM
 using PrimaryBackingStore = PSRAMBackingStore;
 using CacheAddress = PSRAMCacheAddress;
 #define CommunicationPrimitive psramMemory
+#else
+using PrimaryBackingStore = TWIBackingStore;
+using CacheAddress = TWICacheAddress;
+#define CommunicationPrimitive PCLink2
 #endif
 //using CacheAddress = uint32_t;
 constexpr auto CacheLineCount = 256;
@@ -689,7 +690,7 @@ setup() {
     Wire.setClock(Deception::TWI_ClockRate);
     onboardCache.begin();
     psramMemory.begin();
-    //installInitialBootImage();
+    installInitialBootImage();
     Serial.println(F("Setting up RTC"));
     // setup the RTC
     if (!rtc.begin()) {
@@ -813,7 +814,7 @@ setup() {
     // okay now we need to setup the cache so that I can eliminate the valid
     // bit. This is done by seeding the cache with teh first 4096 bytes
     for (Address i = 0; i < DataCache::NumCacheBytes; i += DataCache::NumBytesPerLine) {
-        Serial.printf(F("Seeding 0x%lx\n"), i);
+        //Serial.printf(F("Seeding 0x%lx\n"), i);
         onboardCache.seed(CommunicationPrimitive, i);
     }
     digitalWrite<Pins::RESET, HIGH>();
@@ -933,7 +934,41 @@ PSRAMBackingStore::begin() noexcept {
 }
 void
 installInitialBootImage() noexcept {
-
+#ifdef USE_PSRAM
+    if (!SD.begin(static_cast<int>(Pins::SD_EN))) {
+        Serial.println("No SDCard found!");
+    } else {
+        Serial.println("Found an SDCard, will try to transfer the contents of prog.bin to onboard psram");
+        auto f = SD.open("prog.bin", FILE_READ); 
+        if (!f) {
+            Serial.println("Could not open prog.bin...skipping!");
+        } else {
+            Serial.println("Found prog.bin...");
+            if (f.size() <= 0x100000) {
+                Serial.println("Transferring prog.bin to memory");
+                static constexpr auto ByteCount = 16;
+                uint8_t dataBytes[ByteCount] = { 0 };
+                for (uint32_t i = 0; i < f.size(); i+=ByteCount) {
+                    auto count = f.read(dataBytes, ByteCount);
+                    psramMemory.write(i, dataBytes, count);
+                }
+                Serial.println("Transfer complete!");
+                Serial.println("Header Contents:");
+                psramMemory.read(0, dataBytes, ByteCount);
+                auto* header = reinterpret_cast<uint32_t*>(dataBytes);
+                for (int i = 0; i < (ByteCount / sizeof(uint32_t)); ++i) {
+                    Serial.print("\t0x");
+                    Serial.print(i, HEX);
+                    Serial.print(": 0x");
+                    Serial.println(header[i], HEX);
+                }
+            } else {
+                Serial.println("prog.bin is too large to fit in 16 megabytes!");
+            }
+            f.close();
+        }
+    }
+#endif 
 }
 
 size_t
