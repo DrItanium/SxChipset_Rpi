@@ -115,8 +115,19 @@ class PSRAMBackingStore {
 
 PSRAMBackingStore psramMemory(SPI);
 Deception::TwoWireBackingStore PCLink2(Wire, Deception::TWI_MemoryControllerIndex);
-using PrimaryBackingStore = Deception::TwoWireBackingStore;
-using CacheAddress = __uint24;
+using TWIBackingStore = Deception::TwoWireBackingStore;
+using TWICacheAddress = __uint24;
+using PSRAMBackingStore = PSRAMBackingStore;
+using PSRAMCacheAddress = uint32_t;
+#if 0
+using PrimaryBackingStore = TWIBackingStore;
+using CacheAddress = TWICacheAddress;
+#define CommunicationPrimitive PCLink2
+#else
+using PrimaryBackingStore = PSRAMBackingStore;
+using CacheAddress = PSRAMCacheAddress;
+#define CommunicationPrimitive psramMemory
+#endif
 //using CacheAddress = uint32_t;
 constexpr auto CacheLineCount = 256;
 using CacheLine = Deception::CacheLine16<CacheAddress, PrimaryBackingStore>;
@@ -430,7 +441,7 @@ template<bool readOperation>
 inline
 void
 doMemoryTransaction(SplitWord32 address) noexcept {
-    auto& line = onboardCache.find(PCLink2, address.lo24);
+    auto& line = onboardCache.find(CommunicationPrimitive, address.lo24);
     auto* ptr = line.getLineData(address.getCacheOffset());
     if constexpr (readOperation) {
         uint16_t* ptr16 = reinterpret_cast<uint16_t*>(ptr);
@@ -798,12 +809,12 @@ setup() {
         delay(1000);
     }
 #endif
-    PCLink2.waitForBackingStoreIdle();
+    CommunicationPrimitive.waitForBackingStoreIdle();
     // okay now we need to setup the cache so that I can eliminate the valid
     // bit. This is done by seeding the cache with teh first 4096 bytes
     for (Address i = 0; i < DataCache::NumCacheBytes; i += DataCache::NumBytesPerLine) {
         Serial.printf(F("Seeding 0x%lx\n"), i);
-        onboardCache.seed(PCLink2, i);
+        onboardCache.seed(CommunicationPrimitive, i);
     }
     digitalWrite<Pins::RESET, HIGH>();
 }
