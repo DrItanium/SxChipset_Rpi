@@ -114,21 +114,11 @@ class PSRAMBackingStore {
 };
 
 PSRAMBackingStore psramMemory(SPI);
-Deception::TwoWireBackingStore PCLink2(Wire, Deception::TWI_MemoryControllerIndex);
-using TWIBackingStore = Deception::TwoWireBackingStore;
-using TWICacheAddress = __uint24;
 using PSRAMBackingStore = PSRAMBackingStore;
 using PSRAMCacheAddress = uint32_t;
-#define USE_PSRAM 
-#ifdef USE_PSRAM
 using PrimaryBackingStore = PSRAMBackingStore;
 using CacheAddress = PSRAMCacheAddress;
 #define CommunicationPrimitive psramMemory
-#else
-using PrimaryBackingStore = TWIBackingStore;
-using CacheAddress = TWICacheAddress;
-#define CommunicationPrimitive PCLink2
-#endif
 //using CacheAddress = uint32_t;
 constexpr auto CacheLineCount = 256;
 using CacheLine = Deception::CacheLine16<CacheAddress, PrimaryBackingStore>;
@@ -675,6 +665,7 @@ const char *daysOfTheWeek[] {
     "Friday",
     "Saturday",
 };
+void setupExternalDevices() noexcept;
 void
 setup() {
     GPIOR0 = 0;
@@ -691,6 +682,18 @@ setup() {
     onboardCache.begin();
     psramMemory.begin();
     installInitialBootImage();
+    setupExternalDevices();
+    CommunicationPrimitive.waitForBackingStoreIdle();
+    // okay now we need to setup the cache so that I can eliminate the valid
+    // bit. This is done by seeding the cache with teh first 4096 bytes
+    for (Address i = 0; i < DataCache::NumCacheBytes; i += DataCache::NumBytesPerLine) {
+        //Serial.printf(F("Seeding 0x%lx\n"), i);
+        onboardCache.seed(CommunicationPrimitive, i);
+    }
+    digitalWrite<Pins::RESET, HIGH>();
+}
+void
+setupExternalDevices() noexcept {
     Serial.println(F("Setting up RTC"));
     // setup the RTC
     if (!rtc.begin()) {
@@ -804,20 +807,6 @@ setup() {
         }
         Serial.printf(F("UV data: %d\n"), ltr->readUVS());
     }
-#if 0
-    while (true) {
-        // do nothing after this point for now
-        delay(1000);
-    }
-#endif
-    CommunicationPrimitive.waitForBackingStoreIdle();
-    // okay now we need to setup the cache so that I can eliminate the valid
-    // bit. This is done by seeding the cache with teh first 4096 bytes
-    for (Address i = 0; i < DataCache::NumCacheBytes; i += DataCache::NumBytesPerLine) {
-        //Serial.printf(F("Seeding 0x%lx\n"), i);
-        onboardCache.seed(CommunicationPrimitive, i);
-    }
-    digitalWrite<Pins::RESET, HIGH>();
 }
 [[gnu::always_inline]]
 inline void 
@@ -934,7 +923,6 @@ PSRAMBackingStore::begin() noexcept {
 }
 void
 installInitialBootImage() noexcept {
-#ifdef USE_PSRAM
     if (!SD.begin(static_cast<int>(Pins::SD_EN))) {
         Serial.println("No SDCard found!");
     } else {
@@ -956,7 +944,7 @@ installInitialBootImage() noexcept {
                 Serial.println("Header Contents:");
                 psramMemory.read(0, dataBytes, ByteCount);
                 auto* header = reinterpret_cast<uint32_t*>(dataBytes);
-                for (int i = 0; i < (ByteCount / sizeof(uint32_t)); ++i) {
+                for (size_t i = 0; i < (ByteCount / sizeof(uint32_t)); ++i) {
                     Serial.print("\t0x");
                     Serial.print(i, HEX);
                     Serial.print(": 0x");
@@ -968,7 +956,6 @@ installInitialBootImage() noexcept {
             f.close();
         }
     }
-#endif 
 }
 
 size_t
