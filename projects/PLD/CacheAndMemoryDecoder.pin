@@ -1,0 +1,29 @@
+
+
+ Pin # | Name     | Pin Type
+-----------------------------
+   1   | NC       | Clock/Input
+   2   | A7       | Input
+   3   | A6       | Input
+   4   | A5       | Input
+   5   | A4       | Input
+   6   | WR       | Input
+   7   | RD       | Input
+   8   | A19      | Input
+   9   | A20M     | Input
+  10   | A21M     | Input
+  11   | A22M     | Input
+  12   | GND      | GND
+  13   | A23M     | Input
+  14   | SEL4     | Input
+  15   | SEL5     | Input
+  16   | SEL6     | Input
+  17   | MK       | Input
+  18   | A19M     | Output
+  19   | AM2      | Output
+  20   | DIR0     | Output
+  21   | EN0      | Output
+  22   | C1       | Output
+  23   | C0       | Output
+  24   | VCC      | VCC
+
