@@ -1,0 +1,137 @@
+GAL22V10
+CacheAndMemoryDecoder
+
+NC A7 A6 A5 A4 WR RD A19 A20M A21M A22M GND
+A23M SEL4 SEL5 SEL6 MK A19M AM2 DIR0 EN0 C1 C0 VCC
+
+DIR0 = /WR
+/EN0 = C0 * /C1 * /WR * RD +  C0 * /C1 * WR * /RD + /C0 *  C1 * /WR * RD + /C0 *  C1 * WR * /RD 
+A19M = /A19 * /SEL4 + A19 * SEL4
+AM2 = A19M * /A20M * /A21M * /A22M * /A23M * /SEL5 *  SEL6 *  /MK + A19M * /A20M * /A21M * /A22M *  SEL5 *  SEL6 * /MK + A19M * /A20M * /A21M * /SEL5 *  /SEL6 *  MK + A19M * /A20M *  SEL5 * /SEL6 *  MK + A19M *         /SEL5 *  SEL6 *  MK + SEL5 *  SEL6 *  MK
+
+/C0 = /MK * /SEL6 * /SEL5 * /A4 * /A5 * /A6 * /A7 * /A19 + AM2 * /A4 * /A5 * /A6 * /A7
+/C1 = /MK * /SEL6 * /SEL5 * /A4 * /A5 * /A6 * /A7 *  A19 + AM2 *  A4 * /A5 * /A6 * /A7
+
+DESCRIPTION
+
+When MK is low then we are treating it as a cache
+When it is high then we are treating it as direct memory accesses
+
+
+When MK is high, we are using A19 to switch between the lower 512k and upper
+512k on the chip. We also map the two chips to the same 16-byte window in the
+EBI.
+
+When MK is low, A19 becomes a match criteria instead of upper or lower chip
+select. The 1MB of storage becomes a 512k block of memory to simplify the
+address layout. A19 is compared against SEL4 for a match criteria since 1MB has
+become 512k of actual storage + 512k of tag bits. Thus this chip supports up to
+32 separate devices or 16MB. The problem with this design is that there is no
+way to only have a single chip installed due to SEL5 and SEL6 being used for
+limiting the scope of available chips. 
+
+The combinations currently are (regardless of MK)
+/SEL5 * /SEL6 => Compare Match against A20-A23 
+ SEL5 * /SEL6 => Compare Match against A20-A22 (A23 is ignored)
+/SEL5 *  SEL6 => Compare Match against A20-A21 (A22-A23 are ignored)
+ SEL5 *  SEL6 => Compare Match against A20     (A21-A23 are ignored) (1M when /MK and 2MB when MK)
+
+As it stands now, I need to provide a minimum of two boards to support this
+combination this without having a custom firmware spin. 
+
+The other way to solve this is to use SEL4 for more than just a horizontal
+encoding.  
+
+Currently the combinations look like this:
+/SEL4 * /SEL5 * /SEL6 * /MK => Cache, A19 == LOW, Compare A20-A23
+ SEL4 * /SEL5 * /SEL6 * /MK => Cache, A19 == HIGH, Compare A20-A23
+/SEL4 *  SEL5 * /SEL6 * /MK => Cache, A19 == LOW, Compare A20-A22
+ SEL4 *  SEL5 * /SEL6 * /MK => Cache, A19 == HIGH, Compare A20-A22
+/SEL4 * /SEL5 *  SEL6 * /MK => Cache, A19 == LOW, Compare A20-A21
+ SEL4 * /SEL5 *  SEL6 * /MK => Cache, A19 == HIGH, Compare A20-A21
+/SEL4 *  SEL5 *  SEL6 * /MK => Cache, A19 == LOW, Compare A20
+ SEL4 *  SEL5 *  SEL6 * /MK => Cache, A19 == HIGH, Compare A20
+/SEL4 * /SEL5 * /SEL6 *  MK => Memory, Compare A20-A23
+ SEL4 * /SEL5 * /SEL6 *  MK => Memory, Compare A20-A23
+/SEL4 *  SEL5 * /SEL6 *  MK => Memory, Compare A20-A22
+ SEL4 *  SEL5 * /SEL6 *  MK => Memory, Compare A20-A22
+/SEL4 * /SEL5 *  SEL6 *  MK => Memory, Compare A20-A21
+ SEL4 * /SEL5 *  SEL6 *  MK => Memory, Compare A20-A21
+/SEL4 *  SEL5 *  SEL6 *  MK => Memory, Compare A20
+ SEL4 *  SEL5 *  SEL6 *  MK => Memory, Compare A20
+
+I actually only have 12 unique states from a total of 16 possible states
+currently. Thus I need to actually use SEL4 for other features  This is the
+updated list of operations:
+
+/SEL4 * /SEL5 * /SEL6 * /MK => Cache, A19 == LOW, Compare A20-A23
+ SEL4 * /SEL5 * /SEL6 * /MK => Cache, A19 == HIGH, Compare A20-A23
+/SEL4 *  SEL5 * /SEL6 * /MK => Cache, A19 == LOW, Compare A20-A22
+ SEL4 *  SEL5 * /SEL6 * /MK => Cache, A19 == HIGH, Compare A20-A22
+/SEL4 * /SEL5 *  SEL6 * /MK => Cache, A19 == LOW, Compare A20-A21
+ SEL4 * /SEL5 *  SEL6 * /MK => Cache, A19 == HIGH, Compare A20-A21
+/SEL4 *  SEL5 *  SEL6 * /MK => Cache, A19 == LOW, Compare A20
+ SEL4 *  SEL5 *  SEL6 * /MK => Cache, A19 == HIGH, Compare A20
+/SEL4 * /SEL5 * /SEL6 *  MK => Cache, A19 == LOW, Compare nothing (1MB Mode)
+ SEL4 * /SEL5 * /SEL6 *  MK => Cache, A19 == HIGH, Compare nothing (1MB Mode)
+/SEL4 *  SEL5 * /SEL6 *  MK => Undefined
+ SEL4 *  SEL5 * /SEL6 *  MK => Undefined
+/SEL4 * /SEL5 *  SEL6 *  MK => Memory, Compare A20-A23
+ SEL4 * /SEL5 *  SEL6 *  MK => Memory, Compare A20-A22
+/SEL4 *  SEL5 *  SEL6 *  MK => Memory, Compare A20-A21
+ SEL4 *  SEL5 *  SEL6 *  MK => Memory, Compare A20
+
+ In this new scheme I am using 14 out of 16 possible states for special features
+
+But if we think about it, having a selectable width when in non cache mode
+makes no sense. We want the cache to wrap around but not memory! That is a bad
+idea!!!!
+
+Thus we should actually have the following design:
+
+
+/SEL4 * /SEL5 * /SEL6 * /MK => Cache, A19 == LOW, Compare A20-A23
+ SEL4 * /SEL5 * /SEL6 * /MK => Cache, A19 == HIGH, Compare A20-A23
+/SEL4 *  SEL5 * /SEL6 * /MK => Cache, A19 == LOW, Compare A20-A22
+ SEL4 *  SEL5 * /SEL6 * /MK => Cache, A19 == HIGH, Compare A20-A22
+/SEL4 * /SEL5 *  SEL6 * /MK => Cache, A19 == LOW, Compare A20-A21
+ SEL4 * /SEL5 *  SEL6 * /MK => Cache, A19 == HIGH, Compare A20-A21
+/SEL4 *  SEL5 *  SEL6 * /MK => Cache, A19 == LOW, Compare A20
+ SEL4 *  SEL5 *  SEL6 * /MK => Cache, A19 == HIGH, Compare A20
+/SEL4 * /SEL5 * /SEL6 *  MK => Cache, A19 == LOW, Compare nothing (1MB Mode)
+ SEL4 * /SEL5 * /SEL6 *  MK => Cache, A19 == HIGH, Compare nothing (1MB Mode)
+/SEL4 *  SEL5 * /SEL6 *  MK => Cache, Ignore A19 (512k mode)
+ SEL4 *  SEL5 * /SEL6 *  MK => Undefined
+/SEL4 * /SEL5 *  SEL6 *  MK => Undefined
+ SEL4 * /SEL5 *  SEL6 *  MK => Undefined
+/SEL4 *  SEL5 *  SEL6 *  MK => Undefined
+ SEL4 *  SEL5 *  SEL6 *  MK => Memory (Compare A20-A23) in all cases
+
+ Thus if we ignore SEL4 we get 8 states instead
+
+/SEL5 * /SEL6 * /MK => Cache, Compare A19-A23
+ SEL5 * /SEL6 * /MK => Cache, Compare A19-A22
+/SEL5 *  SEL6 * /MK => Cache, Compare A19-A21
+ SEL5 *  SEL6 * /MK => Cache, Compare A19-A20
+/SEL5 * /SEL6 *  MK => Cache, Compare A19 (1MB Mode)
+ SEL5 * /SEL6 *  MK => Cache, Ignore A19 (512k mode)
+/SEL5 *  SEL6 *  MK => Undefined
+ SEL5 *  SEL6 *  MK => Memory, (Compare A20-A23) in all cases
+
+Now SEL4 becomes A19M match exclusively
+
+This design update means that I can actually invert the logic to make the
+number of jumpers define the set of actions so we get the following:
+
+
+/SEL5 * /SEL6 * /MK => Memory, (Compare A20-A23)
+ SEL5 * /SEL6 * /MK => Undefined / Memory
+/SEL5 *  SEL6 * /MK => Cache, Compare A19-A23 (16MB Mode)
+ SEL5 *  SEL6 * /MK => Cache, Compare A19-A22 (8MB Mode)
+/SEL5 * /SEL6 *  MK => Cache, Compare A19-A21 (4MB Mode)
+ SEL5 * /SEL6 *  MK => Cache, Compare A19-A20 (2MB Mode)
+/SEL5 *  SEL6 *  MK => Cache, Compare A19 (1MB Mode)
+ SEL5 *  SEL6 *  MK => Cache, Ignore A19 (512k mode)
+
+I think that having it this way is a little easier to work with
+

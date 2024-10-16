@@ -125,7 +125,7 @@ using CacheLine = Deception::CacheLine16<CacheAddress, PrimaryBackingStore>;
 using DataCache = Deception::DirectMappedCache<CacheLineCount, CacheLine>;
 DataCache onboardCache;
 static_assert(sizeof(CacheLine) <= 32);
-//[[gnu::address(0xFF00)]] volatile CacheLine externalCacheLine;
+[[gnu::address(0xFF00)]] volatile CacheLine externalCacheLine;
 union [[gnu::packed]] SplitWord32 {
     uint8_t bytes[sizeof(uint32_t) / sizeof(uint8_t)];
     uint16_t halves[sizeof(uint32_t) / sizeof(uint16_t)];
