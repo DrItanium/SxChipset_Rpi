@@ -602,9 +602,9 @@ getAddress() noexcept {
 void 
 configureExternalBus() noexcept {
     // no wait states
-    bitClear(XMCRA, SRW11);
+    bitSet(XMCRA, SRW11);
     bitSet(XMCRA, SRW10);
-    bitClear(XMCRA, SRW01);
+    bitSet(XMCRA, SRW01);
     bitSet(XMCRA, SRW00);
     // half and half sector limits (doesn't really matter since it will an
     // 8-bit space

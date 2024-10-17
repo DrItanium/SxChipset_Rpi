@@ -2,12 +2,12 @@ GAL22V10
 CacheAndMemoryDecoder
 
 NC A7 A6 A5 A4 WR RD A19 A20M A21M A22M GND
-A23M SEL4 SEL5 SEL6 MK A19M AM2 DIR0 EN0 C1 C0 VCC
+A23M SEL4 SEL5 SEL6 MK A19M AM2 EN0 DIR0 C1 C0 VCC
 
-DIR0 = /RD * WR
-/EN0 = C0 * /C1 * /WR *  RD +  C0 * /C1 *  WR * /RD + /C0 *  C1 * /WR *  RD + /C0 *  C1 *  WR * /RD 
+DIR0 = /RD
+/EN0 = C0 * /C1 * /WR * RD +  C0 * /C1 * WR * /RD + /C0 *  C1 * /WR * RD + /C0 *  C1 * WR * /RD 
 A19M = /A19 * /SEL4 + A19 * SEL4
-AM2 = A19M * /A20M * /A21M * /A22M * /A23M * /SEL5 *  SEL6 *  /MK + A19M * /A20M * /A21M * /A22M *          SEL5 *  SEL6 *  /MK + A19M * /A20M * /A21M *                 /SEL5 *  /SEL6 *  MK + A19M * /A20M *                          SEL5 *  /SEL6 *  MK + A19M *                                 /SEL5 *   SEL6 *  MK + SEL5 *   SEL6 *  MK
+AM2 = A19M * /A20M * /A21M * /A22M * /A23M * /SEL5 *  SEL6 *  /MK + A19M * /A20M * /A21M * /A22M *  SEL5 *  SEL6 * /MK + A19M * /A20M * /A21M * /SEL5 *  /SEL6 *  MK + A19M * /A20M *  SEL5 * /SEL6 *  MK + A19M *         /SEL5 *  SEL6 *  MK + SEL5 *  SEL6 *  MK
 
 /C0 = /MK * /SEL6 * /SEL5 * /A4 * /A5 * /A6 * /A7 * /A19 + AM2 * /A4 * /A5 * /A6 * /A7
 /C1 = /MK * /SEL6 * /SEL5 * /A4 * /A5 * /A6 * /A7 *  A19 + AM2 *  A4 * /A5 * /A6 * /A7

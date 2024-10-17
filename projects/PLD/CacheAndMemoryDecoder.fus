@@ -27,12 +27,12 @@ Pin 22 = C1           S0 = 0   S1 = 1
  19  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  20  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 
-Pin 21 = EN0          S0 = 0   S1 = 1
+Pin 21 = DIR0         S0 = 1   S1 = 1
  21  ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
- 22  --x- ---x ---- ---- ---- -x-- x--- ---- ---- ---- ----
- 23  --x- ---x ---- ---- ---- x--- -x-- ---- ---- ---- ----
- 24  ---x --x- ---- ---- ---- -x-- x--- ---- ---- ---- ----
- 25  ---x --x- ---- ---- ---- x--- -x-- ---- ---- ---- ----
+ 22  ---- ---- ---- ---- ---- ---- -x-- ---- ---- ---- ----
+ 23  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
+ 24  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
+ 25  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  26  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  27  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  28  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
@@ -42,12 +42,12 @@ Pin 21 = EN0          S0 = 0   S1 = 1
  32  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  33  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 
-Pin 20 = DIR0         S0 = 1   S1 = 1
+Pin 20 = EN0          S0 = 0   S1 = 1
  34  ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
- 35  ---- ---- ---- ---- ---- x--- -x-- ---- ---- ---- ----
- 36  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
- 37  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
- 38  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
+ 35  --x- ---x ---- ---- ---- -x-- x--- ---- ---- ---- ----
+ 36  --x- ---x ---- ---- ---- x--- -x-- ---- ---- ---- ----
+ 37  ---x --x- ---- ---- ---- -x-- x--- ---- ---- ---- ----
+ 38  ---x --x- ---- ---- ---- x--- -x-- ---- ---- ---- ----
  39  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  40  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  41  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
