@@ -1029,9 +1029,7 @@ sanityCheckHardwareAcceleratedCacheLine() noexcept {
         auto raw = externalCacheLineRaw.dwords[i];
         if (temp != raw) {
             Serial.printf(F("%d: (temp) 0x%lx != 0x%lx (readback)\n"), i, temp, raw);
-        } else {
-            Serial.printf(F("%d: (temp) 0x%lx == 0x%lx (readback)\n"), i, temp, raw);
-        }
+        } 
     }
     Serial.println(F("Sanity Check complete!"));
     delete [] temporaryStorage;
