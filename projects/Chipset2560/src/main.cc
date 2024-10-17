@@ -646,6 +646,12 @@ setup() {
     GPIOR0 = 0;
     GPIOR1 = 0;
     GPIOR2 = 0;
+    randomSeed(
+            analogRead(A0) + analogRead(A1) + analogRead(A2) + analogRead(A3) +
+            analogRead(A4) + analogRead(A5) + analogRead(A6) + analogRead(A7) +
+            analogRead(A8) + analogRead(A9) + analogRead(A10) + analogRead(A11) +
+            analogRead(A12) + analogRead(A13) + analogRead(A14) + analogRead(A15)
+            );
     configurePins();
     configureDataLinesForRead();
     configureInterruptSources();
@@ -989,11 +995,12 @@ union [[gnu::packed]] ExternalCacheLineView {
     uint16_t words[ExternalCacheLineCapacity/sizeof(uint16_t)];
     uint32_t dwords[ExternalCacheLineCapacity/sizeof(uint32_t)];
     uint64_t qwords[ExternalCacheLineCapacity/sizeof(uint64_t)];
-} ;
+};
+static_assert(sizeof(ExternalCacheLineView) == ExternalCacheLineCapacity);
 [[gnu::address(0xFF00)]] volatile ExternalCacheLineView externalCacheLineRaw;
 
-void
 [[gnu::noinline]]
+void
 sanityCheckHardwareAcceleratedCacheLine() noexcept {
     Serial.println(F("Performing hardware accelerated cache line test!"));
     Serial.println(F("Zeroing out cache memory"));
@@ -1018,39 +1025,60 @@ sanityCheckHardwareAcceleratedCacheLine() noexcept {
     // deadly fragmentation in the heap, but in this case it is okay as it is a
     // contiguous block. I do not care if third party libraries do this, but I
     // should not be contributing to it.
-    using TempStorageKind = uint16_t;
+    using TempStorageKind = uint32_t;
     constexpr auto NumberOfEntries = ExternalCacheLineCapacity / sizeof(TempStorageKind);
     TempStorageKind* temporaryStorage = new TempStorageKind[NumberOfEntries]();
+    asm volatile ("nop");
     for (uint8_t i = 0; i < NumberOfEntries; ++i) {
         temporaryStorage[i] = random();
     }
+    asm volatile ("nop");
+    asm volatile ("nop");
     for (uint8_t i = 0; i < NumberOfEntries; ++i) {
-        externalCacheLineRaw.words[i] = temporaryStorage[i];
-        if (temporaryStorage[i] != externalCacheLineRaw.words[i]) {
-            Serial.printf(F("%d: (temp) 0x%x != 0x%x (readback)\n"), i, temporaryStorage[i], externalCacheLineRaw.words[i]);
-        } 
-    }
-    Serial.println(F("Readback check"));
-    for (uint8_t i = 0; i < NumberOfEntries; ++i) {
-        auto temp = temporaryStorage[i];
-        auto raw = externalCacheLineRaw.words[i];
-        if (temp != raw) {
-            Serial.printf(F("%d: (temp) 0x%x != 0x%x (readback)\n"), i, temp, raw);
-        } else {
-            Serial.printf(F("%d: (temp) 0x%x == 0x%x (readback)\n"), i, temp, raw);
+        externalCacheLineRaw.dwords[i] = temporaryStorage[i];
+        if (temporaryStorage[i] != externalCacheLineRaw.dwords[i]) {
+            Serial.printf(F("%d: (temp) 0x%lx != 0x%lx (readback)\n"), i, temporaryStorage[i], externalCacheLineRaw.dwords[i]);
         }
     }
+    asm volatile ("nop");
+    asm volatile ("nop");
+    asm volatile ("nop");
+    Serial.println(F("Readback check"));
+    asm volatile ("nop");
+    asm volatile ("nop");
+    asm volatile ("nop");
+    asm volatile ("nop");
+    for (uint8_t i = 0; i < NumberOfEntries; ++i) {
+        auto temp = temporaryStorage[i];
+        auto raw = externalCacheLineRaw.dwords[i];
+        if (temp != raw) {
+            Serial.printf(F("%d: (temp) 0x%lx != 0x%lx (readback)\n"), i, temp, raw);
+        } else {
+            Serial.printf(F("%d: (temp) 0x%lx == 0x%lx (readback)\n"), i, temp, raw);
+        }
+    }
+    asm volatile ("nop");
+    asm volatile ("nop");
+    asm volatile ("nop");
+    asm volatile ("nop");
+    asm volatile ("nop");
     Serial.println(F("Sanity Check complete!"));
     delete [] temporaryStorage;
+    asm volatile ("nop");
+    asm volatile ("nop");
+    asm volatile ("nop");
+    asm volatile ("nop");
+    asm volatile ("nop");
+    asm volatile ("nop");
 }
 
 void 
 configureExternalBus() noexcept {
     // no wait states
     bitClear(XMCRA, SRW11);
-    bitSet(XMCRA, SRW10);
+    bitClear(XMCRA, SRW10);
     bitClear(XMCRA, SRW01);
-    bitSet(XMCRA, SRW00);
+    bitClear(XMCRA, SRW00);
     // half and half sector limits (doesn't really matter since it will an
     // 8-bit space
     bitClear(XMCRA, SRL0);
