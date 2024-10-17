@@ -30,6 +30,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <RTClib.h>
 #include <Adafruit_Si7021.h>
 #include <Adafruit_LTR390.h>
+#include <Adafruit_SPITFT.h>
 
 #include "Types.h"
 #include "Pinout.h"
@@ -105,6 +106,8 @@ class PSRAMBackingStore {
         size_t read(Address addr, uint8_t* storage, size_t count) noexcept;
         size_t write(Address addr, uint8_t* storage, size_t count) noexcept;
         void waitForBackingStoreIdle() noexcept { }
+    private:
+        void setAddress(Address address) noexcept;
     private:
         SPIDevice& _link;
 };
@@ -692,14 +695,16 @@ setup() {
     setupExternalDevices();
     CommunicationPrimitive.waitForBackingStoreIdle();
     sanityCheckHardwareAcceleratedCacheLine();
-    // do not cache anything to start with as we should instead just be ready
-    // to get data from psram instead
-    getDirectionRegister<Ports::AddressLowest>() = 0;
-    getDirectionRegister<Ports::AddressLower>() = 0;
-    getDirectionRegister<Ports::AddressHigher>() = 0;
-    getDirectionRegister<Ports::AddressHighest>() = 0;
+    {
+        // do not cache anything to start with as we should instead just be ready
+        // to get data from psram instead
+        getDirectionRegister<Ports::AddressLowest>() = 0;
+        getDirectionRegister<Ports::AddressLower>() = 0;
+        getDirectionRegister<Ports::AddressHigher>() = 0;
+        getDirectionRegister<Ports::AddressHighest>() = 0;
 
-    digitalWrite<Pins::RESET, HIGH>();
+        digitalWrite<Pins::RESET, HIGH>();
+    }
 }
 void
 setupExternalDevices() noexcept {
@@ -918,9 +923,21 @@ installInitialBootImage() noexcept {
                 Serial.println(F("Transferring prog.bin to memory"));
                 static constexpr auto ByteCount = 16;
                 uint8_t dataBytes[16] = { 0 };
+                uint8_t dataBytes2[16] = { 0 };
+                uint8_t compareBytes[16] = { 0 };
                 for (uint32_t i = 0, j = 0; i < f.size(); i+=ByteCount, ++j) {
                     auto count = f.read(dataBytes, ByteCount);
+                    // make a temporary copy for compare purposes
+                    for (int i = 0 ; i < ByteCount; ++i) {
+                        dataBytes2[i] = dataBytes[i];
+                    }
                     psramMemory.write(i, dataBytes, count);
+                    psramMemory.read(i, compareBytes, count);
+                    for (int j = 0; j < count; ++j) {
+                        if (dataBytes2[j] != compareBytes[j]) {
+                            Serial.printf(F("UPLOAD MISMATCH @ 0x%lx: (w) 0x%x, (g) 0x%x\n"), (i + j), dataBytes2[j], compareBytes[j]);
+                        }
+                    }
                     // put a blip out every 64k
                     if ((j & 0xFF) == 0) {
                         Serial.print('.');
@@ -941,18 +958,23 @@ installInitialBootImage() noexcept {
     }
 }
 
-size_t
-PSRAMBackingStore::read(Address addr, uint8_t* storage, size_t count) noexcept {
-    if (static_cast<uint8_t>(addr >> 24) & 0b0000'0001) {
+void 
+PSRAMBackingStore::setAddress(Address address) noexcept {
+    uint8_t addr = static_cast<uint8_t>(address >> 23) & 0b11;
+    if (addr & 0b10) {
         digitalWrite<Pins::PSRAM_A1, HIGH>();
     } else {
         digitalWrite<Pins::PSRAM_A1, LOW>();
     }
-    if (static_cast<uint8_t>(addr >> 16) & 0b1000'0000) {
+    if (addr & 0b01) {
         digitalWrite<Pins::PSRAM_A0, HIGH>();
     } else {
         digitalWrite<Pins::PSRAM_A0, LOW>();
     }
+}
+size_t
+PSRAMBackingStore::read(Address addr, uint8_t* storage, size_t count) noexcept {
+    setAddress(addr);
     _link.beginTransaction(SPISettings{5'000'000, MSBFIRST, SPI_MODE0});
     digitalWrite<Pins::PSRAM_EN, LOW>();
     _link.transfer(0x03);
@@ -967,16 +989,7 @@ PSRAMBackingStore::read(Address addr, uint8_t* storage, size_t count) noexcept {
 
 size_t
 PSRAMBackingStore::write(Address addr, uint8_t* storage, size_t count) noexcept {
-    if (static_cast<uint8_t>(addr >> 24) & 0b0000'0001) {
-        digitalWrite<Pins::PSRAM_A1, HIGH>();
-    } else {
-        digitalWrite<Pins::PSRAM_A1, LOW>();
-    }
-    if (static_cast<uint8_t>(addr >> 16) & 0b1000'0000) {
-        digitalWrite<Pins::PSRAM_A0, HIGH>();
-    } else {
-        digitalWrite<Pins::PSRAM_A0, LOW>();
-    }
+    setAddress(addr);
     _link.beginTransaction(SPISettings{5'000'000, MSBFIRST, SPI_MODE0});
     digitalWrite<Pins::PSRAM_EN, LOW>();
     _link.transfer(0x02);
@@ -989,27 +1002,15 @@ PSRAMBackingStore::write(Address addr, uint8_t* storage, size_t count) noexcept 
     return count;
 }
 
-constexpr uint8_t ExternalCacheLineCapacity = 32;
-union [[gnu::packed]] ExternalCacheLineView {
-    uint8_t bytes[ExternalCacheLineCapacity];
-    uint16_t words[ExternalCacheLineCapacity/sizeof(uint16_t)];
-    uint32_t dwords[ExternalCacheLineCapacity/sizeof(uint32_t)];
-    uint64_t qwords[ExternalCacheLineCapacity/sizeof(uint64_t)];
-};
-static_assert(sizeof(ExternalCacheLineView) == ExternalCacheLineCapacity);
-[[gnu::address(0xFF00)]] volatile ExternalCacheLineView externalCacheLineRaw;
-
 void
 sanityCheckHardwareAcceleratedCacheLine() noexcept {
     Serial.println(F("Zeroing out cache memory"));
     for (uint32_t i = 0; i < 0x01'00'0000; i += 16) {
-        auto oldPart = getOutputRegister<Ports::AddressHigher>();
-        auto newPart = static_cast<uint8_t>(i >> 16);
         getOutputRegister<Ports::AddressLowest>() = static_cast<uint8_t>(i);
         getOutputRegister<Ports::AddressLower>() = static_cast<uint8_t>(i >> 8); 
-        getOutputRegister<Ports::AddressHigher>() = newPart;
+        getOutputRegister<Ports::AddressHigher>() = static_cast<uint8_t>(i >> 16);
         getOutputRegister<Ports::AddressHighest>() = static_cast<uint8_t>(i >> 24);
-        if (oldPart != newPart) {
+        if (static_cast<uint16_t>(i) == 0) {
             Serial.print('.');
         }
         externalCacheLine.clear();
@@ -1020,9 +1021,9 @@ sanityCheckHardwareAcceleratedCacheLine() noexcept {
 void 
 configureExternalBus() noexcept {
     // one cycle wait to be on the safe side
-    bitSet(XMCRA, SRW11);
+    bitClear(XMCRA, SRW11);
     bitSet(XMCRA, SRW10);
-    bitSet(XMCRA, SRW01);
+    bitClear(XMCRA, SRW01);
     bitSet(XMCRA, SRW00);
     // half and half sector limits (doesn't really matter since it will an
     // 8-bit space
