@@ -603,9 +603,9 @@ void
 configureExternalBus() noexcept {
     // no wait states
     bitClear(XMCRA, SRW11);
-    bitClear(XMCRA, SRW10);
+    bitSet(XMCRA, SRW10);
     bitClear(XMCRA, SRW01);
-    bitClear(XMCRA, SRW00);
+    bitSet(XMCRA, SRW00);
     // half and half sector limits (doesn't really matter since it will an
     // 8-bit space
     bitClear(XMCRA, SRL0);
@@ -650,12 +650,15 @@ configurePins() noexcept {
     digitalWrite<Pins::HOLD, LOW>();
     digitalWrite<Pins::READY, HIGH>();
 
-    getDirectionRegister<Ports::AddressLowest>() = 0;
-    getDirectionRegister<Ports::AddressLower>() = 0;
-    getDirectionRegister<Ports::AddressHigher>() = 0;
-    getDirectionRegister<Ports::AddressHighest>() = 0;
+    // configure the address lines as output to start
+    getDirectionRegister<Ports::AddressLowest>() = 0xFF;
+    getDirectionRegister<Ports::AddressLower>() = 0xFF;
+    getDirectionRegister<Ports::AddressHigher>() = 0xFF;
+    getDirectionRegister<Ports::AddressHighest>() = 0xFF;
+    // then setup the external bus, it is necessary for the next step
     configureExternalBus();
 }
+void sanityCheckHardwareAcceleratedCacheLine() noexcept;
 void setupExternalDevices() noexcept;
 void
 setup() {
@@ -670,6 +673,7 @@ setup() {
     SPI.begin();
     Wire.begin();
     Wire.setClock(Deception::TWI_ClockRate);
+    sanityCheckHardwareAcceleratedCacheLine();
     onboardCache.begin();
     psramMemory.begin();
     installInitialBootImage();
@@ -681,6 +685,14 @@ setup() {
         //Serial.printf(F("Seeding 0x%lx\n"), i);
         onboardCache.seed(CommunicationPrimitive, i);
     }
+
+    // configure the address lines as inputs now that we are done with seeding
+    // and setting up the cache
+    getDirectionRegister<Ports::AddressLowest>() = 0;
+    getDirectionRegister<Ports::AddressLower>() = 0;
+    getDirectionRegister<Ports::AddressHigher>() = 0;
+    getDirectionRegister<Ports::AddressHighest>() = 0;
+
     digitalWrite<Pins::RESET, HIGH>();
 }
 void
@@ -988,4 +1000,33 @@ PSRAMBackingStore::write(Address addr, uint8_t* storage, size_t count) noexcept 
     digitalWrite<Pins::PSRAM_EN, HIGH>();
     _link.endTransaction();
     return count;
+}
+
+[[gnu::address(0xFF00)]] volatile uint8_t externalCacheLineRaw[32];
+
+void
+sanityCheckHardwareAcceleratedCacheLine() noexcept {
+    Serial.println(F("Performing hardware accelerated cache line test!"));
+    // okay so the first thing we need to do is just test out this design
+    getOutputRegister<Ports::AddressLowest>() = 0; 
+    getOutputRegister<Ports::AddressLower>() = 0; 
+    getOutputRegister<Ports::AddressHigher>() = 0; 
+    getOutputRegister<Ports::AddressHighest>() = 0; 
+    uint8_t temporaryStorage[32];
+    for (int i = 0; i < 32; ++i) {
+        temporaryStorage[i] = random();
+        externalCacheLineRaw[i] = temporaryStorage[i];
+        if (temporaryStorage[i] != externalCacheLineRaw[i]) {
+            Serial.printf(F("(temp) 0x%x != 0x%x (readback)\n"), temporaryStorage[i], externalCacheLineRaw[i]);
+        }
+    }
+    getOutputRegister<Ports::AddressLowest>() = 0xFF;
+    delay(100);
+    getOutputRegister<Ports::AddressLowest>() = 0;
+    for (int i = 0; i < 32; ++i) {
+        if (temporaryStorage[i] != externalCacheLineRaw[i]) {
+            Serial.printf(F("(temp) 0x%x != 0x%x (readback)\n"), temporaryStorage[i], externalCacheLineRaw[i]);
+        }
+    }
+    Serial.println(F("Sanity Check complete!"));
 }
