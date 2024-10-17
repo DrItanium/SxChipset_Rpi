@@ -167,11 +167,19 @@ namespace Deception {
             return input & ByteOffsetMask;
         }
         constexpr bool dirty() const noexcept { return _dirty; }
-        constexpr bool matches(Address_t other) const noexcept { return _valid && (_key == other); }
+        constexpr bool matches(Address_t other) const volatile noexcept { return _valid && (_key == other); }
         void replace(BackingStore_t& store, Address_t newAddress) noexcept {
             if (_valid) {
                 if (_dirty) {
                     (void)store.write(_key, _bytes, NumBytes);
+                }
+            }
+            load(store, newAddress);
+        }
+        void replace(BackingStore_t& store, Address_t newAddress) volatile noexcept {
+            if (_valid) {
+                if (_dirty) {
+                    (void)store.write(_key, const_cast<uint8_t*>(_bytes), NumBytes);
                 }
             }
             load(store, newAddress);
@@ -182,6 +190,12 @@ namespace Deception {
             _key = newAddress;
             (void)store.read(_key, _bytes, NumBytes);
         }
+        void load(BackingStore_t& store, Address_t newAddress) volatile noexcept {
+            _valid = true;
+            _dirty = false;
+            _key = newAddress;
+            (void)store.read(_key, const_cast<uint8_t*>(_bytes), NumBytes);
+        }
         void setByte(uint8_t offset, uint8_t value) noexcept {
             markDirty();
             _bytes[computeByteOffset(offset)] = value;
@@ -189,7 +203,7 @@ namespace Deception {
         constexpr uint8_t getByte(uint8_t offset) const noexcept {
             return _bytes[computeByteOffset(offset)];
         }
-        void clear() noexcept {
+        void clear() volatile noexcept {
             _key = 0;
             _valid = false;
             _dirty = false;
@@ -200,7 +214,8 @@ namespace Deception {
         uint8_t* getLineData(uint8_t offset = 0) noexcept {
             return &_bytes[offset];
         }
-        void markDirty() noexcept { _dirty = true; }
+        volatile uint8_t* getLineData(uint8_t offset = 0) volatile noexcept { return &_bytes[offset]; }
+        void markDirty() volatile noexcept { _dirty = true; }
         constexpr bool valid() const noexcept { return _valid; }
         private:
             uint8_t _bytes[NumBytes] = { 0 };

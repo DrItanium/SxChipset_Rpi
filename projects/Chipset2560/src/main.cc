@@ -120,12 +120,42 @@ using PrimaryBackingStore = PSRAMBackingStore;
 using CacheAddress = PSRAMCacheAddress;
 #define CommunicationPrimitive psramMemory
 //using CacheAddress = uint32_t;
-constexpr auto CacheLineCount = 256;
+//constexpr auto CacheLineCount = 256;
+//using DataCache = Deception::DirectMappedCache<CacheLineCount, CacheLine>;
 using CacheLine = Deception::CacheLine16<CacheAddress, PrimaryBackingStore>;
-using DataCache = Deception::DirectMappedCache<CacheLineCount, CacheLine>;
-DataCache onboardCache;
 static_assert(sizeof(CacheLine) <= 32);
 [[gnu::address(0xFF00)]] volatile CacheLine externalCacheLine;
+
+class ExternalCacheLineInterface {
+    public:
+        using Line_t = CacheLine;
+        using Address_t = typename Line_t::Address_t;
+        using BackingStore_t = typename Line_t::BackingStore_t;
+        void begin() noexcept {
+            if (!_initialized) {
+                _initialized = true;
+            }
+        }
+        static constexpr Address_t normalizeAddress(Address_t address) noexcept {
+            return Line_t::normalizeAddress(address);
+        }
+        static constexpr uint8_t computeOffset(uint8_t input) noexcept {
+            return Line_t::computeByteOffset(input);
+        }
+        void sync(BackingStore_t& store, Address_t address) noexcept {
+            // we've already selected the line via hardware acceleration
+            auto addr = normalizeAddress(address);
+            if (!externalCacheLine.matches(addr)) {
+                externalCacheLine.replace(store, addr);
+            } 
+        }
+    private:
+        bool _initialized = false;
+};
+using DataCache = ExternalCacheLineInterface;
+
+DataCache onboardCache;
+
 union [[gnu::packed]] SplitWord32 {
     uint8_t bytes[sizeof(uint32_t) / sizeof(uint8_t)];
     uint16_t halves[sizeof(uint32_t) / sizeof(uint16_t)];
@@ -432,10 +462,10 @@ template<bool readOperation>
 inline
 void
 doMemoryTransaction(SplitWord32 address) noexcept {
-    auto& line = onboardCache.find(CommunicationPrimitive, address.lo24);
-    auto* ptr = line.getLineData(address.getCacheOffset());
+    onboardCache.sync(CommunicationPrimitive, address.full);
+    auto* ptr = externalCacheLine.getLineData(address.getCacheOffset());
     if constexpr (readOperation) {
-        uint16_t* ptr16 = reinterpret_cast<uint16_t*>(ptr);
+        auto ptr16 = reinterpret_cast<volatile uint16_t*>(ptr);
         auto val = ptr16[0];
         setDataValue(val);
         if (isLastWordOfTransaction()) {
@@ -490,7 +520,7 @@ doMemoryTransaction(SplitWord32 address) noexcept {
 ReadMemoryDone:
         signalReady();
     } else {
-        line.markDirty();
+        externalCacheLine.markDirty();
         auto lo = lowerData();
         auto hi = upperData();
         if (lowerByteEnabled()) ptr[0] = lo;
@@ -666,15 +696,8 @@ setup() {
     installInitialBootImage();
     setupExternalDevices();
     CommunicationPrimitive.waitForBackingStoreIdle();
-    // okay now we need to setup the cache so that I can eliminate the valid
-    // bit. This is done by seeding the cache with teh first 4096 bytes
-    for (Address i = 0; i < DataCache::NumCacheBytes; i += DataCache::NumBytesPerLine) {
-        //Serial.printf(F("Seeding 0x%lx\n"), i);
-        onboardCache.seed(CommunicationPrimitive, i);
-    }
-
-    // configure the address lines as inputs now that we are done with seeding
-    // and setting up the cache
+    // do not cache anything to start with as we should instead just be ready
+    // to get data from psram instead
     getDirectionRegister<Ports::AddressLowest>() = 0;
     getDirectionRegister<Ports::AddressLower>() = 0;
     getDirectionRegister<Ports::AddressHigher>() = 0;
@@ -1001,49 +1024,13 @@ static_assert(sizeof(ExternalCacheLineView) == ExternalCacheLineCapacity);
 
 void
 sanityCheckHardwareAcceleratedCacheLine() noexcept {
-    Serial.println(F("Performing hardware accelerated cache line test!"));
-    // okay so the first thing we need to do is just test out this design
-    getOutputRegister<Ports::AddressLowest>() = 0; 
-    getOutputRegister<Ports::AddressLower>() = 0; 
-    getOutputRegister<Ports::AddressHigher>() = 0; 
-    getOutputRegister<Ports::AddressHighest>() = 0; 
-    // normally, the heap should not be used on such a device as it can lead to
-    // deadly fragmentation in the heap, but in this case it is okay as it is a
-    // contiguous block. I do not care if third party libraries do this, but I
-    // should not be contributing to it.
-    using TempStorageKind = uint32_t;
-    constexpr auto NumberOfEntries = ExternalCacheLineCapacity / sizeof(TempStorageKind);
-    TempStorageKind temporaryStorage[NumberOfEntries];
-    for (uint8_t i = 0; i < NumberOfEntries; ++i) {
-        temporaryStorage[i] = random();
-    }
-    for (uint8_t i = 0; i < NumberOfEntries; ++i) {
-        externalCacheLineRaw.dwords[i] = temporaryStorage[i];
-        if (temporaryStorage[i] != externalCacheLineRaw.dwords[i]) {
-            Serial.printf(F("%d: (temp) 0x%lx != 0x%lx (readback)\n"), i, temporaryStorage[i], externalCacheLineRaw.dwords[i]);
-        }
-    }
-    Serial.println(F("Readback check"));
-    for (uint8_t i = 0; i < NumberOfEntries; ++i) {
-        auto temp = temporaryStorage[i];
-        auto raw = externalCacheLineRaw.dwords[i];
-        if (temp != raw) {
-            Serial.printf(F("%d: (temp) 0x%lx != 0x%lx (readback)\n"), i, temp, raw);
-        } 
-    }
-    Serial.println(F("Sanity Check complete!"));
     Serial.println(F("Zeroing out cache memory"));
     for (uint32_t i = 0; i < 0x01'00'0000; i += 16) {
         getOutputRegister<Ports::AddressLowest>() = static_cast<uint8_t>(i);
         getOutputRegister<Ports::AddressLower>() = static_cast<uint8_t>(i >> 8);
         getOutputRegister<Ports::AddressHigher>() = static_cast<uint8_t>(i >> 16);
         getOutputRegister<Ports::AddressHighest>() = static_cast<uint8_t>(i >> 24);
-        for (uint8_t j = 0; j < (ExternalCacheLineCapacity / sizeof(uint32_t)); ++j) {
-            externalCacheLineRaw.dwords[j] = 0;
-            if (externalCacheLineRaw.dwords[j] != 0) {
-                Serial.printf(F("!0x%lx: 0x%lx\n"), i + (j * sizeof(uint32_t)), externalCacheLineRaw.dwords[j]);
-            }
-        }
+        externalCacheLine.clear();
     }
     Serial.println(F("Zeroing of cache memory complete!"));
 }
