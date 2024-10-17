@@ -36,8 +36,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Types.h"
 #include "Pinout.h"
 #include "Setup.h"
-void installInitialBootImage();
-void configurePSRAM();
+void installInitialBootImage() noexcept;
+void configureExternalBus() noexcept;
 namespace Pins {
     constexpr auto SD_EN = Pin::PortB0;
     constexpr auto INT960_0 = Pin::PortB4;
@@ -599,25 +599,6 @@ getAddress() noexcept {
         getInputRegister<Ports::AddressHighest>()
     };
 }
-void 
-configureExternalBus() noexcept {
-    // no wait states
-    bitSet(XMCRA, SRW11);
-    bitSet(XMCRA, SRW10);
-    bitSet(XMCRA, SRW01);
-    bitSet(XMCRA, SRW00);
-    // half and half sector limits (doesn't really matter since it will an
-    // 8-bit space
-    bitClear(XMCRA, SRL0);
-    bitClear(XMCRA, SRL1);
-    bitSet(XMCRA, SRL2); 
-    // no high address bits!
-    bitSet(XMCRB, XMM0); 
-    bitSet(XMCRB, XMM1); 
-    bitSet(XMCRB, XMM2); 
-    bitClear(XMCRB, XMBK); // no bus keeper
-    bitSet(XMCRA, SRE); // enable the EBI
-}
 
 void
 configurePins() noexcept {
@@ -1002,31 +983,75 @@ PSRAMBackingStore::write(Address addr, uint8_t* storage, size_t count) noexcept 
     return count;
 }
 
-[[gnu::address(0xFF00)]] volatile uint8_t externalCacheLineRaw[32];
+constexpr uint8_t ExternalCacheLineCapacity = 32;
+union [[gnu::packed]] ExternalCacheLineView {
+    uint8_t bytes[ExternalCacheLineCapacity];
+    uint16_t words[ExternalCacheLineCapacity/sizeof(uint16_t)];
+    uint32_t dwords[ExternalCacheLineCapacity/sizeof(uint32_t)];
+    uint64_t qwords[ExternalCacheLineCapacity/sizeof(uint64_t)];
+} ;
+[[gnu::address(0xFF00)]] volatile ExternalCacheLineView externalCacheLineRaw;
 
 void
+[[gnu::noinline]]
 sanityCheckHardwareAcceleratedCacheLine() noexcept {
     Serial.println(F("Performing hardware accelerated cache line test!"));
+    for (uint32_t i = 0; i < 0x01'00'0000; i+= 16) {
+        getOutputRegister<Ports::AddressLowest>() = static_cast<uint8_t>(i);
+        getOutputRegister<Ports::AddressLower>() = static_cast<uint8_t>(i >> 8);
+        getOutputRegister<Ports::AddressHigher>() = static_cast<uint8_t>(i >> 16);
+        getOutputRegister<Ports::AddressHighest>() = static_cast<uint8_t>(i >> 24);
+        for (uint8_t j = 0; j < (ExternalCacheLineCapacity / sizeof(uint32_t)); ++j) {
+            externalCacheLineRaw.dwords[j] = 0;
+            if (externalCacheLineRaw.dwords[j] != 0) {
+                Serial.printf(F("!0x%lx: 0x%lx\n"), i + (j * sizeof(uint32_t)), externalCacheLineRaw.dwords[j]);
+            }
+        }
+    }
     // okay so the first thing we need to do is just test out this design
     getOutputRegister<Ports::AddressLowest>() = 0; 
     getOutputRegister<Ports::AddressLower>() = 0; 
     getOutputRegister<Ports::AddressHigher>() = 0; 
     getOutputRegister<Ports::AddressHighest>() = 0; 
-    uint8_t temporaryStorage[32];
-    for (int i = 0; i < 32; ++i) {
-        temporaryStorage[i] = random();
-        externalCacheLineRaw[i] = temporaryStorage[i];
-        if (temporaryStorage[i] != externalCacheLineRaw[i]) {
-            Serial.printf(F("(temp) 0x%x != 0x%x (readback)\n"), temporaryStorage[i], externalCacheLineRaw[i]);
-        }
+    // normally, the heap should not be used on such a device as it can lead to
+    // deadly fragmentation in the heap, but in this case it is okay as it is a
+    // contiguous block. I do not care if third party libraries do this, but I
+    // should not be contributing to it.
+    uint8_t* temporaryStorage = new uint8_t[ExternalCacheLineCapacity]();
+    for (uint8_t i = 0; i < ExternalCacheLineCapacity; ++i) {
+        auto result = random();
+        temporaryStorage[i] = result;
+        externalCacheLineRaw.bytes[i] = result;
+        if (temporaryStorage[i] != externalCacheLineRaw.bytes[i]) {
+            Serial.printf(F("%d: (temp) 0x%x != 0x%x (readback)\n"), i, temporaryStorage[i], externalCacheLineRaw.bytes[i]);
+        } 
     }
-    getOutputRegister<Ports::AddressLowest>() = 0xFF;
-    delay(100);
-    getOutputRegister<Ports::AddressLowest>() = 0;
-    for (int i = 0; i < 32; ++i) {
-        if (temporaryStorage[i] != externalCacheLineRaw[i]) {
-            Serial.printf(F("(temp) 0x%x != 0x%x (readback)\n"), temporaryStorage[i], externalCacheLineRaw[i]);
+    Serial.println(F("Readback check"));
+    for (uint8_t i = 0; i < ExternalCacheLineCapacity; ++i) {
+        if (temporaryStorage[i] != externalCacheLineRaw.bytes[i]) {
+            Serial.printf(F("%d: (temp) 0x%x != 0x%x (readback)\n"), i, temporaryStorage[i], externalCacheLineRaw.bytes[i]);
         }
     }
     Serial.println(F("Sanity Check complete!"));
+    delete [] temporaryStorage;
+}
+
+void 
+configureExternalBus() noexcept {
+    // no wait states
+    bitClear(XMCRA, SRW11);
+    bitSet(XMCRA, SRW10);
+    bitClear(XMCRA, SRW01);
+    bitSet(XMCRA, SRW00);
+    // half and half sector limits (doesn't really matter since it will an
+    // 8-bit space
+    bitClear(XMCRA, SRL0);
+    bitClear(XMCRA, SRL1);
+    bitSet(XMCRA, SRL2); 
+    // no high address bits!
+    bitSet(XMCRB, XMM0); 
+    bitSet(XMCRB, XMM1); 
+    bitSet(XMCRB, XMM2); 
+    bitClear(XMCRB, XMBK); // no bus keeper
+    bitSet(XMCRA, SRE); // enable the EBI
 }
