@@ -996,7 +996,8 @@ void
 [[gnu::noinline]]
 sanityCheckHardwareAcceleratedCacheLine() noexcept {
     Serial.println(F("Performing hardware accelerated cache line test!"));
-    for (uint32_t i = 0; i < 0x01'00'0000; i+= 16) {
+    Serial.println(F("Zeroing out cache memory"));
+    for (uint32_t i = 0; i < 0x01'00'0000; i += 16) {
         getOutputRegister<Ports::AddressLowest>() = static_cast<uint8_t>(i);
         getOutputRegister<Ports::AddressLower>() = static_cast<uint8_t>(i >> 8);
         getOutputRegister<Ports::AddressHigher>() = static_cast<uint8_t>(i >> 16);
@@ -1017,19 +1018,26 @@ sanityCheckHardwareAcceleratedCacheLine() noexcept {
     // deadly fragmentation in the heap, but in this case it is okay as it is a
     // contiguous block. I do not care if third party libraries do this, but I
     // should not be contributing to it.
-    uint8_t* temporaryStorage = new uint8_t[ExternalCacheLineCapacity]();
-    for (uint8_t i = 0; i < ExternalCacheLineCapacity; ++i) {
-        auto result = random();
-        temporaryStorage[i] = result;
-        externalCacheLineRaw.bytes[i] = result;
-        if (temporaryStorage[i] != externalCacheLineRaw.bytes[i]) {
-            Serial.printf(F("%d: (temp) 0x%x != 0x%x (readback)\n"), i, temporaryStorage[i], externalCacheLineRaw.bytes[i]);
+    using TempStorageKind = uint16_t;
+    constexpr auto NumberOfEntries = ExternalCacheLineCapacity / sizeof(TempStorageKind);
+    TempStorageKind* temporaryStorage = new TempStorageKind[NumberOfEntries]();
+    for (uint8_t i = 0; i < NumberOfEntries; ++i) {
+        temporaryStorage[i] = random();
+    }
+    for (uint8_t i = 0; i < NumberOfEntries; ++i) {
+        externalCacheLineRaw.words[i] = temporaryStorage[i];
+        if (temporaryStorage[i] != externalCacheLineRaw.words[i]) {
+            Serial.printf(F("%d: (temp) 0x%x != 0x%x (readback)\n"), i, temporaryStorage[i], externalCacheLineRaw.words[i]);
         } 
     }
     Serial.println(F("Readback check"));
-    for (uint8_t i = 0; i < ExternalCacheLineCapacity; ++i) {
-        if (temporaryStorage[i] != externalCacheLineRaw.bytes[i]) {
-            Serial.printf(F("%d: (temp) 0x%x != 0x%x (readback)\n"), i, temporaryStorage[i], externalCacheLineRaw.bytes[i]);
+    for (uint8_t i = 0; i < NumberOfEntries; ++i) {
+        auto temp = temporaryStorage[i];
+        auto raw = externalCacheLineRaw.words[i];
+        if (temp != raw) {
+            Serial.printf(F("%d: (temp) 0x%x != 0x%x (readback)\n"), i, temp, raw);
+        } else {
+            Serial.printf(F("%d: (temp) 0x%x == 0x%x (readback)\n"), i, temp, raw);
         }
     }
     Serial.println(F("Sanity Check complete!"));
