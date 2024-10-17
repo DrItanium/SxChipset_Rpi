@@ -44,7 +44,7 @@ Pin 21 = EN0          S0 = 0   S1 = 1
 
 Pin 20 = DIR0         S0 = 1   S1 = 1
  34  ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
- 35  ---- ---- ---- ---- ---- -x-- ---- ---- ---- ---- ----
+ 35  ---- ---- ---- ---- ---- x--- -x-- ---- ---- ---- ----
  36  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  37  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  38  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
