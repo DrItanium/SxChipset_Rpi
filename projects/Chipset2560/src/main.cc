@@ -28,15 +28,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Deception.h>
 #include <SD.h>
 #include <RTClib.h>
-#include <SparkFun_Alphanumeric_Display.h>
 #include <Adafruit_Si7021.h>
-#include <Adafruit_APDS9960.h>
 #include <Adafruit_LTR390.h>
 
 #include "Types.h"
 #include "Pinout.h"
 #include "Setup.h"
-void installInitialBootImage() noexcept;
+[[gnu::noinline]] void installInitialBootImage() noexcept;
 void configureExternalBus() noexcept;
 namespace Pins {
     constexpr auto SD_EN = Pin::PortB0;
@@ -96,9 +94,7 @@ struct OptionalDevice {
 };
 // use a ds3231 chip
 OptionalDevice<RTC_DS3231> rtc;
-OptionalDevice<HT16K33> numericDisplay;
 OptionalDevice<Adafruit_Si7021> sensor_si7021;
-OptionalDevice<Adafruit_APDS9960> apds;
 OptionalDevice<Adafruit_LTR390> ltr;
 
 class PSRAMBackingStore {
@@ -690,12 +686,12 @@ setup() {
     SPI.begin();
     Wire.begin();
     Wire.setClock(Deception::TWI_ClockRate);
-    sanityCheckHardwareAcceleratedCacheLine();
     onboardCache.begin();
     psramMemory.begin();
     installInitialBootImage();
     setupExternalDevices();
     CommunicationPrimitive.waitForBackingStoreIdle();
+    sanityCheckHardwareAcceleratedCacheLine();
     // do not cache anything to start with as we should instead just be ready
     // to get data from psram instead
     getDirectionRegister<Ports::AddressLowest>() = 0;
@@ -720,16 +716,6 @@ setupExternalDevices() noexcept {
 
         DateTime now = rtc->now();
         Serial.printf(F(" since midnight 1/1/1970 = %lds = %ldd\n"), now.unixtime(), now.unixtime() / 86400L);
-    }
-    if (!numericDisplay.begin()) {
-        Serial.println(F("Alphanumeric Display did not acknowledge!"));
-    } else {
-        Serial.println(F("Alphanumeric Display did acknowledge!"));
-        numericDisplay->printChar('B', 0);
-        numericDisplay->printChar('o', 1);
-        numericDisplay->printChar('o', 2);
-        numericDisplay->printChar('t', 3);
-        numericDisplay->updateDisplay();
     }
     if (!sensor_si7021.begin()) {
         Serial.println(F("Si7021 Sensor not found!"));
@@ -761,19 +747,6 @@ setupExternalDevices() noexcept {
         Serial.print(sensor_si7021->readHumidity(), 2);
         Serial.print(F("\tTemperature:    ")); 
         Serial.println(sensor_si7021->readTemperature(), 2);
-    }
-    if (!apds.begin()) {
-        Serial.println(F("Failed to initialize APDS9960! Please check your wiring"));
-    } else {
-        Serial.println(F("APDS9960 initialized!"));
-        // enabling the color sensor
-        apds->enableColor(true);
-        uint16_t r, g, b, c;
-        while (!apds->colorDataReady()) {
-            delay(5);
-        }
-        apds->getColorData(&r, &g, &b, &c);
-        Serial.printf(F("red: %d green: %d blue: %d clear: %d\n"), r, g, b, c);
     }
 
     if (!ltr.begin()) {
@@ -941,13 +914,17 @@ installInitialBootImage() noexcept {
             Serial.println(F("Could not open prog.bin...skipping!"));
         } else {
             Serial.println(F("Found prog.bin..."));
-            if (f.size() <= 0x100000) {
+            if (f.size() <= 0x0100'0000) {
                 Serial.println(F("Transferring prog.bin to memory"));
                 static constexpr auto ByteCount = 16;
-                uint8_t dataBytes[ByteCount] = { 0 };
-                for (uint32_t i = 0; i < f.size(); i+=ByteCount) {
+                uint8_t dataBytes[16] = { 0 };
+                for (uint32_t i = 0, j = 0; i < f.size(); i+=ByteCount, ++j) {
                     auto count = f.read(dataBytes, ByteCount);
                     psramMemory.write(i, dataBytes, count);
+                    // put a blip out every 64k
+                    if ((j & 0xFF) == 0) {
+                        Serial.print('.');
+                    }
                 }
                 Serial.println(F("Transfer complete!"));
                 Serial.println(F("Header Contents:"));
@@ -1026,22 +1003,27 @@ void
 sanityCheckHardwareAcceleratedCacheLine() noexcept {
     Serial.println(F("Zeroing out cache memory"));
     for (uint32_t i = 0; i < 0x01'00'0000; i += 16) {
+        auto oldPart = getOutputRegister<Ports::AddressHigher>();
+        auto newPart = static_cast<uint8_t>(i >> 16);
         getOutputRegister<Ports::AddressLowest>() = static_cast<uint8_t>(i);
-        getOutputRegister<Ports::AddressLower>() = static_cast<uint8_t>(i >> 8);
-        getOutputRegister<Ports::AddressHigher>() = static_cast<uint8_t>(i >> 16);
+        getOutputRegister<Ports::AddressLower>() = static_cast<uint8_t>(i >> 8); 
+        getOutputRegister<Ports::AddressHigher>() = newPart;
         getOutputRegister<Ports::AddressHighest>() = static_cast<uint8_t>(i >> 24);
+        if (oldPart != newPart) {
+            Serial.print('.');
+        }
         externalCacheLine.clear();
     }
-    Serial.println(F("Zeroing of cache memory complete!"));
+    Serial.println(F("DONE!"));
 }
 
 void 
 configureExternalBus() noexcept {
-    // no wait states
-    bitClear(XMCRA, SRW11);
-    bitClear(XMCRA, SRW10);
-    bitClear(XMCRA, SRW01);
-    bitClear(XMCRA, SRW00);
+    // one cycle wait to be on the safe side
+    bitSet(XMCRA, SRW11);
+    bitSet(XMCRA, SRW10);
+    bitSet(XMCRA, SRW01);
+    bitSet(XMCRA, SRW00);
     // half and half sector limits (doesn't really matter since it will an
     // 8-bit space
     bitClear(XMCRA, SRL0);
