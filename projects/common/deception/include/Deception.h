@@ -167,14 +167,17 @@ namespace Deception {
             return input & ByteOffsetMask;
         }
         constexpr bool dirty() const noexcept { return _dirty; }
-        constexpr bool matches(Address_t other) const noexcept { return (_key == other); }
+        constexpr bool matches(Address_t other) const noexcept { return _valid && (_key == other); }
         void replace(BackingStore_t& store, Address_t newAddress) noexcept {
-            if (_dirty) {
-                (void)store.write(_key, _bytes, NumBytes);
+            if (_valid) {
+                if (_dirty) {
+                    (void)store.write(_key, _bytes, NumBytes);
+                }
             }
             load(store, newAddress);
         }
         void load(BackingStore_t& store, Address_t newAddress) noexcept {
+            _valid = true;
             _dirty = false;
             _key = newAddress;
             (void)store.read(_key, _bytes, NumBytes);
@@ -188,6 +191,7 @@ namespace Deception {
         }
         void clear() noexcept {
             _key = 0;
+            _valid = false;
             _dirty = false;
             for (auto i = 0u; i < NumBytes; ++i) {
                 _bytes[i] = 0;
@@ -197,10 +201,12 @@ namespace Deception {
             return &_bytes[offset];
         }
         void markDirty() noexcept { _dirty = true; }
+        constexpr bool valid() const noexcept { return _valid; }
         private:
             uint8_t _bytes[NumBytes] = { 0 };
             Address_t _key = 0;
             bool _dirty = false;
+            bool _valid = false;
     };
     template<typename A, typename T>
     using CacheLine16 = CacheLine<A, 16, 4, static_cast<A>(0xFFFF'FFF0), T>;
