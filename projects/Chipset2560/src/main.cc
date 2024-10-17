@@ -999,23 +999,9 @@ union [[gnu::packed]] ExternalCacheLineView {
 static_assert(sizeof(ExternalCacheLineView) == ExternalCacheLineCapacity);
 [[gnu::address(0xFF00)]] volatile ExternalCacheLineView externalCacheLineRaw;
 
-[[gnu::noinline]]
 void
 sanityCheckHardwareAcceleratedCacheLine() noexcept {
     Serial.println(F("Performing hardware accelerated cache line test!"));
-    Serial.println(F("Zeroing out cache memory"));
-    for (uint32_t i = 0; i < 0x01'00'0000; i += 16) {
-        getOutputRegister<Ports::AddressLowest>() = static_cast<uint8_t>(i);
-        getOutputRegister<Ports::AddressLower>() = static_cast<uint8_t>(i >> 8);
-        getOutputRegister<Ports::AddressHigher>() = static_cast<uint8_t>(i >> 16);
-        getOutputRegister<Ports::AddressHighest>() = static_cast<uint8_t>(i >> 24);
-        for (uint8_t j = 0; j < (ExternalCacheLineCapacity / sizeof(uint32_t)); ++j) {
-            externalCacheLineRaw.dwords[j] = 0;
-            if (externalCacheLineRaw.dwords[j] != 0) {
-                Serial.printf(F("!0x%lx: 0x%lx\n"), i + (j * sizeof(uint32_t)), externalCacheLineRaw.dwords[j]);
-            }
-        }
-    }
     // okay so the first thing we need to do is just test out this design
     getOutputRegister<Ports::AddressLowest>() = 0; 
     getOutputRegister<Ports::AddressLower>() = 0; 
@@ -1049,10 +1035,20 @@ sanityCheckHardwareAcceleratedCacheLine() noexcept {
     }
     Serial.println(F("Sanity Check complete!"));
     delete [] temporaryStorage;
-    // zero out the memory since we are done
-    for (auto& v : externalCacheLineRaw.bytes) {
-        v = 0;
+    Serial.println(F("Zeroing out cache memory"));
+    for (uint32_t i = 0; i < 0x01'00'0000; i += 16) {
+        getOutputRegister<Ports::AddressLowest>() = static_cast<uint8_t>(i);
+        getOutputRegister<Ports::AddressLower>() = static_cast<uint8_t>(i >> 8);
+        getOutputRegister<Ports::AddressHigher>() = static_cast<uint8_t>(i >> 16);
+        getOutputRegister<Ports::AddressHighest>() = static_cast<uint8_t>(i >> 24);
+        for (uint8_t j = 0; j < (ExternalCacheLineCapacity / sizeof(uint32_t)); ++j) {
+            externalCacheLineRaw.dwords[j] = 0;
+            if (externalCacheLineRaw.dwords[j] != 0) {
+                Serial.printf(F("!0x%lx: 0x%lx\n"), i + (j * sizeof(uint32_t)), externalCacheLineRaw.dwords[j]);
+            }
+        }
     }
+    Serial.println(F("Zeroing of cache memory complete!"));
 }
 
 void 
