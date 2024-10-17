@@ -1013,7 +1013,7 @@ sanityCheckHardwareAcceleratedCacheLine() noexcept {
     // should not be contributing to it.
     using TempStorageKind = uint32_t;
     constexpr auto NumberOfEntries = ExternalCacheLineCapacity / sizeof(TempStorageKind);
-    TempStorageKind* temporaryStorage = new TempStorageKind[NumberOfEntries]();
+    TempStorageKind temporaryStorage[NumberOfEntries];
     for (uint8_t i = 0; i < NumberOfEntries; ++i) {
         temporaryStorage[i] = random();
     }
@@ -1032,7 +1032,6 @@ sanityCheckHardwareAcceleratedCacheLine() noexcept {
         } 
     }
     Serial.println(F("Sanity Check complete!"));
-    delete [] temporaryStorage;
     Serial.println(F("Zeroing out cache memory"));
     for (uint32_t i = 0; i < 0x01'00'0000; i += 16) {
         getOutputRegister<Ports::AddressLowest>() = static_cast<uint8_t>(i);
