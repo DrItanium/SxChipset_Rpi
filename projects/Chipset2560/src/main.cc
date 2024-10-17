@@ -1028,26 +1028,16 @@ sanityCheckHardwareAcceleratedCacheLine() noexcept {
     using TempStorageKind = uint32_t;
     constexpr auto NumberOfEntries = ExternalCacheLineCapacity / sizeof(TempStorageKind);
     TempStorageKind* temporaryStorage = new TempStorageKind[NumberOfEntries]();
-    asm volatile ("nop");
     for (uint8_t i = 0; i < NumberOfEntries; ++i) {
         temporaryStorage[i] = random();
     }
-    asm volatile ("nop");
-    asm volatile ("nop");
     for (uint8_t i = 0; i < NumberOfEntries; ++i) {
         externalCacheLineRaw.dwords[i] = temporaryStorage[i];
         if (temporaryStorage[i] != externalCacheLineRaw.dwords[i]) {
             Serial.printf(F("%d: (temp) 0x%lx != 0x%lx (readback)\n"), i, temporaryStorage[i], externalCacheLineRaw.dwords[i]);
         }
     }
-    asm volatile ("nop");
-    asm volatile ("nop");
-    asm volatile ("nop");
     Serial.println(F("Readback check"));
-    asm volatile ("nop");
-    asm volatile ("nop");
-    asm volatile ("nop");
-    asm volatile ("nop");
     for (uint8_t i = 0; i < NumberOfEntries; ++i) {
         auto temp = temporaryStorage[i];
         auto raw = externalCacheLineRaw.dwords[i];
@@ -1057,19 +1047,12 @@ sanityCheckHardwareAcceleratedCacheLine() noexcept {
             Serial.printf(F("%d: (temp) 0x%lx == 0x%lx (readback)\n"), i, temp, raw);
         }
     }
-    asm volatile ("nop");
-    asm volatile ("nop");
-    asm volatile ("nop");
-    asm volatile ("nop");
-    asm volatile ("nop");
     Serial.println(F("Sanity Check complete!"));
     delete [] temporaryStorage;
-    asm volatile ("nop");
-    asm volatile ("nop");
-    asm volatile ("nop");
-    asm volatile ("nop");
-    asm volatile ("nop");
-    asm volatile ("nop");
+    // zero out the memory since we are done
+    for (auto& v : externalCacheLineRaw.bytes) {
+        v = 0;
+    }
 }
 
 void 
