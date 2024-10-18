@@ -205,8 +205,8 @@ namespace Deception {
         }
         void clear() volatile noexcept {
             _key = 0;
-            _valid = false;
             _dirty = false;
+            _valid = false;
             for (auto i = 0u; i < NumBytes; ++i) {
                 _bytes[i] = 0;
             }

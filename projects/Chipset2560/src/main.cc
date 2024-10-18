@@ -118,10 +118,10 @@ using PSRAMCacheAddress = uint32_t;
 using PrimaryBackingStore = PSRAMBackingStore;
 using CacheAddress = PSRAMCacheAddress;
 #define CommunicationPrimitive psramMemory
-//using CacheAddress = uint32_t;
-//constexpr auto CacheLineCount = 256;
-//using DataCache = Deception::DirectMappedCache<CacheLineCount, CacheLine>;
 using CacheLine = Deception::CacheLine16<CacheAddress, PrimaryBackingStore>;
+constexpr auto OnboardCacheLineCount = 256;
+using OnboardDataCache = Deception::DirectMappedCache<OnboardCacheLineCount, CacheLine>;
+OnboardDataCache onboardDataCache;
 static_assert(sizeof(CacheLine) <= 32);
 [[gnu::address(0xFF00)]] volatile CacheLine externalCacheLine;
 
@@ -146,7 +146,7 @@ class ExternalCacheLineInterface {
             auto addr = normalizeAddress(address);
             if (!externalCacheLine.matches(addr)) {
                 externalCacheLine.replace(store, addr);
-            } 
+            }
         }
     private:
         bool _initialized = false;
@@ -666,26 +666,21 @@ configurePins() noexcept {
     getDirectionRegister<Ports::AddressHigher>() = 0xFF;
     getDirectionRegister<Ports::AddressHighest>() = 0xFF;
     // then setup the external bus, it is necessary for the next step
-    configureExternalBus();
 }
 void sanityCheckHardwareAcceleratedCacheLine() noexcept;
 void setupExternalDevices() noexcept;
+void configureRandomSeed() noexcept;
+static constexpr auto SerialBaudRate = 115200;
 void
 setup() {
-    GPIOR0 = 0;
-    GPIOR1 = 0;
-    GPIOR2 = 0;
-    randomSeed(
-            analogRead(A0) + analogRead(A1) + analogRead(A2) + analogRead(A3) +
-            analogRead(A4) + analogRead(A5) + analogRead(A6) + analogRead(A7) +
-            analogRead(A8) + analogRead(A9) + analogRead(A10) + analogRead(A11) +
-            analogRead(A12) + analogRead(A13) + analogRead(A14) + analogRead(A15)
-            );
+    configureRandomSeed();
     configurePins();
+    configureExternalBus();
     configureDataLinesForRead();
     configureInterruptSources();
-    Serial.begin(115200);
-    Serial.println(F("SERIAL UP @ 115200"));
+    Serial.begin(SerialBaudRate);
+    Serial.print(F("Serial Up @ "));
+    Serial.println(SerialBaudRate);
     SPI.begin();
     Wire.begin();
     Wire.setClock(Deception::TWI_ClockRate);
@@ -695,16 +690,14 @@ setup() {
     setupExternalDevices();
     CommunicationPrimitive.waitForBackingStoreIdle();
     sanityCheckHardwareAcceleratedCacheLine();
-    {
-        // do not cache anything to start with as we should instead just be ready
-        // to get data from psram instead
-        getDirectionRegister<Ports::AddressLowest>() = 0;
-        getDirectionRegister<Ports::AddressLower>() = 0;
-        getDirectionRegister<Ports::AddressHigher>() = 0;
-        getDirectionRegister<Ports::AddressHighest>() = 0;
+    // do not cache anything to start with as we should instead just be ready
+    // to get data from psram instead
+    getDirectionRegister<Ports::AddressLowest>() = 0;
+    getDirectionRegister<Ports::AddressLower>() = 0;
+    getDirectionRegister<Ports::AddressHigher>() = 0;
+    getDirectionRegister<Ports::AddressHighest>() = 0;
 
-        digitalWrite<Pins::RESET, HIGH>();
-    }
+    digitalWrite<Pins::RESET, HIGH>();
 }
 void
 setupExternalDevices() noexcept {
@@ -797,37 +790,31 @@ setupExternalDevices() noexcept {
         Serial.printf(F("UV data: %d\n"), ltr->readUVS());
     }
 }
-[[gnu::always_inline]]
 inline void 
-waitForNewTransaction() noexcept {
+processMemoryRequest() noexcept {
     // clear the READY signal interrupt ahead of waiting for the last
     clearREADYInterrupt();
     do { } while (bit_is_clear(EIFR, ADSFLAG));
     clearADSInterrupt();
+    if (auto address = getAddress(); isReadOperation()) {
+        configureDataLinesForRead();
+        if (address.isIOOperation()) {
+            doIOTransaction<true>(address);
+        } else {
+            doMemoryTransaction<true>(address);
+        }
+    } else {
+        configureDataLinesForWrite();
+        if (address.isIOOperation()) {
+            doIOTransaction<false>(address);
+        } else {
+            doMemoryTransaction<false>(address);
+        }
+    }
 }
 void 
 loop() {
-    waitForNewTransaction();
-    {
-        {
-            if (auto address = getAddress(); isReadOperation()) {
-                configureDataLinesForRead();
-                if (address.isIOOperation()) {
-                    doIOTransaction<true>(address);
-                } else {
-                    doMemoryTransaction<true>(address);
-                }
-            } else {
-                configureDataLinesForWrite();
-                if (address.isIOOperation()) {
-                    doIOTransaction<false>(address);
-                } else {
-                    doMemoryTransaction<false>(address);
-                }
-
-            }
-        }
-    }
+    processMemoryRequest();
 }
 
 
@@ -921,23 +908,12 @@ installInitialBootImage() noexcept {
             Serial.println(F("Found prog.bin..."));
             if (f.size() <= 0x0100'0000) {
                 Serial.println(F("Transferring prog.bin to memory"));
-                static constexpr auto ByteCount = 16;
-                uint8_t dataBytes[16] = { 0 };
-                uint8_t dataBytes2[16] = { 0 };
-                uint8_t compareBytes[16] = { 0 };
+                static constexpr auto ByteCount = 32;
+                uint8_t dataBytes[ByteCount] = { 0 };
                 for (uint32_t i = 0, j = 0; i < f.size(); i+=ByteCount, ++j) {
                     auto count = f.read(dataBytes, ByteCount);
                     // make a temporary copy for compare purposes
-                    for (int i = 0 ; i < ByteCount; ++i) {
-                        dataBytes2[i] = dataBytes[i];
-                    }
                     psramMemory.write(i, dataBytes, count);
-                    psramMemory.read(i, compareBytes, count);
-                    for (int j = 0; j < count; ++j) {
-                        if (dataBytes2[j] != compareBytes[j]) {
-                            Serial.printf(F("UPLOAD MISMATCH @ 0x%lx: (w) 0x%x, (g) 0x%x\n"), (i + j), dataBytes2[j], compareBytes[j]);
-                        }
-                    }
                     // put a blip out every 64k
                     if ((j & 0xFF) == 0) {
                         Serial.print('.');
@@ -1021,9 +997,9 @@ sanityCheckHardwareAcceleratedCacheLine() noexcept {
 void 
 configureExternalBus() noexcept {
     // one cycle wait to be on the safe side
-    bitClear(XMCRA, SRW11);
+    bitSet(XMCRA, SRW11);
     bitSet(XMCRA, SRW10);
-    bitClear(XMCRA, SRW01);
+    bitSet(XMCRA, SRW01);
     bitSet(XMCRA, SRW00);
     // half and half sector limits (doesn't really matter since it will an
     // 8-bit space
@@ -1034,6 +1010,28 @@ configureExternalBus() noexcept {
     bitSet(XMCRB, XMM0); 
     bitSet(XMCRB, XMM1); 
     bitSet(XMCRB, XMM2); 
-    bitClear(XMCRB, XMBK); // no bus keeper
+    bitSet(XMCRB, XMBK); // yes bus keeper
     bitSet(XMCRA, SRE); // enable the EBI
 }
+
+void
+configureRandomSeed() noexcept {
+    uint32_t newSeed = analogRead(A0);
+    newSeed += analogRead(A1);
+    newSeed += analogRead(A2);
+    newSeed += analogRead(A3);
+    newSeed += analogRead(A4);
+    newSeed += analogRead(A5);
+    newSeed += analogRead(A6);
+    newSeed += analogRead(A7);
+    newSeed += analogRead(A8);
+    newSeed += analogRead(A9);
+    newSeed += analogRead(A10);
+    newSeed += analogRead(A11);
+    newSeed += analogRead(A12);
+    newSeed += analogRead(A13);
+    newSeed += analogRead(A14);
+    newSeed += analogRead(A15);
+    randomSeed(newSeed);
+}
+
