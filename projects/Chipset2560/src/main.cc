@@ -121,9 +121,9 @@ using CacheAddress = PSRAMCacheAddress;
 using CacheLine = Deception::CacheLine16<CacheAddress, PrimaryBackingStore>;
 constexpr auto OnboardCacheLineCount = 256;
 using OnboardDataCache = Deception::DirectMappedCache<OnboardCacheLineCount, CacheLine>;
-OnboardDataCache onboardDataCache;
 static_assert(sizeof(CacheLine) <= 32);
 [[gnu::address(0xFF00)]] volatile CacheLine externalCacheLine;
+[[gnu::address(0xFF00)]] volatile uint8_t externalCacheBackingStore[32]; 
 
 class ExternalCacheLineInterface {
     public:
@@ -153,7 +153,8 @@ class ExternalCacheLineInterface {
 };
 using DataCache = ExternalCacheLineInterface;
 
-DataCache onboardCache;
+DataCache cacheInterface;
+OnboardDataCache onboardDataCache;
 
 union [[gnu::packed]] SplitWord32 {
     uint8_t bytes[sizeof(uint32_t) / sizeof(uint8_t)];
@@ -461,8 +462,13 @@ template<bool readOperation>
 inline
 void
 doMemoryTransaction(SplitWord32 address) noexcept {
-    onboardCache.sync(CommunicationPrimitive, address.full);
+#if 0
+    cacheInterface.sync(CommunicationPrimitive, address.full);
     auto* ptr = externalCacheLine.getLineData(address.getCacheOffset());
+#else
+    auto& line = onboardDataCache.find(CommunicationPrimitive, address.full);
+    auto* ptr = line.getLineData(address.getCacheOffset());
+#endif
     if constexpr (readOperation) {
         auto ptr16 = reinterpret_cast<volatile uint16_t*>(ptr);
         auto val = ptr16[0];
@@ -519,7 +525,11 @@ doMemoryTransaction(SplitWord32 address) noexcept {
 ReadMemoryDone:
         signalReady();
     } else {
+#if 0
         externalCacheLine.markDirty();
+#else
+        line.markDirty();
+#endif
         auto lo = lowerData();
         auto hi = upperData();
         if (lowerByteEnabled()) ptr[0] = lo;
@@ -684,7 +694,8 @@ setup() {
     SPI.begin();
     Wire.begin();
     Wire.setClock(Deception::TWI_ClockRate);
-    onboardCache.begin();
+    cacheInterface.begin();
+    onboardDataCache.begin();
     psramMemory.begin();
     installInitialBootImage();
     setupExternalDevices();
@@ -998,9 +1009,9 @@ void
 configureExternalBus() noexcept {
     // one cycle wait to be on the safe side
     bitSet(XMCRA, SRW11);
-    bitSet(XMCRA, SRW10);
+    bitClear(XMCRA, SRW10);
     bitSet(XMCRA, SRW01);
-    bitSet(XMCRA, SRW00);
+    bitClear(XMCRA, SRW00);
     // half and half sector limits (doesn't really matter since it will an
     // 8-bit space
     bitClear(XMCRA, SRL0);
