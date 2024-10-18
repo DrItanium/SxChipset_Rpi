@@ -5,7 +5,7 @@ NC A7 A6 A5 A4 WR RD A19 A20M A21M A22M GND
 A23M SEL4 SEL5 SEL6 MK A19M AM2 EN0 DIR0 C1 C0 VCC
 
 DIR0 = /RD
-/EN0 = C0 * /C1 * /WR * RD +  C0 * /C1 * WR * /RD + /C0 *  C1 * /WR * RD + /C0 *  C1 * WR * /RD 
+/EN0 = /C0 + /C1
 A19M = /A19 * /SEL4 + A19 * SEL4
 AM2 = A19M * /A20M * /A21M * /A22M * /A23M * /SEL5 *  SEL6 *  /MK + A19M * /A20M * /A21M * /A22M *  SEL5 *  SEL6 * /MK + A19M * /A20M * /A21M * /SEL5 *  /SEL6 *  MK + A19M * /A20M *  SEL5 * /SEL6 *  MK + A19M *         /SEL5 *  SEL6 *  MK + SEL5 *  SEL6 *  MK
 
