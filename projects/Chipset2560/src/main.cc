@@ -61,6 +61,7 @@ namespace Pins {
 
 
 }
+constexpr bool UseDirectPortsForDataLines = true;
 namespace Ports {
     constexpr auto DataLower = Port::C;
     constexpr auto DataUpper = Port::F;
@@ -116,11 +117,25 @@ PrimaryBackingStore psramMemory(SPI);
 #define CommunicationPrimitive psramMemory
 using CacheLine = Deception::CacheLine16<uint32_t, PrimaryBackingStore>;
 [[gnu::address(0xFF00)]] volatile CacheLine externalCacheLine;
-[[gnu::address(0xFF40)]] volatile struct [[gnu::packed]] {
-    struct [[gnu::packed]] {
+union [[gnu::packed]] CH351 {
+     struct {
         uint32_t data;
         uint32_t direction;
-    } addressLines;
+     } view32;
+     struct {
+         uint16_t data[2];
+         uint16_t direction[2];
+     } view16;
+     struct {
+         uint8_t data[4];
+         uint8_t direction[4];
+     } view8;
+};
+
+static_assert(sizeof(CH351) == 8);
+[[gnu::address(0xFF40)]] volatile struct [[gnu::packed]] {
+    CH351 addressLines;
+    CH351 dataLines;
 } interface960;
 
 class ExternalCacheLineInterface {
@@ -239,52 +254,80 @@ upperByteEnabled() noexcept {
 [[nodiscard]]
 inline uint8_t 
 lowerData() noexcept {
-    return getInputRegister<Ports::DataLower>();
+    if constexpr (UseDirectPortsForDataLines) {
+        return getInputRegister<Ports::DataLower>();
+    } else {
+        return interface960.dataLines.view8.data[0];
+    }
 }
 
 [[gnu::always_inline]]
 [[nodiscard]]
 inline uint8_t 
 upperData() noexcept {
-    return getInputRegister<Ports::DataUpper>();
+    if constexpr (UseDirectPortsForDataLines) {
+        return getInputRegister<Ports::DataUpper>();
+    } else {
+        return interface960.dataLines.view8.data[1];
+    }
 }
 
 [[gnu::always_inline]]
 [[nodiscard]]
 inline uint16_t 
 data() noexcept {
-    union {
-        uint8_t bytes[sizeof(uint16_t)];
-        uint16_t full;
-    } storage;
+    if constexpr (UseDirectPortsForDataLines) {
+        union {
+            uint8_t bytes[sizeof(uint16_t)];
+            uint16_t full;
+        } storage;
 
-    storage.bytes[0] = lowerData();
-    storage.bytes[1] = upperData();
-    return storage.full;
+        storage.bytes[0] = lowerData();
+        storage.bytes[1] = upperData();
+        return storage.full;
+    } else {
+        return interface960.dataLines.view16.data[0];
+    }
 }
 [[gnu::always_inline]]
 inline void
 setUpperData(uint8_t value) noexcept {
-    getOutputRegister<Ports::DataUpper>() = value;
+    if constexpr (UseDirectPortsForDataLines) {
+        getOutputRegister<Ports::DataUpper>() = value;
+    } else {
+        interface960.dataLines.view8.data[1] = value;
+    }
 }
 [[gnu::always_inline]]
 inline void
 setLowerData(uint8_t value) noexcept {
-    getOutputRegister<Ports::DataLower>() = value;
+    if constexpr (UseDirectPortsForDataLines) {
+        getOutputRegister<Ports::DataLower>() = value;
+    } else {
+        interface960.dataLines.view8.data[0] = value;
+    }
 }
 [[gnu::always_inline]]
 inline void
 setDataValue(uint16_t value) noexcept {
-    setLowerData(value);
-    setUpperData(value >> 8);
+    if constexpr (UseDirectPortsForDataLines) {
+        setLowerData(value);
+        setUpperData(value >> 8);
+    } else {
+        interface960.dataLines.view16.data[0] = value;
+    }
 }
 
 template<uint16_t value>
 [[gnu::always_inline]]
 inline void
 setDataDirection() noexcept {
-    getDirectionRegister<Ports::DataLower>() = static_cast<uint8_t>(value);
-    getDirectionRegister<Ports::DataUpper>() = static_cast<uint8_t>(value >> 8);
+    if constexpr (UseDirectPortsForDataLines) {
+        getDirectionRegister<Ports::DataLower>() = static_cast<uint8_t>(value);
+        getDirectionRegister<Ports::DataUpper>() = static_cast<uint8_t>(value >> 8);
+    } else {
+        interface960.dataLines.view16.direction[0] = value;
+    }
 }
 
 [[gnu::always_inline]]
@@ -637,7 +680,7 @@ WriteMemoryDone:
 inline
 SplitWord32
 getAddress() noexcept {
-    return { interface960.addressLines.data };
+    return { interface960.addressLines.view32.data };
 }
 
 void
@@ -674,7 +717,7 @@ configurePins() noexcept {
     digitalWrite<Pins::READY, HIGH>();
 
     // configure the address lines as output to start
-    interface960.addressLines.direction = 0xFFFF'FFFF;
+    interface960.addressLines.view32.direction = 0xFFFF'FFFF;
     // then setup the external bus, it is necessary for the next step
 }
 void sanityCheckHardwareAcceleratedCacheLine() noexcept;
@@ -702,7 +745,7 @@ setup() {
     sanityCheckHardwareAcceleratedCacheLine();
     // do not cache anything to start with as we should instead just be ready
     // to get data from psram instead
-    interface960.addressLines.direction = 0;
+    interface960.addressLines.view32.direction = 0;
     digitalWrite<Pins::RESET, HIGH>();
 }
 void
@@ -1018,7 +1061,7 @@ void
 sanityCheckHardwareAcceleratedCacheLine() noexcept {
     Serial.println(F("Zeroing out cache memory"));
     for (uint32_t i = 0; i < (1024ul * 1024ul); i += 16) {
-        interface960.addressLines.data = i;
+        interface960.addressLines.view32.data = i;
         if (static_cast<uint16_t>(i) == 0) {
             Serial.print('.');
         }
