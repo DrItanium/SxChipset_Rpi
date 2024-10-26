@@ -36,8 +36,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Pinout.h"
 #include "Setup.h"
 
+// stable configuration
 constexpr bool UseDirectPortsForDataLines = true;
-constexpr bool UseOnboardCache = false;
+constexpr bool UseOnboardCache = true;
+constexpr uint16_t NumberOfOnboardCacheLines = 256;
+constexpr bool UseBusKeeper = false;
 [[gnu::noinline]] void installInitialBootImage() noexcept;
 void configureExternalBus() noexcept;
 namespace Pins {
@@ -169,7 +172,7 @@ class ExternalCacheLineInterface {
 using DataCache = ExternalCacheLineInterface;
 
 DataCache cacheInterface;
-Deception::DirectMappedCache<256, CacheLine> onboardCache;
+Deception::DirectMappedCache<NumberOfOnboardCacheLines, CacheLine> onboardCache;
 
 
 union [[gnu::packed]] SplitWord32 {
@@ -1108,7 +1111,12 @@ configureExternalBus() noexcept {
     bitSet(XMCRB, XMM0); 
     bitSet(XMCRB, XMM1); 
     bitSet(XMCRB, XMM2); 
-    bitSet(XMCRB, XMBK); // yes bus keeper
+    if constexpr (UseBusKeeper) {
+        bitSet(XMCRB, XMBK);
+    } else {
+        bitClear(XMCRB, XMBK); 
+    }
+                           
     bitSet(XMCRA, SRE); // enable the EBI
 }
 
