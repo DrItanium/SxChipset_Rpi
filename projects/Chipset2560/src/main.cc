@@ -406,7 +406,7 @@ send16BitValue(uint8_t lo, uint8_t hi) noexcept {
 }
 
 template<bool readOperation>
-void
+inline void
 doIOTransaction(SplitWord32 address) noexcept {
     switch (address.lo24) {
         case 0x0:
