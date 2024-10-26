@@ -730,6 +730,11 @@ setup() {
     configurePins();
     configureExternalBus();
     configureDataLinesForRead();
+    if constexpr (!UseDirectPortsForDataLines) {
+        // make sure that we set data lower and data upper direct ports to be inputs to be safe
+        getDirectionRegister<Ports::DataLower>() = 0;
+        getDirectionRegister<Ports::DataUpper>() = 0;
+    }
     configureInterruptSources();
     Serial.begin(SerialBaudRate);
     Serial.print(F("Serial Up @ "));
