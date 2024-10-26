@@ -989,16 +989,22 @@ PSRAMBackingStore::setAddress(Address address) noexcept {
 }
 size_t
 PSRAMBackingStore::read(Address addr, uint8_t* storage, size_t count) noexcept {
-    setAddress(addr);
-    _link.beginTransaction(SPISettings{5'000'000, MSBFIRST, SPI_MODE0});
-    digitalWrite<Pins::PSRAM_EN, LOW>();
-    _link.transfer(0x03);
-    _link.transfer(static_cast<uint8_t>(addr >> 16));
-    _link.transfer(static_cast<uint8_t>(addr >> 8));
-    _link.transfer(static_cast<uint8_t>(addr));
-    _link.transfer(storage, count);
-    digitalWrite<Pins::PSRAM_EN, HIGH>();
-    _link.endTransaction();
+    uint8_t localStorage[count] = { 0 };
+    {
+        setAddress(addr);
+        _link.beginTransaction(SPISettings{5'000'000, MSBFIRST, SPI_MODE0});
+        digitalWrite<Pins::PSRAM_EN, LOW>();
+        _link.transfer(0x03);
+        _link.transfer(static_cast<uint8_t>(addr >> 16));
+        _link.transfer(static_cast<uint8_t>(addr >> 8));
+        _link.transfer(static_cast<uint8_t>(addr));
+        _link.transfer(localStorage, count);
+        digitalWrite<Pins::PSRAM_EN, HIGH>();
+        _link.endTransaction();
+    }
+    {
+        (void)memcpy(storage, localStorage, count);
+    }
     return count;
 }
 
