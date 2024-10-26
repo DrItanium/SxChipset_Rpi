@@ -40,7 +40,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 constexpr bool UseDirectPortsForDataLines = true;
 constexpr bool UseOnboardCache = true;
 constexpr uint16_t NumberOfOnboardCacheLines = 256;
-constexpr bool UseBusKeeper = false;
+constexpr bool UseBusKeeper = true;
 [[gnu::noinline]] void installInitialBootImage() noexcept;
 void configureExternalBus() noexcept;
 namespace Pins {
