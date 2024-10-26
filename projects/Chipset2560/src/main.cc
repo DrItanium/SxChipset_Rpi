@@ -36,7 +36,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Pinout.h"
 #include "Setup.h"
 
-constexpr bool UseDirectPortsForDataLines = false;
+constexpr bool UseDirectPortsForDataLines = true;
+constexpr bool UseOnboardCache = true;
 [[gnu::noinline]] void installInitialBootImage() noexcept;
 void configureExternalBus() noexcept;
 namespace Pins {
@@ -168,8 +169,7 @@ class ExternalCacheLineInterface {
 using DataCache = ExternalCacheLineInterface;
 
 DataCache cacheInterface;
-using OnboardCacheLine = Deception::CacheLine16<uint32_t, PrimaryBackingStore>;
-Deception::DirectMappedCache<256, OnboardCacheLine> onboardCache;
+Deception::DirectMappedCache<256, CacheLine> onboardCache;
 
 
 union [[gnu::packed]] SplitWord32 {
@@ -506,8 +506,21 @@ template<bool readOperation>
 inline
 void
 doMemoryTransaction(SplitWord32 address) noexcept {
-    cacheInterface.sync(CommunicationPrimitive, address.full);
-    auto* ptr = externalCacheLine.getLineData(address.getCacheOffset());
+    using MemoryPointer = volatile uint8_t*;
+    MemoryPointer ptr = nullptr;
+    if constexpr (UseOnboardCache) {
+        auto& line = onboardCache.find(CommunicationPrimitive, address.full);
+        ptr = line.getLineData(address.getCacheOffset());
+        if constexpr (!readOperation) {
+            line.markDirty();
+        }
+    } else {
+        cacheInterface.sync(CommunicationPrimitive, address.full);
+        ptr = externalCacheLine.getLineData(address.getCacheOffset());
+        if constexpr (!readOperation) {
+            externalCacheLine.markDirty();
+        }
+    }
     if constexpr (readOperation) {
         auto ptr16 = reinterpret_cast<volatile uint16_t*>(ptr);
         auto val = ptr16[0];
@@ -564,7 +577,6 @@ doMemoryTransaction(SplitWord32 address) noexcept {
 ReadMemoryDone:
         signalReady();
     } else {
-        externalCacheLine.markDirty();
         auto lo = lowerData();
         auto hi = upperData();
         if (lowerByteEnabled()) {
