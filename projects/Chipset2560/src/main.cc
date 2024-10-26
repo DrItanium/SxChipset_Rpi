@@ -95,10 +95,12 @@ OptionalDevice<RTC_DS3231> rtc;
 OptionalDevice<Adafruit_Si7021> sensor_si7021;
 OptionalDevice<Adafruit_LTR390> ltr;
 
+template<uint32_t LS = 5'000'000>
 class PSRAMBackingStore {
     public:
         using SPIDevice = decltype(SPI);
         PSRAMBackingStore(SPIDevice& link) : _link(link) { }
+        static constexpr uint32_t LinkSpeed = LS;
         void begin() noexcept;
         size_t read(Address addr, uint8_t* storage, size_t count) noexcept;
         size_t write(Address addr, uint8_t* storage, size_t count) noexcept;
@@ -109,16 +111,10 @@ class PSRAMBackingStore {
         SPIDevice& _link;
 };
 
-PSRAMBackingStore psramMemory(SPI);
-using PSRAMBackingStore = PSRAMBackingStore;
-using PSRAMCacheAddress = uint32_t;
-using PrimaryBackingStore = PSRAMBackingStore;
-using CacheAddress = PSRAMCacheAddress;
+using PrimaryBackingStore = PSRAMBackingStore<2'500'000>;
+PrimaryBackingStore psramMemory(SPI);
 #define CommunicationPrimitive psramMemory
-using CacheLine = Deception::CacheLine16<CacheAddress, PrimaryBackingStore>;
-constexpr auto OnboardCacheLineCount = 256;
-using OnboardDataCache = Deception::DirectMappedCache<OnboardCacheLineCount, CacheLine>;
-static_assert(sizeof(CacheLine) <= 32);
+using CacheLine = Deception::CacheLine16<uint32_t, PrimaryBackingStore>;
 [[gnu::address(0xFF00)]] volatile CacheLine externalCacheLine;
 [[gnu::address(0xFF40)]] volatile struct [[gnu::packed]] {
     struct [[gnu::packed]] {
@@ -126,7 +122,6 @@ static_assert(sizeof(CacheLine) <= 32);
         uint32_t direction;
     } addressLines;
 } interface960;
-static_assert(0b1111'1111'0100'0000 == 0xFF40);
 
 class ExternalCacheLineInterface {
     public:
@@ -157,7 +152,6 @@ class ExternalCacheLineInterface {
 using DataCache = ExternalCacheLineInterface;
 
 DataCache cacheInterface;
-OnboardDataCache onboardDataCache;
 
 union [[gnu::packed]] SplitWord32 {
     uint8_t bytes[sizeof(uint32_t) / sizeof(uint8_t)];
@@ -701,7 +695,6 @@ setup() {
     Wire.begin();
     Wire.setClock(Deception::TWI_ClockRate);
     cacheInterface.begin();
-    onboardDataCache.begin();
     psramMemory.begin();
     installInitialBootImage();
     setupExternalDevices();
@@ -831,8 +824,9 @@ loop() {
 }
 
 
+template<uint32_t LS>
 void
-PSRAMBackingStore::begin() noexcept {
+PSRAMBackingStore<LS>::begin() noexcept {
     auto activatePSRAM = [this](bool pullID, bool performSanityChecking) {
         digitalWrite<Pins::PSRAM_EN, LOW>();
         _link.transfer(0x99);
@@ -889,7 +883,7 @@ PSRAMBackingStore::begin() noexcept {
         
     };
     delay(1000); // make sure that the waiting duration is enough for powerup
-    _link.beginTransaction(SPISettings{5'000'000, MSBFIRST, SPI_MODE0});
+    _link.beginTransaction(SPISettings{LS, MSBFIRST, SPI_MODE0});
     digitalWrite<Pins::PSRAM_A0, LOW>();
     digitalWrite<Pins::PSRAM_A1, LOW>();
     digitalWrite<Pins::PSRAM_A2, LOW>();
@@ -968,8 +962,9 @@ installInitialBootImage() noexcept {
     }
 }
 
+template<uint32_t LS>
 void 
-PSRAMBackingStore::setAddress(Address address) noexcept {
+PSRAMBackingStore<LS>::setAddress(Address address) noexcept {
     uint8_t addr = static_cast<uint8_t>(address >> 23) & 0b111;
     if (addr & 0b100) {
         digitalWrite<Pins::PSRAM_A2, HIGH>();
@@ -987,10 +982,11 @@ PSRAMBackingStore::setAddress(Address address) noexcept {
         digitalWrite<Pins::PSRAM_A0, LOW>();
     }
 }
+template<uint32_t LS>
 size_t
-PSRAMBackingStore::read(Address addr, uint8_t* storage, size_t count) noexcept {
+PSRAMBackingStore<LS>::read(Address addr, uint8_t* storage, size_t count) noexcept {
     setAddress(addr);
-    _link.beginTransaction(SPISettings{5'000'000, MSBFIRST, SPI_MODE0});
+    _link.beginTransaction(SPISettings{LS, MSBFIRST, SPI_MODE0});
     digitalWrite<Pins::PSRAM_EN, LOW>();
     _link.transfer(0x03);
     _link.transfer(static_cast<uint8_t>(addr >> 16));
@@ -1002,10 +998,11 @@ PSRAMBackingStore::read(Address addr, uint8_t* storage, size_t count) noexcept {
     return count;
 }
 
+template<uint32_t LS>
 size_t
-PSRAMBackingStore::write(Address addr, uint8_t* storage, size_t count) noexcept {
+PSRAMBackingStore<LS>::write(Address addr, uint8_t* storage, size_t count) noexcept {
     setAddress(addr);
-    _link.beginTransaction(SPISettings{5'000'000, MSBFIRST, SPI_MODE0});
+    _link.beginTransaction(SPISettings{LS, MSBFIRST, SPI_MODE0});
     digitalWrite<Pins::PSRAM_EN, LOW>();
     _link.transfer(0x02);
     _link.transfer(static_cast<uint8_t>(addr >> 16));
