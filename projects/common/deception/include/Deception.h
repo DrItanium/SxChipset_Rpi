@@ -154,6 +154,9 @@ namespace Deception {
     struct CacheLine {
         using BackingStore_t = T;
         using Address_t = A;
+        static constexpr uint8_t FlagValid = 0b0000'0001;
+        static constexpr uint8_t FlagDirty = 0b0000'0010;
+        static constexpr uint8_t FlagReplace = FlagValid | FlagDirty;
         static constexpr auto NumBytes = size;
         static constexpr auto ShiftAmount = shift;
         static constexpr auto AddressMask = mask;
@@ -166,62 +169,51 @@ namespace Deception {
         static constexpr uint8_t computeByteOffset(uint8_t input) noexcept {
             return input & ByteOffsetMask;
         }
-        constexpr bool dirty() const noexcept { return _dirty; }
-        constexpr bool matches(Address_t other) const volatile noexcept { return _valid && (_key == other); }
+        constexpr bool dirty() const noexcept { return (_flags & FlagDirty); }
+        constexpr bool matches(Address_t other) const volatile noexcept { return valid() && (_key == other); }
         void replace(BackingStore_t& store, Address_t newAddress) noexcept {
-            if (_valid) {
-                if (_dirty) {
-                    (void)store.write(_key, _bytes, NumBytes);
-                }
+            if (_flags >= FlagReplace) {
+                // just do a compare of the two parts valid and dirty if we
+                // hit 3 or greater then it means we have to perform the
+                // replacement
+                (void)store.write(_key, _bytes, NumBytes);
             }
             load(store, newAddress);
         }
         void replace(BackingStore_t& store, Address_t newAddress) volatile noexcept {
-            if (_valid) {
-                if (_dirty) {
-                    (void)store.write(_key, const_cast<uint8_t*>(_bytes), NumBytes);
-                }
+            if (_flags >= FlagReplace) {
+                // just do a compare of the two parts valid and dirty if we
+                // hit 3 or greater then it means we have to perform the
+                // replacement
+                (void)store.write(_key, const_cast<uint8_t*>(_bytes), NumBytes);
             }
             load(store, newAddress);
         }
         void load(BackingStore_t& store, Address_t newAddress) noexcept {
-            _valid = true;
-            _dirty = false;
+            _flags = FlagValid;
             _key = newAddress;
             (void)store.read(_key, _bytes, NumBytes);
         }
         void load(BackingStore_t& store, Address_t newAddress) volatile noexcept {
-            _valid = true;
-            _dirty = false;
+            _flags = FlagValid;
             _key = newAddress;
             (void)store.read(_key, const_cast<uint8_t*>(_bytes), NumBytes);
         }
-        void setByte(uint8_t offset, uint8_t value) noexcept {
-            markDirty();
-            _bytes[computeByteOffset(offset)] = value;
-        }
-        constexpr uint8_t getByte(uint8_t offset) const noexcept {
-            return _bytes[computeByteOffset(offset)];
-        }
         void clear() volatile noexcept {
             _key = 0;
-            _dirty = false;
-            _valid = false;
+            _flags = 0;
             for (auto i = 0u; i < NumBytes; ++i) {
                 _bytes[i] = 0;
             }
         }
-        uint8_t* getLineData(uint8_t offset = 0) noexcept {
-            return &_bytes[offset];
-        }
-        volatile uint8_t* getLineData(uint8_t offset = 0) volatile noexcept { return &_bytes[offset]; }
-        void markDirty() volatile noexcept { _dirty = true; }
-        constexpr bool valid() const noexcept { return _valid; }
+        [[nodiscard]] uint8_t* getLineData(uint8_t offset = 0) noexcept { return &_bytes[offset]; }
+        [[nodiscard]] volatile uint8_t* getLineData(uint8_t offset = 0) volatile noexcept { return &_bytes[offset]; }
+        void markDirty() volatile noexcept { _flags |= FlagDirty ; }
+        [[nodiscard]] constexpr bool valid() const volatile noexcept { return (_flags & FlagValid); }
         private:
             uint8_t _bytes[NumBytes] = { 0 };
             Address_t _key = 0;
-            bool _dirty = false;
-            bool _valid = false;
+            uint8_t _flags = 0;
     };
     template<typename A, typename T>
     using CacheLine16 = CacheLine<A, 16, 4, static_cast<A>(0xFFFF'FFF0), T>;
@@ -344,11 +336,6 @@ namespace Deception {
                     line.replace(store, addr);
                 } 
                 return line;
-            }
-            void seed(BackingStore_t& store, Address_t address) noexcept {
-                auto addr = normalizeAddress(address);
-                auto& line = lines[computeIndex(addr)];
-                line.load(store, addr);
             }
             void begin() noexcept {
                 clear();
