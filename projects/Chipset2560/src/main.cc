@@ -38,7 +38,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 // stable configuration
 constexpr bool UseDirectPortsForDataLines = true;
-constexpr bool UseOnboardCache = false;
+constexpr bool UseOnboardCache = true;
 constexpr uint16_t NumberOfOnboardCacheLines = 256;
 constexpr bool UseBusKeeper = true;
 constexpr auto SerialBaudRate = 115200;
@@ -1084,15 +1084,20 @@ PSRAMBackingStore<LS>::write(Address addr, uint8_t* storage, size_t count) noexc
 
 void
 sanityCheckHardwareAcceleratedCacheLine() noexcept {
-    Serial.println(F("Zeroing out cache memory"));
-    for (uint32_t i = 0; i < (1024ul * 1024ul); i += 16) {
-        interface960.addressLines.view32.data = i;
-        if (static_cast<uint16_t>(i) == 0) {
-            Serial.print('.');
+    if constexpr (UseOnboardCache) {
+        Serial.println(F("Using Onboard Cache!"));
+    } else {
+        Serial.println(F("Using External Hardware Accelerated Cache!"));
+        Serial.println(F("Zeroing out cache memory"));
+        for (uint32_t i = 0; i < (1024ul * 1024ul); i += 16) {
+            interface960.addressLines.view32.data = i;
+            if (static_cast<uint16_t>(i) == 0) {
+                Serial.print('.');
+            }
+            externalCacheLine.clear();
         }
-        externalCacheLine.clear();
+        Serial.println(F("DONE!"));
     }
-    Serial.println(F("DONE!"));
 }
 
 void 
