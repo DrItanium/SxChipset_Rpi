@@ -36,8 +36,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Pinout.h"
 #include "Setup.h"
 
-constexpr bool UseDirectPortsForDataLines = false;
-constexpr bool UseOnboardCache = true;
+constexpr bool UseDirectPortsForDataLines = true;
+constexpr bool UseOnboardCache = false;
 [[gnu::noinline]] void installInitialBootImage() noexcept;
 void configureExternalBus() noexcept;
 namespace Pins {
