@@ -356,7 +356,7 @@ configureDataLinesForWrite() noexcept {
     return digitalRead<Pins::BLAST>() == LOW;
 }
 template<bool isReadOperation>
-void
+inline void
 doNothingOperation() noexcept {
     if constexpr(isReadOperation) {
         setDataValue(0);
@@ -366,7 +366,7 @@ doNothingOperation() noexcept {
     }
     signalReady();
 }
-void
+inline void
 send32BitConstant(uint32_t value) noexcept {
     setDataValue(value);
     if (isLastWordOfTransaction()) {
@@ -383,7 +383,7 @@ send32BitConstant(uint32_t value) noexcept {
     doNothingOperation<true>();
 }
 
-void
+inline void
 send16BitValue(uint16_t value) noexcept {
     setDataValue(value);
     if (isLastWordOfTransaction()) {
@@ -393,7 +393,7 @@ send16BitValue(uint16_t value) noexcept {
     signalReady();
     doNothingOperation<true>();
 }
-void
+inline void
 send16BitValue(uint8_t lo, uint8_t hi) noexcept {
     setLowerData(lo);
     setUpperData(hi);
@@ -506,8 +506,7 @@ doIOTransaction(SplitWord32 address) noexcept {
     }
 }
 template<bool readOperation>
-inline
-void
+inline void
 doMemoryTransaction(SplitWord32 address) noexcept {
     using MemoryPointer = volatile uint8_t*;
     MemoryPointer ptr = nullptr;
@@ -1049,9 +1048,20 @@ installInitialBootImage() noexcept {
 template<uint32_t LS>
 void 
 PSRAMBackingStore<LS>::setAddress(Address address) noexcept {
+#if 0
     uint8_t addr = static_cast<uint8_t>(address >> 23) & 0b111;
+#else
+    uint8_t addr = static_cast<uint8_t>(address >> 24);
+    addr <<= 1;
+    if (static_cast<uint8_t>(address >> 16) & 0b1000'0000) {
+        addr |= 0b1;
+    } else {
+        addr &= 0b1111'1110;
+    }
+#endif
     getOutputRegister<Ports::PSRAMSel>() = addr;
 }
+
 template<uint32_t LS>
 size_t
 PSRAMBackingStore<LS>::read(Address addr, uint8_t* storage, size_t count) noexcept {
