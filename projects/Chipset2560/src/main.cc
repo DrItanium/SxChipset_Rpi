@@ -39,34 +39,29 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void configureExternalBus() noexcept;
 namespace Pins {
     constexpr auto SD_EN = Pin::PortB0;
+    constexpr auto PSRAM_A0 = Pin::PortD2;
+    constexpr auto PSRAM_A1 = Pin::PortD3;
     constexpr auto INT960_0 = Pin::PortB4;
     constexpr auto INT960_1 = Pin::PortB5;
     constexpr auto INT960_2 = Pin::PortB6;
     constexpr auto INT960_3 = Pin::PortB7;
-    constexpr auto BE0 = Pin::PortD4;
-    constexpr auto BE1 = Pin::PortD5;
-    constexpr auto BLAST = Pin::PortD6;
-    constexpr auto WR = Pin::PortD7;
+    constexpr auto BE1 = Pin::PortD4;
+    constexpr auto BE0 = Pin::PortD5;
+    constexpr auto WR = Pin::PortD6;
+    constexpr auto BLAST = Pin::PortD7;
     constexpr auto RESET = Pin::PortE2;
     constexpr auto HOLD = Pin::PortE3;
     constexpr auto ADS = Pin::PortE4;
     constexpr auto HLDA = Pin::PortE5;
-    constexpr auto LOCK = Pin::PortE6;
     constexpr auto READY_SYNC_IN = Pin::PortE7;
-    constexpr auto READY = Pin::PortG4;
+
     constexpr auto PSRAM_EN = Pin::PortG3;
-    constexpr auto PSRAM_A0 = Pin::PortD2;
-    constexpr auto PSRAM_A1 = Pin::PortD3;
-    
-    // PortG5 uncommitted
+    constexpr auto READY = Pin::PortG5;
+
 }
 namespace Ports {
     constexpr auto DataLower = Port::C;
     constexpr auto DataUpper = Port::F;
-    constexpr auto AddressLowest = Port::H;
-    constexpr auto AddressLower = Port::K;
-    constexpr auto AddressHigher = Port::J;
-    constexpr auto AddressHighest = Port::L;
 }
 
 template<typename T>
@@ -124,6 +119,11 @@ using OnboardDataCache = Deception::DirectMappedCache<OnboardCacheLineCount, Cac
 static_assert(sizeof(CacheLine) <= 32);
 [[gnu::address(0xFF00)]] volatile CacheLine externalCacheLine;
 [[gnu::address(0xFF00)]] volatile uint8_t externalCacheBackingStore[32]; 
+[[gnu::address(0xFF40)]] volatile struct {
+    uint32_t contents;
+    uint32_t direction;
+} addressLines;
+static_assert(0b1111'1111'0100'0000 == 0xFF40);
 
 class ExternalCacheLineInterface {
     public:
@@ -647,12 +647,16 @@ WriteMemoryDone:
 inline
 SplitWord32
 getAddress() noexcept {
+#if 0
     return { 
         getInputRegister<Ports::AddressLowest>(),
         getInputRegister<Ports::AddressLower>(),
         getInputRegister<Ports::AddressHigher>(),
         getInputRegister<Ports::AddressHighest>()
     };
+#else
+    return { addressLines.contents };
+#endif
 }
 
 void
@@ -687,10 +691,14 @@ configurePins() noexcept {
     digitalWrite<Pins::READY, HIGH>();
 
     // configure the address lines as output to start
+#if 0
     getDirectionRegister<Ports::AddressLowest>() = 0xFF;
     getDirectionRegister<Ports::AddressLower>() = 0xFF;
     getDirectionRegister<Ports::AddressHigher>() = 0xFF;
     getDirectionRegister<Ports::AddressHighest>() = 0xFF;
+#else
+    addressLines.direction = 0xFFFF'FFFF;
+#endif
     // then setup the external bus, it is necessary for the next step
 }
 void sanityCheckHardwareAcceleratedCacheLine() noexcept;
@@ -719,11 +727,14 @@ setup() {
     sanityCheckHardwareAcceleratedCacheLine();
     // do not cache anything to start with as we should instead just be ready
     // to get data from psram instead
+#if 0
     getDirectionRegister<Ports::AddressLowest>() = 0;
     getDirectionRegister<Ports::AddressLower>() = 0;
     getDirectionRegister<Ports::AddressHigher>() = 0;
     getDirectionRegister<Ports::AddressHighest>() = 0;
-
+#else
+    addressLines.direction = 0;
+#endif
     digitalWrite<Pins::RESET, HIGH>();
 }
 void
@@ -1009,10 +1020,14 @@ void
 sanityCheckHardwareAcceleratedCacheLine() noexcept {
     Serial.println(F("Zeroing out cache memory"));
     for (uint32_t i = 0; i < 0x01'00'0000; i += 16) {
+#if 0
         getOutputRegister<Ports::AddressLowest>() = static_cast<uint8_t>(i);
         getOutputRegister<Ports::AddressLower>() = static_cast<uint8_t>(i >> 8); 
         getOutputRegister<Ports::AddressHigher>() = static_cast<uint8_t>(i >> 16);
         getOutputRegister<Ports::AddressHighest>() = static_cast<uint8_t>(i >> 24);
+#else
+        addressLines.contents = i;
+#endif
         if (static_cast<uint16_t>(i) == 0) {
             Serial.print('.');
         }
