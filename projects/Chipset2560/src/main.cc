@@ -38,9 +38,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 // stable configuration
 constexpr bool UseDirectPortsForDataLines = true;
-constexpr bool UseOnboardCache = true;
+constexpr bool UseOnboardCache = false;
 constexpr uint16_t NumberOfOnboardCacheLines = 256;
 constexpr bool UseBusKeeper = true;
+constexpr auto SerialBaudRate = 9600;
 [[gnu::noinline]] void installInitialBootImage() noexcept;
 void configureExternalBus() noexcept;
 namespace Pins {
@@ -742,7 +743,6 @@ configurePins() noexcept {
 void sanityCheckHardwareAcceleratedCacheLine() noexcept;
 void setupExternalDevices() noexcept;
 void configureRandomSeed() noexcept;
-static constexpr auto SerialBaudRate = 115200;
 void
 setup() {
     configureRandomSeed();
