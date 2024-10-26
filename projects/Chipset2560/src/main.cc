@@ -55,8 +55,10 @@ namespace Pins {
     constexpr auto HLDA = Pin::PortE5;
     constexpr auto READY_SYNC_IN = Pin::PortE7;
 
-    constexpr auto PSRAM_EN = Pin::PortG3;
+    constexpr auto PSRAM_A2 = Pin::PortG3;
+    constexpr auto PSRAM_EN = Pin::PortG4;
     constexpr auto READY = Pin::PortG5;
+
 
 }
 namespace Ports {
@@ -654,6 +656,8 @@ configurePins() noexcept {
     digitalWrite<Pins::PSRAM_A0, LOW>();
     pinMode(Pins::PSRAM_A1, OUTPUT);
     digitalWrite<Pins::PSRAM_A1, LOW>();
+    pinMode(Pins::PSRAM_A2, OUTPUT);
+    digitalWrite<Pins::PSRAM_A2, LOW>();
     pinMode(Pins::INT960_0, OUTPUT);
     pinMode(Pins::INT960_1, OUTPUT);
     pinMode(Pins::INT960_2, OUTPUT);
@@ -888,20 +892,41 @@ PSRAMBackingStore::begin() noexcept {
     _link.beginTransaction(SPISettings{5'000'000, MSBFIRST, SPI_MODE0});
     digitalWrite<Pins::PSRAM_A0, LOW>();
     digitalWrite<Pins::PSRAM_A1, LOW>();
+    digitalWrite<Pins::PSRAM_A2, LOW>();
     activatePSRAM(true, true);
     digitalWrite<Pins::PSRAM_A0, HIGH>();
     digitalWrite<Pins::PSRAM_A1, LOW>();
+    digitalWrite<Pins::PSRAM_A2, LOW>();
     activatePSRAM(true, true);
     digitalWrite<Pins::PSRAM_A0, LOW>();
     digitalWrite<Pins::PSRAM_A1, HIGH>();
+    digitalWrite<Pins::PSRAM_A2, LOW>();
     activatePSRAM(true, true);
     digitalWrite<Pins::PSRAM_A0, HIGH>();
     digitalWrite<Pins::PSRAM_A1, HIGH>();
+    digitalWrite<Pins::PSRAM_A2, LOW>();
+    activatePSRAM(true, true);
+    digitalWrite<Pins::PSRAM_A0, LOW>();
+    digitalWrite<Pins::PSRAM_A1, LOW>();
+    digitalWrite<Pins::PSRAM_A2, HIGH>();
+    activatePSRAM(true, true);
+    digitalWrite<Pins::PSRAM_A0, HIGH>();
+    digitalWrite<Pins::PSRAM_A1, LOW>();
+    digitalWrite<Pins::PSRAM_A2, HIGH>();
+    activatePSRAM(true, true);
+    digitalWrite<Pins::PSRAM_A0, LOW>();
+    digitalWrite<Pins::PSRAM_A1, HIGH>();
+    digitalWrite<Pins::PSRAM_A2, HIGH>();
+    activatePSRAM(true, true);
+    digitalWrite<Pins::PSRAM_A0, HIGH>();
+    digitalWrite<Pins::PSRAM_A1, HIGH>();
+    digitalWrite<Pins::PSRAM_A2, HIGH>();
     activatePSRAM(true, true);
     // we need to go through and enable a
     _link.endTransaction();
     digitalWrite<Pins::PSRAM_A0, LOW>();
     digitalWrite<Pins::PSRAM_A1, LOW>();
+    digitalWrite<Pins::PSRAM_A2, LOW>();
 
 }
 void
@@ -945,13 +970,18 @@ installInitialBootImage() noexcept {
 
 void 
 PSRAMBackingStore::setAddress(Address address) noexcept {
-    uint8_t addr = static_cast<uint8_t>(address >> 23) & 0b11;
-    if (addr & 0b10) {
+    uint8_t addr = static_cast<uint8_t>(address >> 23) & 0b111;
+    if (addr & 0b100) {
+        digitalWrite<Pins::PSRAM_A2, HIGH>();
+    } else {
+        digitalWrite<Pins::PSRAM_A2, LOW>();
+    }
+    if (addr & 0b010) {
         digitalWrite<Pins::PSRAM_A1, HIGH>();
     } else {
         digitalWrite<Pins::PSRAM_A1, LOW>();
     }
-    if (addr & 0b01) {
+    if (addr & 0b001) {
         digitalWrite<Pins::PSRAM_A0, HIGH>();
     } else {
         digitalWrite<Pins::PSRAM_A0, LOW>();
