@@ -999,12 +999,12 @@ PSRAMBackingStore<LS>::begin() noexcept {
     delay(1000); // make sure that the waiting duration is enough for powerup
     _link.beginTransaction(SPISettings{LS, MSBFIRST, SPI_MODE0});
     for (uint8_t i = 0; i < 8; ++i) {
-        setAddress(i);
+        // can't use setAddress since that is setup for direct addresses
+        getOutputRegister<Ports::PSRAMSel>() = i;
         activatePSRAM(true, true);
     }
-    // we need to go through and enable a
     _link.endTransaction();
-    setAddress(0);
+    getOutputRegister<Ports::PSRAMSel>() = 0;
 
 }
 void
