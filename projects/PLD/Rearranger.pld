@@ -1,0 +1,22 @@
+GAL22V10
+Rearranger
+
+CLK PG5 PG1 PG0 A4 A5 A6 A7 NC NC NC GND
+NC XRD XWR CWR CRD TEN DEN PE7 ST0 ST1 RDY VCC
+
+/RDY = ST0 * /ST1 + /ST0 * ST1
+ST0.R = PG5
+ST1.R = ST0
+/PE7 = ST0 * /ST1 + /ST0 * ST1
+/XRD = /PG1 * PG0 * /A7 * A6
+/XWR = /PG0 * PG1 * /A7 * A6
+/CWR = /PG0 * PG1 * /A7 * /A6 * /A5
+/CRD = /PG1 * PG0 * /A7 * /A6 * /A5
+/DEN = /A7 * /A6 * /A5 * /A4
+/TEN = /A7 * /A6 * /A5 *  A4
+
+DESCRIPTION
+
+Decodes EBI address components as well as READY signals
+
+XRD and XWR are for the SMI interface
