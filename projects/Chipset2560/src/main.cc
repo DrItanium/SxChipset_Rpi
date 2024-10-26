@@ -36,7 +36,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Pinout.h"
 #include "Setup.h"
 
-constexpr bool UseDirectPortsForDataLines = true;
+constexpr bool UseDirectPortsForDataLines = false;
 constexpr bool UseOnboardCache = true;
 [[gnu::noinline]] void installInitialBootImage() noexcept;
 void configureExternalBus() noexcept;
@@ -98,7 +98,7 @@ OptionalDevice<RTC_DS3231> rtc;
 OptionalDevice<Adafruit_Si7021> sensor_si7021;
 OptionalDevice<Adafruit_LTR390> ltr;
 
-template<uint32_t LS = 5'000'000>
+template<uint32_t LS>
 class PSRAMBackingStore {
     public:
         using SPIDevice = decltype(SPI);
@@ -114,7 +114,7 @@ class PSRAMBackingStore {
         SPIDevice& _link;
 };
 
-using PrimaryBackingStore = PSRAMBackingStore<2'500'000>;
+using PrimaryBackingStore = PSRAMBackingStore<5'000'000>;
 PrimaryBackingStore psramMemory(SPI);
 #define CommunicationPrimitive psramMemory
 using CacheLine = Deception::CacheLine16<uint32_t, PrimaryBackingStore>;
