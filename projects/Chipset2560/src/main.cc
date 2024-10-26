@@ -591,8 +591,8 @@ ReadMemoryDone:
             signalReady<false>();
             goto WriteMemoryDone;
         }
-        ptr[1] = hi;
         signalReady<false>();
+        ptr[1] = hi;
         waitForReady();
         // we can safely ignore checking BE0 since we flowed into this
         lo = lowerData();
@@ -605,9 +605,9 @@ ReadMemoryDone:
             signalReady<false>();
             goto WriteMemoryDone;
         }
+        signalReady<false>();
         ptr[2] = lo;
         ptr[3] = hi;
-        signalReady<false>();
         waitForReady();
         // we can safely ignore checking BE0 since we flowed into this
         lo = lowerData();
@@ -620,9 +620,9 @@ ReadMemoryDone:
             signalReady<false>();
             goto WriteMemoryDone;
         }
+        signalReady<false>();
         ptr[4] = lo;
         ptr[5] = hi;
-        signalReady<false>();
         waitForReady();
         // we can safely ignore checking BE0 since we flowed into this
         lo = lowerData();
@@ -635,9 +635,9 @@ ReadMemoryDone:
             signalReady<false>();
             goto WriteMemoryDone;
         }
+        signalReady<false>();
         ptr[6] = lo;
         ptr[7] = hi;
-        signalReady<false>();
         waitForReady();
         // we can safely ignore checking BE0 since we flowed into this
         lo = lowerData();
@@ -650,9 +650,9 @@ ReadMemoryDone:
             signalReady<false>();
             goto WriteMemoryDone;
         }
+        signalReady<false>();
         ptr[8] = lo;
         ptr[9] = hi;
-        signalReady<false>();
         waitForReady();
         // we can safely ignore checking BE0 since we flowed into this
         lo = lowerData();
@@ -665,9 +665,9 @@ ReadMemoryDone:
             signalReady<false>();
             goto WriteMemoryDone;
         }
+        signalReady<false>();
         ptr[10] = lo;
         ptr[11] = hi;
-        signalReady<false>();
         waitForReady();
         // we can safely ignore checking BE0 since we flowed into this
         lo = lowerData();
@@ -680,9 +680,9 @@ ReadMemoryDone:
             signalReady<false>();
             goto WriteMemoryDone;
         }
+        signalReady<false>();
         ptr[12] = lo;
         ptr[13] = hi;
-        signalReady<false>();
         waitForReady();
         // we can safely ignore checking BE0 since we flowed into this
         ptr[14] = lowerData();
