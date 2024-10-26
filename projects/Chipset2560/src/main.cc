@@ -46,8 +46,6 @@ constexpr auto SerialBaudRate = 115200;
 void configureExternalBus() noexcept;
 namespace Pins {
     constexpr auto SD_EN = Pin::PortB0;
-    constexpr auto PSRAM_A0 = Pin::PortD2;
-    constexpr auto PSRAM_A1 = Pin::PortD3;
     constexpr auto INT960_0 = Pin::PortB4;
     constexpr auto INT960_1 = Pin::PortB5;
     constexpr auto INT960_2 = Pin::PortB6;
@@ -62,15 +60,16 @@ namespace Pins {
     constexpr auto HLDA = Pin::PortE5;
     constexpr auto READY_SYNC_IN = Pin::PortE7;
 
-    constexpr auto PSRAM_A2 = Pin::PortG3;
     constexpr auto PSRAM_EN = Pin::PortG4;
     constexpr auto READY = Pin::PortG5;
+
 
 
 }
 namespace Ports {
     constexpr auto DataLower = Port::C;
     constexpr auto DataUpper = Port::F;
+    constexpr auto PSRAMSel = Port::L;
 }
 
 template<typename T>
@@ -709,12 +708,8 @@ configurePins() noexcept {
     digitalWrite<Pins::RESET, LOW>();
     pinMode(Pins::PSRAM_EN, OUTPUT);
     digitalWrite<Pins::PSRAM_EN, HIGH>();
-    pinMode(Pins::PSRAM_A0, OUTPUT);
-    digitalWrite<Pins::PSRAM_A0, LOW>();
-    pinMode(Pins::PSRAM_A1, OUTPUT);
-    digitalWrite<Pins::PSRAM_A1, LOW>();
-    pinMode(Pins::PSRAM_A2, OUTPUT);
-    digitalWrite<Pins::PSRAM_A2, LOW>();
+    getDirectionRegister<Ports::PSRAMSel>() = 0xFF;
+    getOutputRegister<Ports::PSRAMSel>() = 0x00;
     pinMode(Pins::INT960_0, OUTPUT);
     pinMode(Pins::INT960_1, OUTPUT);
     pinMode(Pins::INT960_2, OUTPUT);
@@ -1003,43 +998,13 @@ PSRAMBackingStore<LS>::begin() noexcept {
     };
     delay(1000); // make sure that the waiting duration is enough for powerup
     _link.beginTransaction(SPISettings{LS, MSBFIRST, SPI_MODE0});
-    digitalWrite<Pins::PSRAM_A0, LOW>();
-    digitalWrite<Pins::PSRAM_A1, LOW>();
-    digitalWrite<Pins::PSRAM_A2, LOW>();
-    activatePSRAM(true, true);
-    digitalWrite<Pins::PSRAM_A0, HIGH>();
-    digitalWrite<Pins::PSRAM_A1, LOW>();
-    digitalWrite<Pins::PSRAM_A2, LOW>();
-    activatePSRAM(true, true);
-    digitalWrite<Pins::PSRAM_A0, LOW>();
-    digitalWrite<Pins::PSRAM_A1, HIGH>();
-    digitalWrite<Pins::PSRAM_A2, LOW>();
-    activatePSRAM(true, true);
-    digitalWrite<Pins::PSRAM_A0, HIGH>();
-    digitalWrite<Pins::PSRAM_A1, HIGH>();
-    digitalWrite<Pins::PSRAM_A2, LOW>();
-    activatePSRAM(true, true);
-    digitalWrite<Pins::PSRAM_A0, LOW>();
-    digitalWrite<Pins::PSRAM_A1, LOW>();
-    digitalWrite<Pins::PSRAM_A2, HIGH>();
-    activatePSRAM(true, true);
-    digitalWrite<Pins::PSRAM_A0, HIGH>();
-    digitalWrite<Pins::PSRAM_A1, LOW>();
-    digitalWrite<Pins::PSRAM_A2, HIGH>();
-    activatePSRAM(true, true);
-    digitalWrite<Pins::PSRAM_A0, LOW>();
-    digitalWrite<Pins::PSRAM_A1, HIGH>();
-    digitalWrite<Pins::PSRAM_A2, HIGH>();
-    activatePSRAM(true, true);
-    digitalWrite<Pins::PSRAM_A0, HIGH>();
-    digitalWrite<Pins::PSRAM_A1, HIGH>();
-    digitalWrite<Pins::PSRAM_A2, HIGH>();
-    activatePSRAM(true, true);
+    for (uint8_t i = 0; i < 8; ++i) {
+        setAddress(i);
+        activatePSRAM(true, true);
+    }
     // we need to go through and enable a
     _link.endTransaction();
-    digitalWrite<Pins::PSRAM_A0, LOW>();
-    digitalWrite<Pins::PSRAM_A1, LOW>();
-    digitalWrite<Pins::PSRAM_A2, LOW>();
+    setAddress(0);
 
 }
 void
@@ -1085,21 +1050,7 @@ template<uint32_t LS>
 void 
 PSRAMBackingStore<LS>::setAddress(Address address) noexcept {
     uint8_t addr = static_cast<uint8_t>(address >> 23) & 0b111;
-    if (addr & 0b100) {
-        digitalWrite<Pins::PSRAM_A2, HIGH>();
-    } else {
-        digitalWrite<Pins::PSRAM_A2, LOW>();
-    }
-    if (addr & 0b010) {
-        digitalWrite<Pins::PSRAM_A1, HIGH>();
-    } else {
-        digitalWrite<Pins::PSRAM_A1, LOW>();
-    }
-    if (addr & 0b001) {
-        digitalWrite<Pins::PSRAM_A0, HIGH>();
-    } else {
-        digitalWrite<Pins::PSRAM_A0, LOW>();
-    }
+    getOutputRegister<Ports::PSRAMSel>() = addr;
 }
 template<uint32_t LS>
 size_t
