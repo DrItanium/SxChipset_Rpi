@@ -38,7 +38,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 // stable configuration
 constexpr bool UseDirectPortsForDataLines = true;
-constexpr bool UseOnboardCache = true;
+constexpr bool UseOnboardCache = false;
 constexpr uint16_t NumberOfOnboardCacheLines = 256;
 constexpr bool UseBusKeeper = true;
 constexpr auto SerialBaudRate = 115200;
@@ -591,8 +591,8 @@ ReadMemoryDone:
             signalReady<false>();
             goto WriteMemoryDone;
         }
-        signalReady<false>();
         ptr[1] = hi;
+        signalReady<false>();
         waitForReady();
         // we can safely ignore checking BE0 since we flowed into this
         lo = lowerData();
@@ -601,13 +601,13 @@ ReadMemoryDone:
             if (upperByteEnabled()) {
                 ptr[3] = hi;
             }
-            signalReady<false>();
             ptr[2] = lo;
+            signalReady<false>();
             goto WriteMemoryDone;
         }
-        signalReady<false>();
         ptr[2] = lo;
         ptr[3] = hi;
+        signalReady<false>();
         waitForReady();
         // we can safely ignore checking BE0 since we flowed into this
         lo = lowerData();
@@ -616,13 +616,13 @@ ReadMemoryDone:
             if (upperByteEnabled()) {
                 ptr[5] = hi;
             }
-            signalReady<false>();
             ptr[4] = lo;
+            signalReady<false>();
             goto WriteMemoryDone;
         }
-        signalReady<false>();
         ptr[4] = lo;
         ptr[5] = hi;
+        signalReady<false>();
         waitForReady();
         // we can safely ignore checking BE0 since we flowed into this
         lo = lowerData();
@@ -631,13 +631,13 @@ ReadMemoryDone:
             if (upperByteEnabled()) {
                 ptr[7] = hi;
             }
-            signalReady<false>();
             ptr[6] = lo;
+            signalReady<false>();
             goto WriteMemoryDone;
         }
-        signalReady<false>();
         ptr[6] = lo;
         ptr[7] = hi;
+        signalReady<false>();
         waitForReady();
         // we can safely ignore checking BE0 since we flowed into this
         lo = lowerData();
@@ -646,13 +646,13 @@ ReadMemoryDone:
             if (upperByteEnabled()) {
                 ptr[9] = hi;
             }
-            signalReady<false>();
             ptr[8] = lo;
+            signalReady<false>();
             goto WriteMemoryDone;
         }
-        signalReady<false>();
         ptr[8] = lo;
         ptr[9] = hi;
+        signalReady<false>();
         waitForReady();
         // we can safely ignore checking BE0 since we flowed into this
         lo = lowerData();
@@ -661,13 +661,13 @@ ReadMemoryDone:
             if (upperByteEnabled()) {
                 ptr[11] = hi;
             }
-            signalReady<false>();
             ptr[10] = lo;
+            signalReady<false>();
             goto WriteMemoryDone;
         }
-        signalReady<false>();
         ptr[10] = lo;
         ptr[11] = hi;
+        signalReady<false>();
         waitForReady();
         // we can safely ignore checking BE0 since we flowed into this
         lo = lowerData();
@@ -676,13 +676,13 @@ ReadMemoryDone:
             if (upperByteEnabled()) {
                 ptr[13] = hi;
             }
-            signalReady<false>();
             ptr[12] = lo;
+            signalReady<false>();
             goto WriteMemoryDone;
         }
-        signalReady<false>();
         ptr[12] = lo;
         ptr[13] = hi;
+        signalReady<false>();
         waitForReady();
         // we can safely ignore checking BE0 since we flowed into this
         ptr[14] = lowerData();
