@@ -119,10 +119,12 @@ using OnboardDataCache = Deception::DirectMappedCache<OnboardCacheLineCount, Cac
 static_assert(sizeof(CacheLine) <= 32);
 [[gnu::address(0xFF00)]] volatile CacheLine externalCacheLine;
 [[gnu::address(0xFF00)]] volatile uint8_t externalCacheBackingStore[32]; 
-[[gnu::address(0xFF40)]] volatile struct {
-    uint32_t contents;
-    uint32_t direction;
-} addressLines;
+[[gnu::address(0xFF40)]] volatile struct [[gnu::packed]] {
+    struct [[gnu::packed]] {
+        uint32_t data;
+        uint32_t direction;
+    } addressLines;
+} interface960;
 static_assert(0b1111'1111'0100'0000 == 0xFF40);
 
 class ExternalCacheLineInterface {
@@ -655,7 +657,7 @@ getAddress() noexcept {
         getInputRegister<Ports::AddressHighest>()
     };
 #else
-    return { addressLines.contents };
+    return { interface960.addressLines.data };
 #endif
 }
 
@@ -697,7 +699,7 @@ configurePins() noexcept {
     getDirectionRegister<Ports::AddressHigher>() = 0xFF;
     getDirectionRegister<Ports::AddressHighest>() = 0xFF;
 #else
-    addressLines.direction = 0xFFFF'FFFF;
+    interface960.addressLines.direction = 0xFFFF'FFFF;
 #endif
     // then setup the external bus, it is necessary for the next step
 }
@@ -733,7 +735,7 @@ setup() {
     getDirectionRegister<Ports::AddressHigher>() = 0;
     getDirectionRegister<Ports::AddressHighest>() = 0;
 #else
-    addressLines.direction = 0;
+    interface960.addressLines.direction = 0;
 #endif
     digitalWrite<Pins::RESET, HIGH>();
 }
@@ -1026,7 +1028,7 @@ sanityCheckHardwareAcceleratedCacheLine() noexcept {
         getOutputRegister<Ports::AddressHigher>() = static_cast<uint8_t>(i >> 16);
         getOutputRegister<Ports::AddressHighest>() = static_cast<uint8_t>(i >> 24);
 #else
-        addressLines.contents = i;
+        interface960.addressLines.data = i;
 #endif
         if (static_cast<uint16_t>(i) == 0) {
             Serial.print('.');
