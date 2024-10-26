@@ -41,7 +41,7 @@ constexpr bool UseDirectPortsForDataLines = true;
 constexpr bool UseOnboardCache = false;
 constexpr uint16_t NumberOfOnboardCacheLines = 256;
 constexpr bool UseBusKeeper = true;
-constexpr auto SerialBaudRate = 9600;
+constexpr auto SerialBaudRate = 115200;
 [[gnu::noinline]] void installInitialBootImage() noexcept;
 void configureExternalBus() noexcept;
 namespace Pins {
