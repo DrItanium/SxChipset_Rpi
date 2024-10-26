@@ -118,7 +118,6 @@ constexpr auto OnboardCacheLineCount = 256;
 using OnboardDataCache = Deception::DirectMappedCache<OnboardCacheLineCount, CacheLine>;
 static_assert(sizeof(CacheLine) <= 32);
 [[gnu::address(0xFF00)]] volatile CacheLine externalCacheLine;
-[[gnu::address(0xFF00)]] volatile uint8_t externalCacheBackingStore[32]; 
 [[gnu::address(0xFF40)]] volatile struct [[gnu::packed]] {
     struct [[gnu::packed]] {
         uint32_t data;
@@ -466,10 +465,6 @@ void
 doMemoryTransaction(SplitWord32 address) noexcept {
     cacheInterface.sync(CommunicationPrimitive, address.full);
     auto* ptr = externalCacheLine.getLineData(address.getCacheOffset());
-#if 0
-    auto& line = onboardDataCache.find(CommunicationPrimitive, address.full);
-    auto* ptr = line.getLineData(address.getCacheOffset());
-#endif
     if constexpr (readOperation) {
         auto ptr16 = reinterpret_cast<volatile uint16_t*>(ptr);
         auto val = ptr16[0];
@@ -527,9 +522,6 @@ ReadMemoryDone:
         signalReady();
     } else {
         externalCacheLine.markDirty();
-#if 0
-        line.markDirty();
-#endif
         auto lo = lowerData();
         auto hi = upperData();
         if (lowerByteEnabled()) {
@@ -649,16 +641,7 @@ WriteMemoryDone:
 inline
 SplitWord32
 getAddress() noexcept {
-#if 0
-    return { 
-        getInputRegister<Ports::AddressLowest>(),
-        getInputRegister<Ports::AddressLower>(),
-        getInputRegister<Ports::AddressHigher>(),
-        getInputRegister<Ports::AddressHighest>()
-    };
-#else
     return { interface960.addressLines.data };
-#endif
 }
 
 void
@@ -693,14 +676,7 @@ configurePins() noexcept {
     digitalWrite<Pins::READY, HIGH>();
 
     // configure the address lines as output to start
-#if 0
-    getDirectionRegister<Ports::AddressLowest>() = 0xFF;
-    getDirectionRegister<Ports::AddressLower>() = 0xFF;
-    getDirectionRegister<Ports::AddressHigher>() = 0xFF;
-    getDirectionRegister<Ports::AddressHighest>() = 0xFF;
-#else
     interface960.addressLines.direction = 0xFFFF'FFFF;
-#endif
     // then setup the external bus, it is necessary for the next step
 }
 void sanityCheckHardwareAcceleratedCacheLine() noexcept;
@@ -729,14 +705,7 @@ setup() {
     sanityCheckHardwareAcceleratedCacheLine();
     // do not cache anything to start with as we should instead just be ready
     // to get data from psram instead
-#if 0
-    getDirectionRegister<Ports::AddressLowest>() = 0;
-    getDirectionRegister<Ports::AddressLower>() = 0;
-    getDirectionRegister<Ports::AddressHigher>() = 0;
-    getDirectionRegister<Ports::AddressHighest>() = 0;
-#else
     interface960.addressLines.direction = 0;
-#endif
     digitalWrite<Pins::RESET, HIGH>();
 }
 void
@@ -1021,15 +990,8 @@ PSRAMBackingStore::write(Address addr, uint8_t* storage, size_t count) noexcept 
 void
 sanityCheckHardwareAcceleratedCacheLine() noexcept {
     Serial.println(F("Zeroing out cache memory"));
-    for (uint32_t i = 0; i < 0x01'00'0000; i += 16) {
-#if 0
-        getOutputRegister<Ports::AddressLowest>() = static_cast<uint8_t>(i);
-        getOutputRegister<Ports::AddressLower>() = static_cast<uint8_t>(i >> 8); 
-        getOutputRegister<Ports::AddressHigher>() = static_cast<uint8_t>(i >> 16);
-        getOutputRegister<Ports::AddressHighest>() = static_cast<uint8_t>(i >> 24);
-#else
+    for (uint32_t i = 0; i < (1024ul * 1024ul); i += 16) {
         interface960.addressLines.data = i;
-#endif
         if (static_cast<uint16_t>(i) == 0) {
             Serial.print('.');
         }
