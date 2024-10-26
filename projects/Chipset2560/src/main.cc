@@ -1103,10 +1103,17 @@ sanityCheckHardwareAcceleratedCacheLine() noexcept {
 void 
 configureExternalBus() noexcept {
     // one cycle wait to be on the safe side
-    bitSet(XMCRA, SRW11);
-    bitClear(XMCRA, SRW10);
-    bitSet(XMCRA, SRW01);
-    bitClear(XMCRA, SRW00);
+    if constexpr (UseOnboardCache) {
+        bitClear(XMCRA, SRW11);
+        bitSet(XMCRA, SRW10);
+        bitClear(XMCRA, SRW01);
+        bitSet(XMCRA, SRW00);
+    } else {
+        bitSet(XMCRA, SRW11);
+        bitClear(XMCRA, SRW10);
+        bitSet(XMCRA, SRW01);
+        bitClear(XMCRA, SRW00);
+    }
     // half and half sector limits (doesn't really matter since it will an
     // 8-bit space
     bitClear(XMCRA, SRL0);
