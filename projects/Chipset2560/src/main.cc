@@ -35,6 +35,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Types.h"
 #include "Pinout.h"
 #include "Setup.h"
+
+constexpr bool UseDirectPortsForDataLines = false;
 [[gnu::noinline]] void installInitialBootImage() noexcept;
 void configureExternalBus() noexcept;
 namespace Pins {
@@ -61,7 +63,6 @@ namespace Pins {
 
 
 }
-constexpr bool UseDirectPortsForDataLines = true;
 namespace Ports {
     constexpr auto DataLower = Port::C;
     constexpr auto DataUpper = Port::F;
@@ -167,6 +168,9 @@ class ExternalCacheLineInterface {
 using DataCache = ExternalCacheLineInterface;
 
 DataCache cacheInterface;
+using OnboardCacheLine = Deception::CacheLine16<uint32_t, PrimaryBackingStore>;
+Deception::DirectMappedCache<256, OnboardCacheLine> onboardCache;
+
 
 union [[gnu::packed]] SplitWord32 {
     uint8_t bytes[sizeof(uint32_t) / sizeof(uint8_t)];
@@ -743,6 +747,7 @@ setup() {
     Wire.begin();
     Wire.setClock(Deception::TWI_ClockRate);
     cacheInterface.begin();
+    onboardCache.begin();
     psramMemory.begin();
     installInitialBootImage();
     setupExternalDevices();
