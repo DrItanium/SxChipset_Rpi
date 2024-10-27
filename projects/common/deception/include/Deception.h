@@ -150,7 +150,7 @@ namespace Deception {
                 return false;
         }
     }
-    template<typename A, uint8_t size, uint8_t shift, A mask, typename T, bool isExternalCache>
+    template<typename A, uint8_t size, uint8_t shift, A mask, typename T>
     struct CacheLine {
         using BackingStore_t = T;
         using Address_t = A;
@@ -210,15 +210,16 @@ namespace Deception {
         [[nodiscard]] volatile uint8_t* getLineData(uint8_t offset = 0) volatile noexcept { return &_bytes[offset]; }
         void markDirty() volatile noexcept { _flags |= FlagDirty ; }
         [[nodiscard]] constexpr bool valid() const volatile noexcept { return (_flags & FlagValid); }
+        [[nodiscard]] constexpr auto getKey() const volatile noexcept { return _key; }
         private:
             uint8_t _bytes[NumBytes] = { 0 };
             Address_t _key = 0;
             uint8_t _flags = 0;
     };
-    template<typename A, typename T, bool isExternalCache>
-    using CacheLine16 = CacheLine<A, 16, 4, static_cast<A>(0xFFFF'FFF0), T, isExternalCache>;
-    template<typename A, typename T, bool isExternalCache>
-    using CacheLine32 = CacheLine<A, 32, 5, static_cast<A>(0xFFFF'FFE0), T, isExternalCache>;
+    template<typename A, typename T>
+    using CacheLine16 = CacheLine<A, 16, 4, static_cast<A>(0xFFFF'FFF0), T>;
+    template<typename A, typename T>
+    using CacheLine32 = CacheLine<A, 32, 5, static_cast<A>(0xFFFF'FFE0), T>;
     template<uint16_t C, typename L>
     class DirectMappedCache {
         public:

@@ -120,11 +120,8 @@ class PSRAMBackingStore {
 using PrimaryBackingStore = PSRAMBackingStore<5'000'000>;
 PrimaryBackingStore psramMemory(SPI);
 #define CommunicationPrimitive psramMemory
-template<bool isExternalCacheLine>
-using CacheLine = Deception::CacheLine16<uint32_t, PrimaryBackingStore, isExternalCacheLine>;
-using ExternalCacheLine = CacheLine<true>;
-using InternalCacheLine = CacheLine<false>;
-[[gnu::address(0xFF00)]] volatile ExternalCacheLine externalCacheLine;
+using CacheLine = Deception::CacheLine16<uint32_t, PrimaryBackingStore>;
+[[gnu::address(0xFF00)]] volatile CacheLine externalCacheLine;
 union [[gnu::packed]] CH351 {
      struct {
         uint32_t data;
@@ -146,10 +143,9 @@ static_assert(sizeof(CH351) == 8);
     CH351 dataLines;
 } interface960;
 
-template<typename L>
 class ExternalCacheLineInterface {
     public:
-        using Line_t = L;
+        using Line_t = CacheLine;
         using Address_t = typename Line_t::Address_t;
         using BackingStore_t = typename Line_t::BackingStore_t;
         void begin() noexcept {
@@ -173,10 +169,10 @@ class ExternalCacheLineInterface {
     private:
         bool _initialized = false;
 };
-using DataCache = ExternalCacheLineInterface<ExternalCacheLine>;
+using DataCache = ExternalCacheLineInterface;
 
 DataCache cacheInterface;
-Deception::DirectMappedCache<NumberOfOnboardCacheLines, InternalCacheLine> onboardCache;
+Deception::DirectMappedCache<NumberOfOnboardCacheLines, CacheLine> onboardCache;
 
 
 union [[gnu::packed]] SplitWord32 {
