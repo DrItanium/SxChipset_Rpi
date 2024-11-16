@@ -476,6 +476,7 @@ doIOTransaction(SplitWord32 address) noexcept {
             if constexpr (readOperation) {
                 send32BitConstant(ltr->getMode());
             } else {
+                ltr->setMode(static_cast<ltr390_mode_t>(lowerData()));
                 doNothingOperation<readOperation>();
             }
             break;
@@ -483,6 +484,7 @@ doIOTransaction(SplitWord32 address) noexcept {
             if constexpr (readOperation) {
                 send32BitConstant(ltr->getGain());
             } else {
+                ltr->setGain(static_cast<ltr390_gain_t>(lowerData()));
                 doNothingOperation<readOperation>();
             }
             break;
@@ -490,6 +492,7 @@ doIOTransaction(SplitWord32 address) noexcept {
             if constexpr (readOperation) {
                 send32BitConstant(ltr->getResolution());
             } else {
+                ltr->setResolution(static_cast<ltr390_resolution_t>(lowerData()));
                 doNothingOperation<readOperation>();
             }
             break;
