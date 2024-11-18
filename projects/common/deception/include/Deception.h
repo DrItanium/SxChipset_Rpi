@@ -212,9 +212,15 @@ namespace Deception {
         [[nodiscard]] constexpr bool valid() const volatile noexcept { return (_flags & FlagValid); }
         [[nodiscard]] constexpr auto getKey() const volatile noexcept { return _key; }
         private:
+#if 0
             uint8_t _bytes[NumBytes] = { 0 };
             Address_t _key = 0;
             uint8_t _flags = 0;
+#else
+            uint8_t _bytes[NumBytes];
+            Address_t _key;
+            uint8_t _flags;
+#endif
     };
     template<typename A, typename T>
     using CacheLine16 = CacheLine<A, 16, 4, static_cast<A>(0xFFFF'FFF0), T>;
