@@ -531,55 +531,61 @@ doMemoryTransaction(SplitWord32 address) noexcept {
         auto val = ptr16[0];
         setDataValue(val);
         if (isLastWordOfTransaction()) {
-            goto ReadMemoryDone;
+            signalReady();
+            return;
         }
         signalReady<false>();
         val = ptr16[1];
         waitForReady();
         setDataValue(val);
         if (isLastWordOfTransaction()) {
-            goto ReadMemoryDone;
+            signalReady();
+            return;
         }
         signalReady<false>();
         val = ptr16[2];
         waitForReady();
         setDataValue(val);
         if (isLastWordOfTransaction()) {
-            goto ReadMemoryDone;
+            signalReady();
+            return;
         }
         signalReady<false>();
         val = ptr16[3];
         waitForReady();
         setDataValue(val);
         if (isLastWordOfTransaction()) {
-            goto ReadMemoryDone;
+            signalReady();
+            return;
         }
         signalReady<false>();
         val = ptr16[4];
         waitForReady();
         setDataValue(val);
         if (isLastWordOfTransaction()) {
-            goto ReadMemoryDone;
+            signalReady();
+            return;
         }
         signalReady<false>();
         val = ptr16[5];
         waitForReady();
         setDataValue(val);
         if (isLastWordOfTransaction()) {
-            goto ReadMemoryDone;
+            signalReady();
+            return;
         }
         signalReady<false>();
         val = ptr16[6];
         waitForReady();
         setDataValue(val);
         if (isLastWordOfTransaction()) {
-            goto ReadMemoryDone;
+            signalReady();
+            return;
         }
         signalReady<false>();
         val = ptr16[7];
         waitForReady();
         setDataValue(val);
-ReadMemoryDone:
         signalReady();
     } else {
         auto lo = lowerData();
@@ -591,8 +597,8 @@ ReadMemoryDone:
             if (upperByteEnabled()) {
                 ptr[1] = hi;
             }
-            signalReady<false>();
-            goto WriteMemoryDone;
+            signalReady();
+            return;
         }
         signalReady<false>();
         ptr[1] = hi;
@@ -605,8 +611,8 @@ ReadMemoryDone:
                 ptr[3] = hi;
             }
             ptr[2] = lo;
-            signalReady<false>();
-            goto WriteMemoryDone;
+            signalReady();
+            return;
         }
         signalReady<false>();
         ptr[2] = lo;
@@ -620,8 +626,8 @@ ReadMemoryDone:
                 ptr[5] = hi;
             }
             ptr[4] = lo;
-            signalReady<false>();
-            goto WriteMemoryDone;
+            signalReady();
+            return;
         }
         signalReady<false>();
         ptr[4] = lo;
@@ -635,8 +641,8 @@ ReadMemoryDone:
                 ptr[7] = hi;
             }
             ptr[6] = lo;
-            signalReady<false>();
-            goto WriteMemoryDone;
+            signalReady();
+            return;
         }
         signalReady<false>();
         ptr[6] = lo;
@@ -650,8 +656,8 @@ ReadMemoryDone:
                 ptr[9] = hi;
             }
             ptr[8] = lo;
-            signalReady<false>();
-            goto WriteMemoryDone;
+            signalReady();
+            return;
         }
         signalReady<false>();
         ptr[8] = lo;
@@ -665,8 +671,8 @@ ReadMemoryDone:
                 ptr[11] = hi;
             }
             ptr[10] = lo;
-            signalReady<false>();
-            goto WriteMemoryDone;
+            signalReady();
+            return;
         }
         signalReady<false>();
         ptr[10] = lo;
@@ -680,8 +686,8 @@ ReadMemoryDone:
                 ptr[13] = hi;
             }
             ptr[12] = lo;
-            signalReady<false>();
-            goto WriteMemoryDone;
+            signalReady();
+            return;
         }
         signalReady<false>();
         ptr[12] = lo;
@@ -692,9 +698,7 @@ ReadMemoryDone:
         if (upperByteEnabled()) {
             ptr[15] = upperData();
         }
-        signalReady<false>();
-WriteMemoryDone:
-        waitForReady();
+        signalReady();
     }
 }
 
