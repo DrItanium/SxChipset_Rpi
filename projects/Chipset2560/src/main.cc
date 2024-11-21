@@ -874,11 +874,11 @@ loop() {
     if (auto address = getAddress(); isReadOperation()) {
         configureDataLinesForRead();
         switch (address.bytes[3]) {
+            case 0x00 ... 0x7f:
+                doMemoryTransaction<true>(address);
+                break;
             case 0xFE:
                 doIOTransaction<true>(address);
-                break;
-            case 0x00 ... 0x7F:
-                doMemoryTransaction<true>(address);
                 break;
             default:
                 configureDataLinesForWrite();
@@ -888,11 +888,11 @@ loop() {
     } else {
         configureDataLinesForWrite();
         switch (address.bytes[3]) {
+            case 0x00 ... 0x7f:
+                doMemoryTransaction<false>(address);
+                break;
             case 0xFE:
                 doIOTransaction<false>(address);
-                break;
-            case 0x00 ... 0x7F:
-                doMemoryTransaction<false>(address);
                 break;
             default:
                 doNothingOperation<false>();
