@@ -865,82 +865,40 @@ setupExternalDevices() noexcept {
         Serial.printf(F("UV data: %d\n"), ltr->readUVS());
     }
 }
-inline void
-handleReadOperation() noexcept {
-    configureDataLinesForRead();
-    do {
-        clearREADYInterrupt();
-        do { } while (bit_is_clear(EIFR, ADSFLAG));
-        clearADSInterrupt();
-        if (auto address = getAddress(); isReadOperation()) {
-            if (address.isIOOperation()) {
-                doIOTransaction<true>(address);
-            } else {
-                doMemoryTransaction<true>(address);
-            }
-        } else {
-            configureDataLinesForWrite();
-            if (address.isIOOperation()) {
-                doIOTransaction<false>(address);
-            } else {
-                doMemoryTransaction<false>(address);
-            }
-            return;
-        }
-    } while (true);
-}
-
-inline void
-handleWriteOperation() noexcept {
-    configureDataLinesForWrite();
-    do {
-        clearREADYInterrupt();
-        do { } while (bit_is_clear(EIFR, ADSFLAG));
-        clearADSInterrupt();
-        if (auto address = getAddress(); isReadOperation()) {
-            configureDataLinesForRead();
-            if (address.isIOOperation()) {
-                doIOTransaction<true>(address);
-            } else {
-                doMemoryTransaction<true>(address);
-            }
-            return;
-        } else {
-            if (address.isIOOperation()) {
-                doIOTransaction<false>(address);
-            } else {
-                doMemoryTransaction<false>(address);
-            }
-        }
-    } while (true);
-}
-inline void 
-processMemoryRequest() noexcept {
+void 
+loop() {
     // clear the READY signal interrupt ahead of waiting for the last
     clearREADYInterrupt();
     do { } while (bit_is_clear(EIFR, ADSFLAG));
     clearADSInterrupt();
     if (auto address = getAddress(); isReadOperation()) {
         configureDataLinesForRead();
-        if (address.isIOOperation()) {
-            doIOTransaction<true>(address);
-        } else {
-            doMemoryTransaction<true>(address);
+        switch (address.bytes[3]) {
+            case 0xFE:
+                doIOTransaction<true>(address);
+                break;
+            case 0x00 ... 0x7F:
+                doMemoryTransaction<true>(address);
+                break;
+            default:
+                configureDataLinesForWrite();
+                doNothingOperation<false>();
+                break;
         }
     } else {
         configureDataLinesForWrite();
-        if (address.isIOOperation()) {
-            doIOTransaction<false>(address);
-        } else {
-            doMemoryTransaction<false>(address);
+        switch (address.bytes[3]) {
+            case 0xFE:
+                doIOTransaction<false>(address);
+                break;
+            case 0x00 ... 0x7F:
+                doMemoryTransaction<false>(address);
+                break;
+            default:
+                doNothingOperation<false>();
+                break;
         }
     }
-}
-void 
-loop() {
-    handleReadOperation();
-    handleWriteOperation();
-//    processMemoryRequest();
 }
 
 
