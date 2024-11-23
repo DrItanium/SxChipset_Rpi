@@ -513,192 +513,187 @@ doMemoryTransaction(SplitWord32 address) noexcept {
     using MemoryPointer = volatile uint8_t*;
     cacheInterface.sync(CommunicationPrimitive, address.full);
     MemoryPointer ptr = externalCacheLine.getLineData(address.getCacheOffset());
-    if constexpr (readOperation) {
-        auto lo = ptr[0];
-        auto hi = ptr[1];
-        setLowerData(lo);
-        setUpperData(hi);
-        if (isLastWordOfTransaction()) {
-            goto MemoryReadOperation_Done;
-        }
-        signalReady<false>();
-        lo = ptr[2];
-        hi = ptr[3];
-        waitForReady();
-        setLowerData(lo);
-        setUpperData(hi);
-        if (isLastWordOfTransaction()) {
-            goto MemoryReadOperation_Done;
-        }
-        signalReady<false>();
-        lo = ptr[4];
-        hi = ptr[5];
-        waitForReady();
-        setLowerData(lo);
-        setUpperData(hi);
-        if (isLastWordOfTransaction()) {
-            goto MemoryReadOperation_Done;
-        }
-        signalReady<false>();
-        lo = ptr[6];
-        hi = ptr[7];
-        waitForReady();
-        setLowerData(lo);
-        setUpperData(hi);
-        if (isLastWordOfTransaction()) {
-            goto MemoryReadOperation_Done;
-        }
-        signalReady<false>();
-        lo = ptr[8];
-        hi = ptr[9];
-        waitForReady();
-        setLowerData(lo);
-        setUpperData(hi);
-        if (isLastWordOfTransaction()) {
-            goto MemoryReadOperation_Done;
-        }
-        signalReady<false>();
-        lo = ptr[10];
-        hi = ptr[11];
-        waitForReady();
-        setLowerData(lo);
-        setUpperData(hi);
-        if (isLastWordOfTransaction()) {
-            goto MemoryReadOperation_Done;
-        }
-        signalReady<false>();
-        lo = ptr[12];
-        hi = ptr[13];
-        waitForReady();
-        setLowerData(lo);
-        setUpperData(hi);
-        if (isLastWordOfTransaction()) {
-            goto MemoryReadOperation_Done;
-        }
-        signalReady<false>();
-        lo = ptr[14];
-        hi = ptr[15];
-        waitForReady();
-        setLowerData(lo);
-        setUpperData(hi);
-MemoryReadOperation_Done:
-        signalReady();
-    } else {
-        externalCacheLine.markDirty();
-        auto lo = lowerData();
-        auto hi = upperData();
-        if (lowerByteEnabled()) {
-            ptr[0] = lo;
-        }
-        if (isLastWordOfTransaction()) {
-            if (upperByteEnabled()) {
-                ptr[1] = hi;
+    do {
+        if constexpr (readOperation) {
+            auto lo = ptr[0];
+            auto hi = ptr[1];
+            setLowerData(lo);
+            setUpperData(hi);
+            if (isLastWordOfTransaction()) {
+                break;
             }
-            signalReady();
-            return;
-        }
-        signalReady<false>();
-        ptr[1] = hi;
-        waitForReady();
-        // we can safely ignore checking BE0 since we flowed into this
-        lo = lowerData();
-        hi = upperData();
-        if (isLastWordOfTransaction()) {
-            if (upperByteEnabled()) {
-                ptr[3] = hi;
+            signalReady<false>();
+            lo = ptr[2];
+            hi = ptr[3];
+            waitForReady();
+            setLowerData(lo);
+            setUpperData(hi);
+            if (isLastWordOfTransaction()) {
+                break;
             }
+            signalReady<false>();
+            lo = ptr[4];
+            hi = ptr[5];
+            waitForReady();
+            setLowerData(lo);
+            setUpperData(hi);
+            if (isLastWordOfTransaction()) {
+                break;
+            }
+            signalReady<false>();
+            lo = ptr[6];
+            hi = ptr[7];
+            waitForReady();
+            setLowerData(lo);
+            setUpperData(hi);
+            if (isLastWordOfTransaction()) {
+                break;
+            }
+            signalReady<false>();
+            lo = ptr[8];
+            hi = ptr[9];
+            waitForReady();
+            setLowerData(lo);
+            setUpperData(hi);
+            if (isLastWordOfTransaction()) {
+                break;
+            }
+            signalReady<false>();
+            lo = ptr[10];
+            hi = ptr[11];
+            waitForReady();
+            setLowerData(lo);
+            setUpperData(hi);
+            if (isLastWordOfTransaction()) {
+                break;
+            }
+            signalReady<false>();
+            lo = ptr[12];
+            hi = ptr[13];
+            waitForReady();
+            setLowerData(lo);
+            setUpperData(hi);
+            if (isLastWordOfTransaction()) {
+                break;
+            }
+            signalReady<false>();
+            lo = ptr[14];
+            hi = ptr[15];
+            waitForReady();
+            setLowerData(lo);
+            setUpperData(hi);
+        } else {
+            externalCacheLine.markDirty();
+            auto lo = lowerData();
+            auto hi = upperData();
+            if (lowerByteEnabled()) {
+                ptr[0] = lo;
+            }
+            if (isLastWordOfTransaction()) {
+                if (upperByteEnabled()) {
+                    ptr[1] = hi;
+                }
+                signalReady();
+                return;
+            }
+            signalReady<false>();
+            ptr[1] = hi;
+            waitForReady();
+            // we can safely ignore checking BE0 since we flowed into this
+            lo = lowerData();
+            hi = upperData();
+            if (isLastWordOfTransaction()) {
+                if (upperByteEnabled()) {
+                    ptr[3] = hi;
+                }
+                ptr[2] = lo;
+                break;
+            }
+            signalReady<false>();
             ptr[2] = lo;
-            signalReady();
-            return;
-        }
-        signalReady<false>();
-        ptr[2] = lo;
-        ptr[3] = hi;
-        waitForReady();
-        // we can safely ignore checking BE0 since we flowed into this
-        lo = lowerData();
-        hi = upperData();
-        if (isLastWordOfTransaction()) {
-            if (upperByteEnabled()) {
-                ptr[5] = hi;
+            ptr[3] = hi;
+            waitForReady();
+            // we can safely ignore checking BE0 since we flowed into this
+            lo = lowerData();
+            hi = upperData();
+            if (isLastWordOfTransaction()) {
+                if (upperByteEnabled()) {
+                    ptr[5] = hi;
+                }
+                ptr[4] = lo;
+                break;
             }
+            signalReady<false>();
             ptr[4] = lo;
-            signalReady();
-            return;
-        }
-        signalReady<false>();
-        ptr[4] = lo;
-        ptr[5] = hi;
-        waitForReady();
-        // we can safely ignore checking BE0 since we flowed into this
-        lo = lowerData();
-        hi = upperData();
-        if (isLastWordOfTransaction()) {
-            if (upperByteEnabled()) {
-                ptr[7] = hi;
+            ptr[5] = hi;
+            waitForReady();
+            // we can safely ignore checking BE0 since we flowed into this
+            lo = lowerData();
+            hi = upperData();
+            if (isLastWordOfTransaction()) {
+                if (upperByteEnabled()) {
+                    ptr[7] = hi;
+                }
+                ptr[6] = lo;
+                break;
             }
+            signalReady<false>();
             ptr[6] = lo;
-            signalReady();
-            return;
-        }
-        signalReady<false>();
-        ptr[6] = lo;
-        ptr[7] = hi;
-        waitForReady();
-        // we can safely ignore checking BE0 since we flowed into this
-        lo = lowerData();
-        hi = upperData();
-        if (isLastWordOfTransaction()) {
-            if (upperByteEnabled()) {
-                ptr[9] = hi;
+            ptr[7] = hi;
+            waitForReady();
+            // we can safely ignore checking BE0 since we flowed into this
+            lo = lowerData();
+            hi = upperData();
+            if (isLastWordOfTransaction()) {
+                if (upperByteEnabled()) {
+                    ptr[9] = hi;
+                }
+                ptr[8] = lo;
+                break;
             }
+            signalReady<false>();
             ptr[8] = lo;
-            signalReady();
-            return;
-        }
-        signalReady<false>();
-        ptr[8] = lo;
-        ptr[9] = hi;
-        waitForReady();
-        // we can safely ignore checking BE0 since we flowed into this
-        lo = lowerData();
-        hi = upperData();
-        if (isLastWordOfTransaction()) {
-            if (upperByteEnabled()) {
-                ptr[11] = hi;
+            ptr[9] = hi;
+            waitForReady();
+            // we can safely ignore checking BE0 since we flowed into this
+            lo = lowerData();
+            hi = upperData();
+            if (isLastWordOfTransaction()) {
+                if (upperByteEnabled()) {
+                    ptr[11] = hi;
+                }
+                ptr[10] = lo;
+                break;
             }
+            signalReady<false>();
             ptr[10] = lo;
-            signalReady();
-            return;
-        }
-        signalReady<false>();
-        ptr[10] = lo;
-        ptr[11] = hi;
-        waitForReady();
-        // we can safely ignore checking BE0 since we flowed into this
-        lo = lowerData();
-        hi = upperData();
-        if (isLastWordOfTransaction()) {
-            if (upperByteEnabled()) {
-                ptr[13] = hi;
+            ptr[11] = hi;
+            waitForReady();
+            // we can safely ignore checking BE0 since we flowed into this
+            lo = lowerData();
+            hi = upperData();
+            if (isLastWordOfTransaction()) {
+                if (upperByteEnabled()) {
+                    ptr[13] = hi;
+                }
+                ptr[12] = lo;
+                break;
             }
+            signalReady<false>();
             ptr[12] = lo;
-            signalReady();
-            return;
+            ptr[13] = hi;
+            waitForReady();
+            lo = lowerData();
+            hi = upperData();
+            // we can safely ignore checking BE0 since we flowed into this
+            ptr[14] = lo;
+            if (upperByteEnabled()) {
+                ptr[15] = hi;
+            }
         }
-        signalReady<false>();
-        ptr[12] = lo;
-        ptr[13] = hi;
-        waitForReady();
-        lo = lowerData();
-        hi = upperData();
-        // we can safely ignore checking BE0 since we flowed into this
-        ptr[14] = lo;
-        if (upperByteEnabled()) {
-            ptr[15] = hi;
-        }
-        signalReady();
-    }
+    } while (false);
+    signalReady();
+
 }
 
 inline
