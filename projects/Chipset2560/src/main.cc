@@ -510,12 +510,8 @@ template<bool readOperation>
 inline void
 doMemoryTransaction(SplitWord32 address) noexcept {
     using MemoryPointer = volatile uint8_t*;
-    MemoryPointer ptr = nullptr;
     cacheInterface.sync(CommunicationPrimitive, address.full);
-    ptr = externalCacheLine.getLineData(address.getCacheOffset());
-    if constexpr (!readOperation) {
-        externalCacheLine.markDirty();
-    }
+    MemoryPointer ptr = externalCacheLine.getLineData(address.getCacheOffset());
     if constexpr (readOperation) {
         auto ptr16 = reinterpret_cast<volatile uint16_t*>(ptr);
         auto val = ptr16[0];
@@ -578,8 +574,11 @@ doMemoryTransaction(SplitWord32 address) noexcept {
         setDataValue(val);
         signalReady();
     } else {
+        externalCacheLine.markDirty();
         auto lo = lowerData();
         auto hi = upperData();
+        // in all cases we have to check the lowest byte when we start the
+        // transaction. It could be a burst transaction that is unaligned!
         if (lowerByteEnabled()) {
             ptr[0] = lo;
         }
@@ -591,16 +590,18 @@ doMemoryTransaction(SplitWord32 address) noexcept {
             return;
         }
         signalReady<false>();
+        // since we are flowing into the next 16-bit word, we know that BE1 has
+        // to be low
         ptr[1] = hi;
         waitForReady();
         // we can safely ignore checking BE0 since we flowed into this
         lo = lowerData();
         hi = upperData();
         if (isLastWordOfTransaction()) {
+            ptr[2] = lo;
             if (upperByteEnabled()) {
                 ptr[3] = hi;
             }
-            ptr[2] = lo;
             signalReady();
             return;
         }
@@ -612,10 +613,10 @@ doMemoryTransaction(SplitWord32 address) noexcept {
         lo = lowerData();
         hi = upperData();
         if (isLastWordOfTransaction()) {
+            ptr[4] = lo;
             if (upperByteEnabled()) {
                 ptr[5] = hi;
             }
-            ptr[4] = lo;
             signalReady();
             return;
         }
@@ -627,10 +628,10 @@ doMemoryTransaction(SplitWord32 address) noexcept {
         lo = lowerData();
         hi = upperData();
         if (isLastWordOfTransaction()) {
+            ptr[6] = lo;
             if (upperByteEnabled()) {
                 ptr[7] = hi;
             }
-            ptr[6] = lo;
             signalReady();
             return;
         }
@@ -642,10 +643,10 @@ doMemoryTransaction(SplitWord32 address) noexcept {
         lo = lowerData();
         hi = upperData();
         if (isLastWordOfTransaction()) {
+            ptr[8] = lo;
             if (upperByteEnabled()) {
                 ptr[9] = hi;
             }
-            ptr[8] = lo;
             signalReady();
             return;
         }
@@ -657,10 +658,10 @@ doMemoryTransaction(SplitWord32 address) noexcept {
         lo = lowerData();
         hi = upperData();
         if (isLastWordOfTransaction()) {
+            ptr[10] = lo;
             if (upperByteEnabled()) {
                 ptr[11] = hi;
             }
-            ptr[10] = lo;
             signalReady();
             return;
         }
