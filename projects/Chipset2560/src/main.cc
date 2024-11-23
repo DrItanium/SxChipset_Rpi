@@ -38,7 +38,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 // stable configuration
 constexpr bool UseDirectPortsForDataLines = true;
-constexpr bool UseOnboardCache = false;
 constexpr uint16_t NumberOfOnboardCacheLines = 256;
 constexpr bool UseBusKeeper = true;
 constexpr auto SerialBaudRate = 115200;
@@ -172,7 +171,6 @@ class ExternalCacheLineInterface {
 using DataCache = ExternalCacheLineInterface;
 
 DataCache cacheInterface;
-Deception::DirectMappedCache<NumberOfOnboardCacheLines, CacheLine> onboardCache;
 
 
 union [[gnu::packed]] SplitWord32 {
@@ -513,18 +511,10 @@ inline void
 doMemoryTransaction(SplitWord32 address) noexcept {
     using MemoryPointer = volatile uint8_t*;
     MemoryPointer ptr = nullptr;
-    if constexpr (UseOnboardCache) {
-        auto& line = onboardCache.find(CommunicationPrimitive, address.full);
-        ptr = line.getLineData(address.getCacheOffset());
-        if constexpr (!readOperation) {
-            line.markDirty();
-        }
-    } else {
-        cacheInterface.sync(CommunicationPrimitive, address.full);
-        ptr = externalCacheLine.getLineData(address.getCacheOffset());
-        if constexpr (!readOperation) {
-            externalCacheLine.markDirty();
-        }
+    cacheInterface.sync(CommunicationPrimitive, address.full);
+    ptr = externalCacheLine.getLineData(address.getCacheOffset());
+    if constexpr (!readOperation) {
+        externalCacheLine.markDirty();
     }
     if constexpr (readOperation) {
         auto ptr16 = reinterpret_cast<volatile uint16_t*>(ptr);
@@ -763,7 +753,6 @@ setup() {
     Wire.begin();
     Wire.setClock(Deception::TWI_ClockRate);
     cacheInterface.begin();
-    onboardCache.begin();
     psramMemory.begin();
     installInitialBootImage();
     setupExternalDevices();
@@ -1061,36 +1050,25 @@ PSRAMBackingStore<LS>::write(Address addr, uint8_t* storage, size_t count) noexc
 
 void
 sanityCheckHardwareAcceleratedCacheLine() noexcept {
-    if constexpr (UseOnboardCache) {
-        Serial.println(F("Using Onboard Cache!"));
-    } else {
-        Serial.println(F("Using External Hardware Accelerated Cache!"));
-        Serial.println(F("Zeroing out cache memory"));
-        for (uint32_t i = 0; i < (1024ul * 1024ul); i += 16) {
-            interface960.addressLines.view32.data = i;
-            if (static_cast<uint16_t>(i) == 0) {
-                Serial.print('.');
-            }
-            externalCacheLine.clear();
+    Serial.println(F("Using External Hardware Accelerated Cache!"));
+    Serial.println(F("Zeroing out cache memory"));
+    for (uint32_t i = 0; i < (1024ul * 1024ul); i += 16) {
+        interface960.addressLines.view32.data = i;
+        if (static_cast<uint16_t>(i) == 0) {
+            Serial.print('.');
         }
-        Serial.println(F("DONE!"));
+        externalCacheLine.clear();
     }
+    Serial.println(F("DONE!"));
 }
 
 void 
 configureExternalBus() noexcept {
     // one cycle wait to be on the safe side
-    if constexpr (UseOnboardCache) {
-        bitClear(XMCRA, SRW11);
-        bitSet(XMCRA, SRW10);
-        bitClear(XMCRA, SRW01);
-        bitSet(XMCRA, SRW00);
-    } else {
-        bitClear(XMCRA, SRW11);
-        bitSet(XMCRA, SRW10);
-        bitClear(XMCRA, SRW01);
-        bitSet(XMCRA, SRW00);
-    }
+    bitClear(XMCRA, SRW11);
+    bitSet(XMCRA, SRW10);
+    bitClear(XMCRA, SRW01);
+    bitSet(XMCRA, SRW00);
     // half and half sector limits (doesn't really matter since it will an
     // 8-bit space
     bitClear(XMCRA, SRL0);
