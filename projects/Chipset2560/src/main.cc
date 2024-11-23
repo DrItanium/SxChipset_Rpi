@@ -510,15 +510,12 @@ doIOTransaction(SplitWord32 address) noexcept {
 template<bool readOperation>
 inline void
 doMemoryTransaction(SplitWord32 address) noexcept {
-    digitalWrite<Pins::WAITING, LOW>();
     using MemoryPointer = volatile uint8_t*;
-    MemoryPointer ptr = nullptr;
     cacheInterface.sync(CommunicationPrimitive, address.full);
-    ptr = externalCacheLine.getLineData(address.getCacheOffset());
+    MemoryPointer ptr = externalCacheLine.getLineData(address.getCacheOffset());
     if constexpr (!readOperation) {
         externalCacheLine.markDirty();
     }
-    digitalWrite<Pins::WAITING, HIGH>();
     if constexpr (readOperation) {
         auto ptr16 = reinterpret_cast<volatile uint16_t*>(ptr);
         auto val = ptr16[0];
