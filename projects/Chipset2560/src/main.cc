@@ -519,8 +519,7 @@ doMemoryTransaction(SplitWord32 address) noexcept {
         setLowerData(lo);
         setUpperData(hi);
         if (isLastWordOfTransaction()) {
-            signalReady();
-            return;
+            goto MemoryReadOperation_Done;
         }
         signalReady<false>();
         lo = ptr[2];
@@ -529,8 +528,7 @@ doMemoryTransaction(SplitWord32 address) noexcept {
         setLowerData(lo);
         setUpperData(hi);
         if (isLastWordOfTransaction()) {
-            signalReady();
-            return;
+            goto MemoryReadOperation_Done;
         }
         signalReady<false>();
         lo = ptr[4];
@@ -539,8 +537,7 @@ doMemoryTransaction(SplitWord32 address) noexcept {
         setLowerData(lo);
         setUpperData(hi);
         if (isLastWordOfTransaction()) {
-            signalReady();
-            return;
+            goto MemoryReadOperation_Done;
         }
         signalReady<false>();
         lo = ptr[6];
@@ -549,8 +546,7 @@ doMemoryTransaction(SplitWord32 address) noexcept {
         setLowerData(lo);
         setUpperData(hi);
         if (isLastWordOfTransaction()) {
-            signalReady();
-            return;
+            goto MemoryReadOperation_Done;
         }
         signalReady<false>();
         lo = ptr[8];
@@ -559,8 +555,7 @@ doMemoryTransaction(SplitWord32 address) noexcept {
         setLowerData(lo);
         setUpperData(hi);
         if (isLastWordOfTransaction()) {
-            signalReady();
-            return;
+            goto MemoryReadOperation_Done;
         }
         signalReady<false>();
         lo = ptr[10];
@@ -569,8 +564,7 @@ doMemoryTransaction(SplitWord32 address) noexcept {
         setLowerData(lo);
         setUpperData(hi);
         if (isLastWordOfTransaction()) {
-            signalReady();
-            return;
+            goto MemoryReadOperation_Done;
         }
         signalReady<false>();
         lo = ptr[12];
@@ -579,8 +573,7 @@ doMemoryTransaction(SplitWord32 address) noexcept {
         setLowerData(lo);
         setUpperData(hi);
         if (isLastWordOfTransaction()) {
-            signalReady();
-            return;
+            goto MemoryReadOperation_Done;
         }
         signalReady<false>();
         lo = ptr[14];
@@ -588,6 +581,7 @@ doMemoryTransaction(SplitWord32 address) noexcept {
         waitForReady();
         setLowerData(lo);
         setUpperData(hi);
+MemoryReadOperation_Done:
         signalReady();
     } else {
         externalCacheLine.markDirty();
