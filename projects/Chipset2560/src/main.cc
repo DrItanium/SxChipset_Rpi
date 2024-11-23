@@ -511,74 +511,86 @@ template<bool readOperation>
 inline void
 doMemoryTransaction(SplitWord32 address) noexcept {
     using MemoryPointer = volatile uint8_t*;
-    MemoryPointer ptr = nullptr;
     cacheInterface.sync(CommunicationPrimitive, address.full);
-    ptr = externalCacheLine.getLineData(address.getCacheOffset());
-    if constexpr (!readOperation) {
-        externalCacheLine.markDirty();
-    }
+    MemoryPointer ptr = externalCacheLine.getLineData(address.getCacheOffset());
     if constexpr (readOperation) {
-        auto ptr16 = reinterpret_cast<volatile uint16_t*>(ptr);
-        auto val = ptr16[0];
-        setDataValue(val);
+        auto lo = ptr[0];
+        auto hi = ptr[1];
+        setLowerData(lo);
+        setUpperData(hi);
         if (isLastWordOfTransaction()) {
             signalReady();
             return;
         }
         signalReady<false>();
-        val = ptr16[1];
+        lo = ptr[2];
+        hi = ptr[3];
         waitForReady();
-        setDataValue(val);
+        setLowerData(lo);
+        setUpperData(hi);
         if (isLastWordOfTransaction()) {
             signalReady();
             return;
         }
         signalReady<false>();
-        val = ptr16[2];
+        lo = ptr[4];
+        hi = ptr[5];
         waitForReady();
-        setDataValue(val);
+        setLowerData(lo);
+        setUpperData(hi);
         if (isLastWordOfTransaction()) {
             signalReady();
             return;
         }
         signalReady<false>();
-        val = ptr16[3];
+        lo = ptr[6];
+        hi = ptr[7];
         waitForReady();
-        setDataValue(val);
+        setLowerData(lo);
+        setUpperData(hi);
         if (isLastWordOfTransaction()) {
             signalReady();
             return;
         }
         signalReady<false>();
-        val = ptr16[4];
+        lo = ptr[8];
+        hi = ptr[9];
         waitForReady();
-        setDataValue(val);
+        setLowerData(lo);
+        setUpperData(hi);
         if (isLastWordOfTransaction()) {
             signalReady();
             return;
         }
         signalReady<false>();
-        val = ptr16[5];
+        lo = ptr[10];
+        hi = ptr[11];
         waitForReady();
-        setDataValue(val);
+        setLowerData(lo);
+        setUpperData(hi);
         if (isLastWordOfTransaction()) {
             signalReady();
             return;
         }
         signalReady<false>();
-        val = ptr16[6];
+        lo = ptr[12];
+        hi = ptr[13];
         waitForReady();
-        setDataValue(val);
+        setLowerData(lo);
+        setUpperData(hi);
         if (isLastWordOfTransaction()) {
             signalReady();
             return;
         }
         signalReady<false>();
-        val = ptr16[7];
+        lo = ptr[14];
+        hi = ptr[15];
         waitForReady();
-        setDataValue(val);
+        setLowerData(lo);
+        setUpperData(hi);
         signalReady();
     } else {
+        externalCacheLine.markDirty();
         auto lo = lowerData();
         auto hi = upperData();
         if (lowerByteEnabled()) {
@@ -684,10 +696,12 @@ doMemoryTransaction(SplitWord32 address) noexcept {
         ptr[12] = lo;
         ptr[13] = hi;
         waitForReady();
+        lo = lowerData();
+        hi = upperData();
         // we can safely ignore checking BE0 since we flowed into this
-        ptr[14] = lowerData();
+        ptr[14] = lo;
         if (upperByteEnabled()) {
-            ptr[15] = upperData();
+            ptr[15] = hi;
         }
         signalReady();
     }
