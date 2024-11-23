@@ -511,8 +511,9 @@ template<bool readOperation>
 inline void
 doMemoryTransaction(SplitWord32 address) noexcept {
     using MemoryPointer = volatile uint8_t*;
+    MemoryPointer ptr = nullptr;
     cacheInterface.sync(CommunicationPrimitive, address.full);
-    MemoryPointer ptr = externalCacheLine.getLineData(address.getCacheOffset());
+    ptr = externalCacheLine.getLineData(address.getCacheOffset());
     if constexpr (!readOperation) {
         externalCacheLine.markDirty();
     }
