@@ -119,7 +119,72 @@ class PSRAMBackingStore {
 using PrimaryBackingStore = PSRAMBackingStore<5'000'000>;
 PrimaryBackingStore psramMemory(SPI);
 #define CommunicationPrimitive psramMemory
-using CacheLine = Deception::CacheLine16<uint32_t, PrimaryBackingStore>;
+// this is a special case cache line implementation so we can be very specific
+//using CacheLine = Deception::CacheLine16<uint32_t, PrimaryBackingStore>;
+struct CacheLine {
+    using BackingStore_t = PrimaryBackingStore;
+    using Address_t = uint32_t;
+    static constexpr uint8_t FlagValid = 0b0000'0001;
+    static constexpr uint8_t FlagDirty = 0b0000'0010;
+    static constexpr uint8_t FlagReplace = FlagValid | FlagDirty;
+    static constexpr auto NumBytes = 16;
+    static constexpr auto ShiftAmount = 4;
+    static constexpr auto AddressMask = 0xFFFF'FFF0;
+    static constexpr auto ByteOffsetMask = static_cast<uint8_t>(~AddressMask);
+    static constexpr Address_t normalizeAddress(Address_t input) noexcept {
+        return input & AddressMask;
+    }
+    static constexpr uint8_t computeByteOffset(uint8_t input) noexcept {
+        return input & ByteOffsetMask;
+    }
+    constexpr bool dirty() const noexcept { return (_flags & FlagDirty); }
+    // only compare the upper halves
+    bool matches(Address_t other) const volatile noexcept { return valid() && (static_cast<uint16_t>(_key >> 16) == static_cast<uint16_t>(other >> 16)); }
+    void replace(BackingStore_t& store, Address_t newAddress) noexcept {
+        if (_flags >= FlagReplace) {
+            // just do a compare of the two parts valid and dirty if we
+            // hit 3 or greater then it means we have to perform the
+            // replacement
+            (void)store.write(_key, _bytes, NumBytes);
+        }
+        load(store, newAddress);
+    }
+    void replace(BackingStore_t& store, Address_t newAddress) volatile noexcept {
+        if (_flags >= FlagReplace) {
+            // just do a compare of the two parts valid and dirty if we
+            // hit 3 or greater then it means we have to perform the
+            // replacement
+            (void)store.write(_key, const_cast<uint8_t*>(_bytes), NumBytes);
+        }
+        load(store, newAddress);
+    }
+    void load(BackingStore_t& store, Address_t newAddress) noexcept {
+        _flags = FlagValid;
+        _key = newAddress;
+        (void)store.read(_key, _bytes, NumBytes);
+    }
+    void load(BackingStore_t& store, Address_t newAddress) volatile noexcept {
+        _flags = FlagValid;
+        _key = newAddress;
+        (void)store.read(_key, const_cast<uint8_t*>(_bytes), NumBytes);
+    }
+    void clear() volatile noexcept {
+        _key = 0;
+        _flags = 0;
+        for (auto i = 0u; i < NumBytes; ++i) {
+            _bytes[i] = 0;
+        }
+    }
+    [[nodiscard]] uint8_t* getLineData(uint8_t offset = 0) noexcept { return &_bytes[offset]; }
+    [[nodiscard]] volatile uint8_t* getLineData(uint8_t offset = 0) volatile noexcept { return &_bytes[offset]; }
+    void markDirty() volatile noexcept { _flags |= FlagDirty ; }
+    [[nodiscard]] bool valid() const volatile noexcept { return (_flags & FlagValid); }
+    [[nodiscard]] auto getKey() const volatile noexcept { return _key; }
+private:
+    uint8_t _bytes[NumBytes];
+    Address_t _key;
+    uint8_t _flags;
+};
 [[gnu::address(0xFF00)]] volatile CacheLine externalCacheLine;
 union [[gnu::packed]] CH351 {
      struct {
