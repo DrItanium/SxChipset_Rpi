@@ -38,7 +38,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 // stable configuration
 constexpr bool UseDirectPortsForDataLines = true;
-constexpr uint16_t NumberOfOnboardCacheLines = 256;
 constexpr bool UseBusKeeper = true;
 constexpr auto SerialBaudRate = 115200;
 [[gnu::noinline]] void installInitialBootImage() noexcept;
