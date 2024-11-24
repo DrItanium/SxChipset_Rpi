@@ -686,10 +686,10 @@ doMemoryTransaction(SplitWord32 address) noexcept {
             lo = lowerData();
             hi = upperData();
             // we can safely ignore checking BE0 since we flowed into this
-            ptr[14] = lo;
             if (upperByteEnabled()) {
                 ptr[15] = hi;
             }
+            ptr[14] = lo;
         }
     } while (false);
     signalReady();
