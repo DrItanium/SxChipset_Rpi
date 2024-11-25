@@ -32,6 +32,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Adafruit_LTR390.h>
 #include <Adafruit_SPITFT.h>
 #include <Adafruit_seesaw.h>
+#include <Adafruit_CCS811.h>
 
 #include "Types.h"
 #include "Pinout.h"
@@ -101,6 +102,7 @@ struct OptionalDevice {
 OptionalDevice<RTC_DS3231> rtc;
 OptionalDevice<Adafruit_Si7021> sensor_si7021;
 OptionalDevice<Adafruit_LTR390> ltr;
+OptionalDevice<Adafruit_CCS811> ccs;
 
 template<uint32_t LS>
 class PSRAMBackingStore {
@@ -950,7 +952,7 @@ setup() {
     digitalWrite<Pins::RESET, HIGH>();
 }
 void
-setupExternalDevices() noexcept {
+setupRTC() noexcept {
     Serial.println(F("Setting up RTC"));
     // setup the RTC
     if (!rtc.begin()) {
@@ -965,6 +967,9 @@ setupExternalDevices() noexcept {
         DateTime now = rtc->now();
         Serial.printf(F(" since midnight 1/1/1970 = %lds = %ldd\n"), now.unixtime(), now.unixtime() / 86400L);
     }
+}
+void 
+setupSI7021() noexcept {
     if (!sensor_si7021.begin()) {
         Serial.println(F("Si7021 Sensor not found!"));
     } else {
@@ -996,7 +1001,9 @@ setupExternalDevices() noexcept {
         Serial.print(F("\tTemperature:    ")); 
         Serial.println(sensor_si7021->readTemperature(), 2);
     }
-
+}
+void
+setupLTR() noexcept {
     if (!ltr.begin()) {
         Serial.println(F("Couldn't find LTR sensor!"));
     } else {
@@ -1039,6 +1046,32 @@ setupExternalDevices() noexcept {
         }
         Serial.printf(F("UV data: %d\n"), ltr->readUVS());
     }
+}
+void
+setupCCS() noexcept {
+    if (!ccs.begin()) {
+        Serial.println(F("Couldn't find CCS811 gas sensor"));
+    } else {
+        while(!ccs->available());
+        if(ccs->available()) {
+            if (!ccs->readData()) {
+                Serial.print(F("CO2: "));
+                Serial.print(ccs->geteCO2());
+                Serial.print(F("ppm, TVOC: "));
+                Serial.println(ccs->getTVOC());
+            } else {
+                Serial.println(F("Error sampling data from CCS811"));
+            }
+        }
+    }
+}
+void
+setupExternalDevices() noexcept {
+    setupRTC();
+    setupSI7021();
+    setupLTR();
+    setupCCS();
+
 }
 void 
 loop() {
