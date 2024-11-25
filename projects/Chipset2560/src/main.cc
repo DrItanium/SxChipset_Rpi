@@ -354,7 +354,7 @@ configureDataLinesForWrite() noexcept {
 [[gnu::always_inline]] inline bool isLastWordOfTransaction() noexcept {
     return digitalRead<Pins::BLAST>() == LOW;
 }
-template<bool isReadOperation>
+template<bool isReadOperation, bool signalReadyAtEnd = true>
 inline void
 doNothingOperation() noexcept {
     if constexpr(isReadOperation) {
@@ -363,45 +363,54 @@ doNothingOperation() noexcept {
     while (!isLastWordOfTransaction()) {
         signalReady();
     }
-    signalReady();
+    if constexpr (signalReadyAtEnd) {
+        signalReady();
+    }
 }
 inline void
 send32BitConstant(uint32_t value) noexcept {
-    setDataValue(value);
-    if (isLastWordOfTransaction()) {
+    do {
+        setDataValue(value);
+        if (isLastWordOfTransaction()) {
+            break;
+        }
+        signalReady<false>();
+        auto upper = static_cast<uint16_t>(value >> 16);
+        waitForReady();
+        setDataValue(upper);
+        if (isLastWordOfTransaction()) {
+            break;
+        }
         signalReady();
-        return;
-    }
+        doNothingOperation<true, false>();
+    } while (false);
     signalReady();
-    setDataValue(value >> 16);
-    if (isLastWordOfTransaction()) {
-        signalReady();
-        return;
-    }
-    signalReady();
-    doNothingOperation<true>();
 }
 
 inline void
 send16BitValue(uint16_t value) noexcept {
-    setDataValue(value);
-    if (isLastWordOfTransaction()) {
+    do {
+        setDataValue(value);
+        if (isLastWordOfTransaction()) {
+            break;
+        }
         signalReady();
-        return;
-    }
+        doNothingOperation<true, false>();
+    } while (false);
     signalReady();
-    doNothingOperation<true>();
 }
 inline void
 send16BitValue(uint8_t lo, uint8_t hi) noexcept {
-    setLowerData(lo);
-    setUpperData(hi);
-    if (isLastWordOfTransaction()) {
+    do {
+        setLowerData(lo);
+        setUpperData(hi);
+        if (isLastWordOfTransaction()) {
+            break;
+        }
         signalReady();
-        return;
-    }
+        doNothingOperation<true, false>();
+    } while (false);
     signalReady();
-    doNothingOperation<true>();
 }
 
 template<bool readOperation>
