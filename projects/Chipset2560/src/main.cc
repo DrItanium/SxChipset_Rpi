@@ -31,6 +31,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Adafruit_Si7021.h>
 #include <Adafruit_LTR390.h>
 #include <Adafruit_SPITFT.h>
+#include <Adafruit_seesaw.h>
 
 #include "Types.h"
 #include "Pinout.h"
