@@ -476,7 +476,8 @@ doLTROperation(uint8_t offset) noexcept {
 template<bool readOperation>
 inline void
 doIOTransaction(SplitWord32 address) noexcept {
-    switch (address.lo24) {
+    // only dispatch on the lower 16-bits for now
+    switch (address.halves[0]) {
         case 0x0:
             if constexpr (readOperation) {
                 send32BitConstant(F_CPU);
