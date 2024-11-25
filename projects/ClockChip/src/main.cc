@@ -164,6 +164,8 @@ configureCCLs(bool mode) {
 void
 configureCCLs() {
     configureCCLs(digitalReadFast(ClockConfigurationBit) == LOW);
+    // we need to make sure that we can run the CCLs in standby
+    CCL.CTRLA |= CCL_RUNSTDBY_bm;
 }
 void
 setupSystemClocks() {
