@@ -790,6 +790,34 @@ handleAHTx0Operation(uint8_t offset) noexcept {
             break;
     }
 }
+
+template<bool readOperation>
+inline void 
+handleSi5351Operation(uint8_t offset) noexcept {
+    // @todo implement
+    switch (offset) {
+        case 0x00:
+            handleAvailableRequest<readOperation>(externalClockGenerator);
+            break;
+        default:
+            doNothingOperation<readOperation>();
+            break;
+    }
+}
+
+template<bool readOperation>
+inline void 
+handleBH1750Operation(uint8_t offset) noexcept {
+    // @todo implement
+    switch (offset) {
+        case 0x00:
+            handleAvailableRequest<readOperation>(bh1750);
+            break;
+        default:
+            doNothingOperation<readOperation>();
+            break;
+    }
+}
 template<bool readOperation>
 inline void
 doIOTransaction(SplitWord32 address) noexcept {
@@ -815,6 +843,12 @@ doIOTransaction(SplitWord32 address) noexcept {
             break;
         case 0x84:
             handleAHTx0Operation<readOperation>(address.bytes[0]);
+            break;
+        case 0x85:
+            handleSi5351Operation<readOperation>(address.bytes[0]);
+            break;
+        case 0x86:
+            handleBH1750Operation<readOperation>(address.bytes[0]);
             break;
         default:
             doNothingOperation<readOperation>();
