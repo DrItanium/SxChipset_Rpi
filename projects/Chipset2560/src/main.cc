@@ -471,6 +471,20 @@ doSI7021Operation(uint8_t offset) noexcept {
         case 0x00: // available
             handleAvailableRequest<readOperation>(sensor_si7021);
             break;
+        case 0x04: // temperature
+            transmitValue<readOperation>(sensor_si7021->readTemperature(), TreatAs<float>{});
+            break;
+        case 0x08: // humidity
+            transmitValue<readOperation>(sensor_si7021->readHumidity(), TreatAs<float>{});
+            break;
+        case 0x0C: // heater
+            if constexpr (readOperation) {
+                transmitValue<readOperation>(sensor_si7021->isHeaterEnabled(), TreatAs<bool>{});
+            } else {
+                sensor_si7021->heater(lowerData() != 0);
+                doNothingOperation<readOperation>();
+            }
+            break;
         default:
             doNothingOperation<readOperation>();
             break;
