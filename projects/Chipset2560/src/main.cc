@@ -95,10 +95,6 @@ struct OptionalDevice {
         bool _valid = false;
         T _device;
 };
-// use a ds3231 chip
-OptionalDevice<RTC_DS3231> rtc;
-OptionalDevice<Adafruit_Si7021> sensor_si7021;
-OptionalDevice<Adafruit_LTR390> ltr;
 
 template<uint32_t LS>
 class PSRAMBackingStore {
@@ -412,16 +408,61 @@ send16BitValue(uint8_t lo, uint8_t hi) noexcept {
     } while (false);
     signalReady();
 }
+// use a ds3231 chip
+OptionalDevice<RTC_DS3231> rtc;
+OptionalDevice<Adafruit_Si7021> sensor_si7021;
+OptionalDevice<Adafruit_LTR390> ltr;
+template<bool readOperation>
+inline void transmitValue(uint32_t value, TreatAs<uint32_t>) noexcept {
+    if constexpr (readOperation) {
+        send32BitConstant(value);
+    } else {
+        doNothingOperation<readOperation>();
+    }
+}
+
+template<bool readOperation>
+inline void transmitValue(bool value, TreatAs<bool>) noexcept {
+    if constexpr (readOperation) {
+        send32BitConstant(value ? 0xFFFF'FFFF : 0);
+    } else {
+        doNothingOperation<readOperation>();
+    }
+}
+template<bool readOperation, typename T>
+inline void handleAvailableRequest(const T& item) noexcept {
+    transmitValue<readOperation>(item.valid(), TreatAs<bool>{});
+}
+template<bool readOperation>
+inline void
+doSI7021Operation(uint8_t offset) noexcept {
+    switch (offset) {
+        case 0x00: // available
+            handleAvailableRequest<readOperation>(sensor_si7021);
+            break;
+        default:
+            doNothingOperation<readOperation>();
+            break;
+    }
+}
+template<bool readOperation>
+inline void
+doRTCOperation(uint8_t offset) noexcept {
+    switch (offset) {
+        case 0x00: // available
+            handleAvailableRequest<readOperation>(rtc);
+            break;
+        default:
+            doNothingOperation<readOperation>();
+            break;
+    }
+}
 template<bool readOperation>
 inline void
 doLTROperation(uint8_t offset) noexcept {
     switch(offset) {
         case 0x00: // LTR.available
-            if constexpr (readOperation) {
-                send32BitConstant(ltr ? 0xFFFF'FFFF : 0x0000'0000);
-            } else {
-                doNothingOperation<readOperation>();
-            }
+            handleAvailableRequest<readOperation>(ltr);
             break;
         case 0x04: // UVS
             if constexpr (readOperation) {
@@ -474,23 +515,14 @@ doLTROperation(uint8_t offset) noexcept {
     }
 }
 template<bool readOperation>
-inline void
-doIOTransaction(SplitWord32 address) noexcept {
-    // only dispatch on the lower 16-bits for now
-    switch (address.halves[0]) {
+inline 
+void handleBuiltinDevices(uint8_t offset) noexcept {
+    switch (offset) {
         case 0x0:
-            if constexpr (readOperation) {
-                send32BitConstant(F_CPU);
-            } else {
-                doNothingOperation<readOperation>();
-            }
+            transmitValue<readOperation>(F_CPU, TreatAs<uint32_t>{});
             break;
         case 0x4:
-            if constexpr (readOperation) {
-                send32BitConstant(F_CPU/2);
-            } else {
-                doNothingOperation<readOperation>();
-            }
+            transmitValue<readOperation>(F_CPU / 2, TreatAs<uint32_t>{});
             break;
         case 0x8:
             if constexpr (readOperation) {
@@ -507,21 +539,32 @@ doIOTransaction(SplitWord32 address) noexcept {
             doNothingOperation<readOperation>();
             break;
         case 0x40:
-            if constexpr (readOperation)  {
-                send32BitConstant(millis());
-            } else {
-                doNothingOperation<readOperation>();
-            }
+            transmitValue<readOperation>(millis(), TreatAs<uint32_t>{});
             break;
         case 0x44:
-            if constexpr (readOperation) {
-                send32BitConstant(micros());
-            } else {
-                doNothingOperation<readOperation>();
-            }
+            transmitValue<readOperation>(micros(), TreatAs<uint32_t>{});
             break;
-        case 0x100 ... 0x1FF:
+        default:
+            doNothingOperation<readOperation>();
+            break;
+    }
+}
+template<bool readOperation>
+inline void
+doIOTransaction(SplitWord32 address) noexcept {
+    // only dispatch with bytes[1] 
+    switch (address.bytes[1]) {
+        case 0x00:
+            handleBuiltinDevices<readOperation>(address.bytes[0]);
+            break;
+        case 0x01:
             doLTROperation<readOperation>(address.bytes[0]);
+            break;
+        case 0x02:
+            doRTCOperation<readOperation>(address.bytes[0]);
+            break;
+        case 0x03:
+            doSI7021Operation<readOperation>(address.bytes[0]);
             break;
         default:
             doNothingOperation<readOperation>();
