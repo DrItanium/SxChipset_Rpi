@@ -646,8 +646,32 @@ doLTROperation(uint8_t offset) noexcept {
     }
 }
 template<bool readOperation>
-inline 
-void handleBuiltinDevices(uint8_t offset) noexcept {
+inline void 
+handleCCSOperation(uint8_t offset) noexcept {
+    switch (offset) {
+        case 0x00:
+            handleAvailableRequest<readOperation>(ccs);
+            break;
+        case 0x04:
+            transmitValue<readOperation>(ccs->available(), TreatAs<bool>{});
+            break;
+        case 0x08:
+            transmitValue<readOperation>(!ccs->readData(), TreatAs<bool>{});
+            break;
+        case 0x0c: // tvoc
+            transmitValue<readOperation>(ccs->getTVOC(), TreatAs<uint16_t>{});
+            break;
+        case 0x0e: // eCO2
+            transmitValue<readOperation>(ccs->geteCO2(), TreatAs<uint16_t>{});
+            break;
+        default:
+            doNothingOperation<readOperation>();
+            break;
+    }
+}
+template<bool readOperation>
+inline void 
+handleBuiltinDevices(uint8_t offset) noexcept {
     switch (offset) {
         case 0x0:
             transmitValue<readOperation>(F_CPU, TreatAs<uint32_t>{});
@@ -714,6 +738,9 @@ doIOTransaction(SplitWord32 address) noexcept {
             break;
         case 0x82:
             doSI7021Operation<readOperation>(address.bytes[0]);
+            break;
+        case 0x83:
+            handleCCSOperation<readOperation>(address.bytes[0]);
             break;
         default:
             doNothingOperation<readOperation>();
