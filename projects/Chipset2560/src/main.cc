@@ -1,27 +1,27 @@
 /*
-i960SxChipset_RPi
-Copyright (c) 2022-2024, Joshua Scoggins
-All rights reserved.
+   i960SxChipset_RPi
+   Copyright (c) 2022-2024, Joshua Scoggins
+   All rights reserved.
 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-    * Redistributions in binary form must reproduce the above copyright
-      notice, this list of conditions and the following disclaimer in the
-      documentation and/or other materials provided with the distribution.
+   Redistribution and use in source and binary forms, with or without
+   modification, are permitted provided that the following conditions are met:
+ * Redistributions of source code must retain the above copyright
+ notice, this list of conditions and the following disclaimer.
+ * Redistributions in binary form must reproduce the above copyright
+ notice, this list of conditions and the following disclaimer in the
+ documentation and/or other materials provided with the distribution.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR 
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR 
+ ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 #include <Arduino.h>
 #include <Wire.h>
 #include <SPI.h>
@@ -80,7 +80,7 @@ template<typename T>
 struct OptionalDevice {
     public:
         template<typename ... Args>
-        OptionalDevice(Args ... args) : _device(args...) { }
+            OptionalDevice(Args ... args) : _device(args...) { }
         constexpr bool valid() const noexcept {
             return _valid;
         }
@@ -88,10 +88,10 @@ struct OptionalDevice {
             return _device;
         }
         template<typename ... Args>
-        bool begin(Args&& ... args) noexcept {
-            _valid = _device.begin(args...);
-            return _valid;
-        }
+            bool begin(Args&& ... args) noexcept {
+                _valid = _device.begin(args...);
+                return _valid;
+            }
         auto& operator*() const noexcept { return _device; }
         auto* operator->() noexcept { return &_device; }
         const auto* operator->() const noexcept { return &_device; }
@@ -105,7 +105,7 @@ template<>
 struct OptionalDevice<Adafruit_SI5351> {
     public:
         template<typename ... Args>
-        OptionalDevice(Args ... args) : _device(args...) { }
+            OptionalDevice(Args ... args) : _device(args...) { }
         constexpr bool valid() const noexcept {
             return _valid;
         }
@@ -113,10 +113,10 @@ struct OptionalDevice<Adafruit_SI5351> {
             return _device;
         }
         template<typename ... Args>
-        bool begin(Args&& ... args) noexcept {
-            _valid = (_device.begin(args...) != ERROR_NONE);
-            return _valid;
-        }
+            bool begin(Args&& ... args) noexcept {
+                _valid = (_device.begin(args...) != ERROR_NONE);
+                return _valid;
+            }
         auto& operator*() const noexcept { return _device; }
         auto* operator->() noexcept { return &_device; }
         const auto* operator->() const noexcept { return &_device; }
@@ -158,18 +158,18 @@ PrimaryBackingStore psramMemory(SPI);
 using CacheLine = Deception::CacheLine16<uint32_t, PrimaryBackingStore>;
 [[gnu::address(0xFF00)]] volatile CacheLine externalCacheLine;
 union [[gnu::packed]] CH351 {
-     struct {
+    struct {
         uint32_t data;
         uint32_t direction;
-     } view32;
-     struct {
-         uint16_t data[2];
-         uint16_t direction[2];
-     } view16;
-     struct {
-         uint8_t data[4];
-         uint8_t direction[4];
-     } view8;
+    } view32;
+    struct {
+        uint16_t data[2];
+        uint16_t direction[2];
+    } view16;
+    struct {
+        uint8_t data[4];
+        uint8_t direction[4];
+    } view8;
 };
 
 static_assert(sizeof(CH351) == 8);
@@ -494,6 +494,53 @@ inline void transmitValue(float value, TreatAs<float>) noexcept {
     converter.flt = value;
     transmitValue<readOperation>(converter.raw, TreatAs<uint32_t>{});
 }
+template<bool readOperation>
+inline void transmitValue(uint64_t value, TreatAs<uint64_t>) noexcept {
+    if constexpr (readOperation) {
+        do {
+            setDataValue(static_cast<uint16_t>(value));
+            if (isLastWordOfTransaction()) {
+                break;
+            }
+            signalReady<false>();
+            auto next = static_cast<uint16_t>(value >> 16);
+            waitForReady();
+            setDataValue(next);
+            if (isLastWordOfTransaction()) {
+                break;
+            }
+            signalReady<false>();
+            next = static_cast<uint16_t>(value >> 32);
+            waitForReady();
+            setDataValue(next);
+            if (isLastWordOfTransaction()) {
+                break;
+            }
+            signalReady<false>();
+            next = static_cast<uint16_t>(value >> 48);
+            waitForReady();
+            setDataValue(next);
+            if (isLastWordOfTransaction()) {
+                break;
+            }
+            signalReady();
+            doNothingOperation<readOperation, false>();
+        } while (false);
+        signalReady();
+    } else {
+        doNothingOperation<readOperation>();
+    }
+}
+template<bool readOperation>
+inline void transmitValue(float a, float b, TreatAs<uint64_t>) noexcept {
+    union {
+        float components[2];
+        uint64_t whole;
+    } container;
+    container.components[0] = a;
+    container.components[1] = b;
+    transmitValue<readOperation>(container.whole, TreatAs<uint64_t>{});
+}
 template<bool readOperation, typename T>
 inline void handleAvailableRequest(const T& item) noexcept {
     transmitValue<readOperation>(item.valid(), TreatAs<bool>{});
@@ -616,6 +663,7 @@ doLTROperation(uint8_t offset) noexcept {
                 ltr->setMode(static_cast<ltr390_mode_t>(lowerData()));
                 doNothingOperation<readOperation>();
             }
+
             break;
         case 0x10: // LTR.Gain
             if constexpr (readOperation) {
@@ -719,6 +767,29 @@ handleSerialDeviceInterface(uint8_t offset, HardwareSerial& device) noexcept {
             break;
     }
 }
+sensors_event_t _humidity, 
+                _temperature;
+template<bool readOperation>
+inline void 
+handleAHTx0Operation(uint8_t offset) noexcept {
+    switch (offset) {
+        case 0x00:
+            handleAvailableRequest<readOperation>(aht);
+            break;
+        case 0x04: // sample data
+            transmitValue<readOperation>(aht->getEvent(&_humidity, &_temperature), TreatAs<bool>{});
+            break;
+        case 0x08: // humidity
+            transmitValue<readOperation>(_humidity.relative_humidity, _temperature.temperature, TreatAs<uint64_t>{});
+            break;
+        case 0x0C: // temperature
+            transmitValue<readOperation>(_temperature.temperature, TreatAs<float>{});
+            break;
+        default:
+            doNothingOperation<readOperation>();
+            break;
+    }
+}
 template<bool readOperation>
 inline void
 doIOTransaction(SplitWord32 address) noexcept {
@@ -741,6 +812,9 @@ doIOTransaction(SplitWord32 address) noexcept {
             break;
         case 0x83:
             handleCCSOperation<readOperation>(address.bytes[0]);
+            break;
+        case 0x84:
+            handleAHTx0Operation<readOperation>(address.bytes[0]);
             break;
         default:
             doNothingOperation<readOperation>();
@@ -1262,7 +1336,7 @@ PSRAMBackingStore<LS>::begin() noexcept {
                 } 
             }
         }
-        
+
     };
     delay(1000); // make sure that the waiting duration is enough for powerup
     _link.beginTransaction(SPISettings{LS, MSBFIRST, SPI_MODE0});
@@ -1398,7 +1472,7 @@ configureExternalBus() noexcept {
     } else {
         bitClear(XMCRB, XMBK); 
     }
-                           
+
     bitSet(XMCRA, SRE); // enable the EBI
 }
 
