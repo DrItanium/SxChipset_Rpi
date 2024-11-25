@@ -61,6 +61,7 @@ namespace Pins {
     constexpr auto HOLD = Pin::PortE3;
     constexpr auto ADS = Pin::PortE4;
     constexpr auto HLDA = Pin::PortE5;
+    //constexpr auto PCJoystickInterrupt = Pin::PortE6;
     constexpr auto READY_SYNC_IN = Pin::PortE7;
 
     constexpr auto WAITING = Pin::PortG3;
@@ -96,6 +97,7 @@ struct OptionalDevice {
         auto* operator->() noexcept { return &_device; }
         const auto* operator->() const noexcept { return &_device; }
         explicit operator bool() const noexcept { return _valid; }
+        void disable() noexcept { _valid = false; }
     private:
         bool _valid = false;
         T _device;
@@ -105,7 +107,7 @@ template<>
 struct OptionalDevice<Adafruit_SI5351> {
     public:
         template<typename ... Args>
-            OptionalDevice(Args ... args) : _device(args...) { }
+        OptionalDevice(Args ... args) : _device(args...) { }
         constexpr bool valid() const noexcept {
             return _valid;
         }
@@ -113,18 +115,20 @@ struct OptionalDevice<Adafruit_SI5351> {
             return _device;
         }
         template<typename ... Args>
-            bool begin(Args&& ... args) noexcept {
-                _valid = (_device.begin(args...) != ERROR_NONE);
-                return _valid;
-            }
+        bool begin(Args&& ... args) noexcept {
+            _valid = (_device.begin(args...) != ERROR_NONE);
+            return _valid;
+        }
         auto& operator*() const noexcept { return _device; }
         auto* operator->() noexcept { return &_device; }
         const auto* operator->() const noexcept { return &_device; }
         explicit operator bool() const noexcept { return _valid; }
+        void disable() noexcept { _valid = false; }
     private:
         bool _valid = false;
         Adafruit_SI5351 _device;
 };
+
 
 // use a ds3231 chip
 OptionalDevice<RTC_DS3231> rtc;
@@ -134,6 +138,37 @@ OptionalDevice<Adafruit_CCS811> ccs;
 OptionalDevice<Adafruit_AHTX0> aht;
 OptionalDevice<Adafruit_SI5351> externalClockGenerator;
 OptionalDevice<hp_BH1750> bh1750;
+OptionalDevice<Adafruit_seesaw> pcJoystick{&Wire};
+OptionalDevice<Adafruit_seesaw> gamepad{&Wire};
+
+namespace PCJoystick {
+    constexpr auto Address = 0x49;
+    constexpr auto Button1 = 3;
+    constexpr auto Button2 = 13;
+    constexpr auto Button3 = 2;
+    constexpr auto Button4 = 14;
+    constexpr uint32_t ButtonMask = (1ul << Button1) | (1ul << Button2) | (1ul << button3) | (1ul << button4);
+    constexpr auto Joy1_X = 1;
+    constexpr auto Joy1_Y = 15;
+    constexpr auto Joy2_X = 0;
+    constexpr auto Joy2_Y = 16;
+    constexpr auto EnableInterrupt = false;
+    constexpr uint32_t Version = 5753;
+}
+namespace GamepadQt {
+    constexpr auto AddressBase = 0x50;
+    constexpr auto ButtonX = 6;
+    constexpr auto ButtonY = 2;
+    constexpr auto ButtonA = 5;
+    constexpr auto ButtonB = 1;
+    constexpr auto ButtonSelect = 0;
+    constexpr auto ButtonStart = 16;
+    constexpr uint32_t ButtonMask = (1ul << ButtonX) | (1ul << ButtonY) | (1ul << ButtonA) | (1ul << ButtonB) | (1ul << ButtonSelect) | (1ul << ButtonStart);
+    constexpr auto EnableInterrupt = false;
+    constexpr auto Joy_X = 14;
+    constexpr auto Joy_Y = 15;
+    constexpr uint32_t Version = 5743;
+}
 
 template<uint32_t LS>
 class PSRAMBackingStore {
@@ -818,6 +853,47 @@ handleBH1750Operation(uint8_t offset) noexcept {
             break;
     }
 }
+
+template<bool readOperation>
+inline void 
+handlePCJoystickOperation(uint8_t offset) noexcept {
+    // @todo implement
+    switch (offset) {
+        case 0x00:
+            handleAvailableRequest<readOperation>(pcJoystick);
+            break;
+        case 0x04: // version
+            transmitValue<readOperation>(pcJoystick->getVersion(), TreatAs<uint32_t>{});
+            break;
+        case 0x06: // version upper
+            transmitValue<readOperation>(static_cast<uint16_t>(pcJoystick->getVersion() >> 16), TreatAs<uint16_t>{});
+            break;
+        case 0x08: // options
+            transmitValue<readOperation>(pcJoystick->getOptions(), TreatAs<uint32_t>{});
+            break;
+        case 0x0C: // button mask
+            transmitValue<readOperation>(PCJoystick::ButtonMask, TreatAs<uint32_t>{});
+            break;
+        case 0x10:
+            transmitValue<readOperation>(pcJoystick->analogRead(PCJoystick::Joy1_X), TreatAs<float>{});
+            break;
+        case 0x14:
+            transmitValue<readOperation>(pcJoystick->analogRead(PCJoystick::Joy1_Y), TreatAs<float>{});
+            break;
+        case 0x18:
+            transmitValue<readOperation>(pcJoystick->analogRead(PCJoystick::Joy2_X), TreatAs<float>{});
+            break;
+        case 0x1C:
+            transmitValue<readOperation>(pcJoystick->analogRead(PCJoystick::Joy2_Y), TreatAs<float>{});
+            break;
+        case 0x20: // buttons
+            transmitValue<readOperation>(pcJoystick->digitalReadBulk(PCJoystick::ButtonMask), TreatAs<uint32_t>{});
+            break;
+        default:
+            doNothingOperation<readOperation>();
+            break;
+    }
+}
 template<bool readOperation>
 inline void
 doIOTransaction(SplitWord32 address) noexcept {
@@ -849,6 +925,9 @@ doIOTransaction(SplitWord32 address) noexcept {
             break;
         case 0x86:
             handleBH1750Operation<readOperation>(address.bytes[0]);
+            break;
+        case 0x87:
+            handlePCJoystickOperation<readOperation>(address.bytes[0]);
             break;
         default:
             doNothingOperation<readOperation>();
@@ -1267,6 +1346,42 @@ setupBH1750() noexcept {
     }
 }
 void
+setupJoystickBreakout() noexcept {
+    if (!pcJoystick->begin(PCJoystick::Address)) {
+        Serial.println(F("PC Joystick port not found!"));
+    } else {
+        uint32_t version = ((pcJoystick->getVersion() >> 16) & 0xFFFF);
+        if (version != PCJoystick::Version) {
+            Serial.printf(F("Wrong firmware loaded? %lu\n"), version);
+            pcJoystick.disable();
+            return;
+        }
+        Serial.println(F("PC Joystick port found!"));
+        // configure everything as needed
+        pcJoystick->pinModeBulk(PCJoystick::ButtonMask, INPUT_PULLUP);
+        pcJoystick->setGPIOInterrupts(PCJoystick::ButtonMask, 1);
+        /// @todo enable interrupts eventually?
+    }
+}
+void
+setupGamepadBreakout() noexcept {
+    if (!gamepad->begin(GamepadQt::Address)) {
+        Serial.println(F("GamepadQt not found!"));
+    } else {
+        uint32_t version = ((gamepad->getVersion() >> 16) & 0xFFFF);
+        if (version != GamepadQt::Version) {
+            Serial.printf(F("Wrong firmware loaded? %lu\n"), version);
+            gamepad.disable();
+            return;
+        }
+        Serial.println(F("GamepadQt found!"));
+        // configure everything as needed
+        gamepad->pinModeBulk(GamepadQt::ButtonMask, INPUT_PULLUP);
+        gamepad->setGPIOInterrupts(GamepadQt::ButtonMask, 1);
+        /// @todo enable interrupts eventually?
+    }
+}
+void
 setupExternalDevices() noexcept {
     setupRTC();
     setupSI7021();
@@ -1274,6 +1389,8 @@ setupExternalDevices() noexcept {
     setupCCS();
     setupSI5351();
     setupBH1750();
+    setupJoystickBreakout();
+    setupGamepadBreakout();
 }
 void 
 loop() {
