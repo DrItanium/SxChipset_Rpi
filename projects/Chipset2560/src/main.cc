@@ -499,25 +499,25 @@ doRTCOperation(uint8_t offset) noexcept {
                 setDataValue(now.second(), now.minute());
                 if (isLastWordOfTransaction()) {
                     signalReady();
-                    return;
+                    break;
                 }
                 signalReady();
                 setDataValue(now.hour(), now.day());
                 if (isLastWordOfTransaction()) {
                     signalReady();
-                    return;
+                    break;
                 }
                 signalReady();
                 setDataValue(now.month(), 0);
                 if (isLastWordOfTransaction()) {
                     signalReady();
-                    return;
+                    break;
                 }
                 signalReady();
                 setDataValue(now.year());
                 if (isLastWordOfTransaction()) {
                     signalReady();
-                    return;
+                    break;
                 }
                 signalReady();
             }
