@@ -584,13 +584,13 @@ doIOTransaction(SplitWord32 address) noexcept {
         case 0x01:
             handleSerialDeviceInterface<readOperation>(address.bytes[0], Serial);
             break;
-        case 0x10:
+        case 0x80:
             doLTROperation<readOperation>(address.bytes[0]);
             break;
-        case 0x02:
+        case 0x81:
             doRTCOperation<readOperation>(address.bytes[0]);
             break;
-        case 0x03:
+        case 0x82:
             doSI7021Operation<readOperation>(address.bytes[0]);
             break;
         default:
