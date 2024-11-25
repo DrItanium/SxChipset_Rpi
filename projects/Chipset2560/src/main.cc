@@ -33,6 +33,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Adafruit_SPITFT.h>
 #include <Adafruit_seesaw.h>
 #include <Adafruit_CCS811.h>
+#include <Adafruit_AHTX0.h>
 
 #include "Types.h"
 #include "Pinout.h"
@@ -103,6 +104,7 @@ OptionalDevice<RTC_DS3231> rtc;
 OptionalDevice<Adafruit_Si7021> sensor_si7021;
 OptionalDevice<Adafruit_LTR390> ltr;
 OptionalDevice<Adafruit_CCS811> ccs;
+OptionalDevice<Adafruit_AHTX0> aht;
 
 template<uint32_t LS>
 class PSRAMBackingStore {
@@ -1052,6 +1054,7 @@ setupCCS() noexcept {
     if (!ccs.begin()) {
         Serial.println(F("Couldn't find CCS811 gas sensor"));
     } else {
+        Serial.println(F("Found a CCS811 gas sensor!"));
         while(!ccs->available());
         if(ccs->available()) {
             if (!ccs->readData()) {
@@ -1063,6 +1066,18 @@ setupCCS() noexcept {
                 Serial.println(F("Error sampling data from CCS811"));
             }
         }
+    }
+}
+void
+setupAHTX0() noexcept {
+    if (!aht.begin()) {
+        Serial.println(F("Couldn't find an AHTx0 device!"));
+    } else {
+        Serial.println(F("Found an AHTx0 device!"));
+        sensors_event_t humidity, temp;
+        aht->getEvent(&humidity, &temp); // populate
+        Serial.printf(F("Temperature: %f degrees C\n"), temp.temperature);
+        Serial.printf(F("Humidity: %f%% rH\n"), humidity.relative_humidity);
     }
 }
 void
