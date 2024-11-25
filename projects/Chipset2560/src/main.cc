@@ -34,6 +34,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Adafruit_seesaw.h>
 #include <Adafruit_CCS811.h>
 #include <Adafruit_AHTX0.h>
+#include <Adafruit_SI5351.h>
 
 #include "Types.h"
 #include "Pinout.h"
@@ -99,12 +100,38 @@ struct OptionalDevice {
         T _device;
 };
 
+template<>
+struct OptionalDevice<Adafruit_SI5351> {
+    public:
+        template<typename ... Args>
+        OptionalDevice(Args ... args) : _device(args...) { }
+        constexpr bool valid() const noexcept {
+            return _valid;
+        }
+        auto& get() noexcept {
+            return _device;
+        }
+        template<typename ... Args>
+        bool begin(Args&& ... args) noexcept {
+            _valid = (_device.begin(args...) != ERROR_NONE);
+            return _valid;
+        }
+        auto& operator*() const noexcept { return _device; }
+        auto* operator->() noexcept { return &_device; }
+        const auto* operator->() const noexcept { return &_device; }
+        explicit operator bool() const noexcept { return _valid; }
+    private:
+        bool _valid = false;
+        Adafruit_SI5351 _device;
+};
+
 // use a ds3231 chip
 OptionalDevice<RTC_DS3231> rtc;
 OptionalDevice<Adafruit_Si7021> sensor_si7021;
 OptionalDevice<Adafruit_LTR390> ltr;
 OptionalDevice<Adafruit_CCS811> ccs;
 OptionalDevice<Adafruit_AHTX0> aht;
+OptionalDevice<Adafruit_SI5351> externalClockGenerator;
 
 template<uint32_t LS>
 class PSRAMBackingStore {
@@ -1081,12 +1108,21 @@ setupAHTX0() noexcept {
     }
 }
 void
+setupSI5351() noexcept {
+    if (!externalClockGenerator.begin()) {
+        Serial.println(F("Couldn't find a SI5351 device!"));
+    } else {
+        Serial.println(F("Found a SI5351 device!"));
+        /// @todo configure clock generator outputs?
+    }
+}
+void
 setupExternalDevices() noexcept {
     setupRTC();
     setupSI7021();
     setupLTR();
     setupCCS();
-
+    setupSI5351();
 }
 void 
 loop() {
