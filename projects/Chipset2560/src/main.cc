@@ -422,6 +422,15 @@ inline void transmitValue(uint32_t value, TreatAs<uint32_t>) noexcept {
 }
 
 template<bool readOperation>
+inline void transmitValue(uint16_t value, TreatAs<uint16_t>) noexcept {
+    if constexpr (readOperation) {
+        send16BitValue(value);
+    } else {
+        doNothingOperation<readOperation>();
+    }
+}
+
+template<bool readOperation>
 inline void transmitValue(bool value, TreatAs<bool>) noexcept {
     if constexpr (readOperation) {
         send32BitConstant(value ? 0xFFFF'FFFF : 0);
@@ -551,6 +560,21 @@ void handleBuiltinDevices(uint8_t offset) noexcept {
 }
 template<bool readOperation>
 inline void
+handleSerialDeviceInterface(uint8_t offset, HardwareSerial& device) noexcept {
+    // this is a wrapper interface over a given hardware serial device
+    // It should provide extra functions for making execution as easy as
+    // possible
+    switch (offset) {
+        case 0x00: // available
+            transmitValue<readOperation>(true, TreatAs<bool>{});
+            break;
+        default:
+            doNothingOperation<readOperation>();
+            break;
+    }
+}
+template<bool readOperation>
+inline void
 doIOTransaction(SplitWord32 address) noexcept {
     // only dispatch with bytes[1] 
     switch (address.bytes[1]) {
@@ -558,6 +582,9 @@ doIOTransaction(SplitWord32 address) noexcept {
             handleBuiltinDevices<readOperation>(address.bytes[0]);
             break;
         case 0x01:
+            handleSerialDeviceInterface<readOperation>(address.bytes[0], Serial);
+            break;
+        case 0x10:
             doLTROperation<readOperation>(address.bytes[0]);
             break;
         case 0x02:
