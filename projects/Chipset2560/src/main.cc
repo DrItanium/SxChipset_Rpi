@@ -96,6 +96,11 @@ struct OptionalDevice {
         T _device;
 };
 
+// use a ds3231 chip
+OptionalDevice<RTC_DS3231> rtc;
+OptionalDevice<Adafruit_Si7021> sensor_si7021;
+OptionalDevice<Adafruit_LTR390> ltr;
+
 template<uint32_t LS>
 class PSRAMBackingStore {
     public:
@@ -320,6 +325,18 @@ setDataValue(uint16_t value) noexcept {
     }
 }
 
+[[gnu::always_inline]]
+inline void
+setDataValue(uint8_t lower, uint8_t upper) noexcept {
+    if constexpr (UseDirectPortsForDataLines) {
+        setLowerData(lower);
+        setUpperData(upper);
+    } else {
+        interface960.dataLines.view8.data[0] = lower;
+        interface960.dataLines.view8.data[1] = upper;
+    }
+}
+
 template<uint16_t value>
 [[gnu::always_inline]]
 inline void
@@ -408,10 +425,6 @@ send16BitValue(uint8_t lo, uint8_t hi) noexcept {
     } while (false);
     signalReady();
 }
-// use a ds3231 chip
-OptionalDevice<RTC_DS3231> rtc;
-OptionalDevice<Adafruit_Si7021> sensor_si7021;
-OptionalDevice<Adafruit_LTR390> ltr;
 template<bool readOperation>
 inline void transmitValue(uint32_t value, TreatAs<uint32_t>) noexcept {
     if constexpr (readOperation) {
@@ -438,6 +451,15 @@ inline void transmitValue(bool value, TreatAs<bool>) noexcept {
         doNothingOperation<readOperation>();
     }
 }
+template<bool readOperation>
+inline void transmitValue(float value, TreatAs<float>) noexcept {
+    union {
+        float flt;
+        uint32_t raw;
+    } converter;
+    converter.flt = value;
+    transmitValue<readOperation>(converter.raw, TreatAs<uint32_t>{});
+}
 template<bool readOperation, typename T>
 inline void handleAvailableRequest(const T& item) noexcept {
     transmitValue<readOperation>(item.valid(), TreatAs<bool>{});
@@ -461,6 +483,47 @@ doRTCOperation(uint8_t offset) noexcept {
         case 0x00: // available
             handleAvailableRequest<readOperation>(rtc);
             break;
+        case 0x04: // unixtime
+            transmitValue<readOperation>(rtc->now().unixtime(), TreatAs<uint32_t>{});
+            break;
+        case 0x08: // secondstime
+            transmitValue<readOperation>(rtc->now().secondstime(), TreatAs<uint32_t>{});
+            break;
+        case 0x0C: // temperature
+            transmitValue<readOperation>(rtc->getTemperature(), TreatAs<float>{});
+            break;
+        case 0x10: {
+                       if constexpr (readOperation) {
+                           // now
+                           auto now = rtc->now();
+                           setDataValue(now.second(), now.minute());
+                           if (isLastWordOfTransaction()) {
+                               signalReady();
+                               return;
+                           }
+                           signalReady();
+                           setDataValue(now.hour(), now.day());
+                           if (isLastWordOfTransaction()) {
+                               signalReady();
+                               return;
+                           }
+                           signalReady();
+                           setDataValue(now.month(), 0);
+                           if (isLastWordOfTransaction()) {
+                               signalReady();
+                               return;
+                           }
+                           signalReady();
+                           setDataValue(now.year());
+                           if (isLastWordOfTransaction()) {
+                               signalReady();
+                               return;
+                           }
+                           signalReady();
+                       }
+                       doNothingOperation<readOperation>();
+                       break;
+                   }
         default:
             doNothingOperation<readOperation>();
             break;
