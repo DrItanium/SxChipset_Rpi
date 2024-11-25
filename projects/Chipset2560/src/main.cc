@@ -412,7 +412,67 @@ send16BitValue(uint8_t lo, uint8_t hi) noexcept {
     } while (false);
     signalReady();
 }
-
+template<bool readOperation>
+inline void
+doLTROperation(uint8_t offset) noexcept {
+    switch(offset) {
+        case 0x00: // LTR.available
+            if constexpr (readOperation) {
+                send32BitConstant(ltr ? 0xFFFF'FFFF : 0x0000'0000);
+            } else {
+                doNothingOperation<readOperation>();
+            }
+            break;
+        case 0x04: // UVS
+            if constexpr (readOperation) {
+                send32BitConstant(ltr->readUVS());
+            } else {
+                doNothingOperation<readOperation>();
+            }
+            break;
+        case 0x08: // ALS
+            if constexpr (readOperation) {
+                send32BitConstant(ltr->readALS());
+            } else {
+                doNothingOperation<readOperation>();
+            }
+            break;
+        case 0x0C: // LTR.Mode
+            if constexpr (readOperation) {
+                send32BitConstant(ltr->getMode());
+            } else {
+                ltr->setMode(static_cast<ltr390_mode_t>(lowerData()));
+                doNothingOperation<readOperation>();
+            }
+            break;
+        case 0x10: // LTR.Gain
+            if constexpr (readOperation) {
+                send32BitConstant(ltr->getGain());
+            } else {
+                ltr->setGain(static_cast<ltr390_gain_t>(lowerData()));
+                doNothingOperation<readOperation>();
+            }
+            break;
+        case 0x14: // LTR.Resolution
+            if constexpr (readOperation) {
+                send32BitConstant(ltr->getResolution());
+            } else {
+                ltr->setResolution(static_cast<ltr390_resolution_t>(lowerData()));
+                doNothingOperation<readOperation>();
+            }
+            break;
+        case 0x18: // LTR.newDataAvailable
+            if constexpr (readOperation) {
+                send32BitConstant(ltr->newDataAvailable() ? 0xFFFF'FFFF : 0x0000'0000);
+            } else {
+                doNothingOperation<readOperation>();
+            }
+            break;
+        default:
+            doNothingOperation<readOperation>();
+            break;
+    }
+}
 template<bool readOperation>
 inline void
 doIOTransaction(SplitWord32 address) noexcept {
@@ -459,57 +519,8 @@ doIOTransaction(SplitWord32 address) noexcept {
                 doNothingOperation<readOperation>();
             }
             break;
-        case 0x100: // LTR.available
-            if constexpr (readOperation) {
-                send32BitConstant(ltr ? 0xFFFF'FFFF : 0x0000'0000);
-            } else {
-                doNothingOperation<readOperation>();
-            }
-            break;
-        case 0x104: // UVS
-            if constexpr (readOperation) {
-                send32BitConstant(ltr->readUVS());
-            } else {
-                doNothingOperation<readOperation>();
-            }
-            break;
-        case 0x108: // ALS
-            if constexpr (readOperation) {
-                send32BitConstant(ltr->readALS());
-            } else {
-                doNothingOperation<readOperation>();
-            }
-            break;
-        case 0x10C: // LTR.Mode
-            if constexpr (readOperation) {
-                send32BitConstant(ltr->getMode());
-            } else {
-                ltr->setMode(static_cast<ltr390_mode_t>(lowerData()));
-                doNothingOperation<readOperation>();
-            }
-            break;
-        case 0x110: // LTR.Gain
-            if constexpr (readOperation) {
-                send32BitConstant(ltr->getGain());
-            } else {
-                ltr->setGain(static_cast<ltr390_gain_t>(lowerData()));
-                doNothingOperation<readOperation>();
-            }
-            break;
-        case 0x114: // LTR.Resolution
-            if constexpr (readOperation) {
-                send32BitConstant(ltr->getResolution());
-            } else {
-                ltr->setResolution(static_cast<ltr390_resolution_t>(lowerData()));
-                doNothingOperation<readOperation>();
-            }
-            break;
-        case 0x118: // LTR.newDataAvailable
-            if constexpr (readOperation) {
-                send32BitConstant(ltr->newDataAvailable() ? 0xFFFF'FFFF : 0x0000'0000);
-            } else {
-                doNothingOperation<readOperation>();
-            }
+        case 0x100 ... 0x1FF:
+            doLTROperation<readOperation>(address.bytes[0]);
             break;
         default:
             doNothingOperation<readOperation>();
