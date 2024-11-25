@@ -35,6 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Adafruit_CCS811.h>
 #include <Adafruit_AHTX0.h>
 #include <Adafruit_SI5351.h>
+#include <hp_BH1750.h>
 
 #include "Types.h"
 #include "Pinout.h"
@@ -132,6 +133,7 @@ OptionalDevice<Adafruit_LTR390> ltr;
 OptionalDevice<Adafruit_CCS811> ccs;
 OptionalDevice<Adafruit_AHTX0> aht;
 OptionalDevice<Adafruit_SI5351> externalClockGenerator;
+OptionalDevice<hp_BH1750> bh1750;
 
 template<uint32_t LS>
 class PSRAMBackingStore {
@@ -1117,12 +1119,26 @@ setupSI5351() noexcept {
     }
 }
 void
+setupBH1750() noexcept {
+    if (!bh1750.begin(BH1750_TO_GROUND)) {
+        Serial.println(F("No BH1750 Sensor Found"));
+    } else {
+        Serial.println(F("Found a BH1750 Sensor!"));
+        bh1750->start();
+        while (!bh1750->hasValue());
+        auto lux = bh1750->getLux();
+        Serial.printf(F("Current LUX: %f\n"), lux);
+        bh1750->start();
+    }
+}
+void
 setupExternalDevices() noexcept {
     setupRTC();
     setupSI7021();
     setupLTR();
     setupCCS();
     setupSI5351();
+    setupBH1750();
 }
 void 
 loop() {
