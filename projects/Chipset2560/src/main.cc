@@ -492,38 +492,49 @@ doRTCOperation(uint8_t offset) noexcept {
         case 0x0C: // temperature
             transmitValue<readOperation>(rtc->getTemperature(), TreatAs<float>{});
             break;
-        case 0x10: {
-                       if constexpr (readOperation) {
-                           // now
-                           auto now = rtc->now();
-                           setDataValue(now.second(), now.minute());
-                           if (isLastWordOfTransaction()) {
-                               signalReady();
-                               return;
-                           }
-                           signalReady();
-                           setDataValue(now.hour(), now.day());
-                           if (isLastWordOfTransaction()) {
-                               signalReady();
-                               return;
-                           }
-                           signalReady();
-                           setDataValue(now.month(), 0);
-                           if (isLastWordOfTransaction()) {
-                               signalReady();
-                               return;
-                           }
-                           signalReady();
-                           setDataValue(now.year());
-                           if (isLastWordOfTransaction()) {
-                               signalReady();
-                               return;
-                           }
-                           signalReady();
-                       }
-                       doNothingOperation<readOperation>();
-                       break;
-                   }
+        case 0x10: 
+            if constexpr (readOperation) {
+                // now
+                auto now = rtc->now();
+                setDataValue(now.second(), now.minute());
+                if (isLastWordOfTransaction()) {
+                    signalReady();
+                    return;
+                }
+                signalReady();
+                setDataValue(now.hour(), now.day());
+                if (isLastWordOfTransaction()) {
+                    signalReady();
+                    return;
+                }
+                signalReady();
+                setDataValue(now.month(), 0);
+                if (isLastWordOfTransaction()) {
+                    signalReady();
+                    return;
+                }
+                signalReady();
+                setDataValue(now.year());
+                if (isLastWordOfTransaction()) {
+                    signalReady();
+                    return;
+                }
+                signalReady();
+            }
+            doNothingOperation<readOperation>();
+            break;
+        case 0x20: // 32k configure, read returns enabled, write configures
+            if constexpr (readOperation) {
+                transmitValue<readOperation>(rtc->isEnabled32K(), TreatAs<bool>{});
+            } else {
+                if (lowerData() != 0) {
+                    rtc->enable32K();
+                } else {
+                    rtc->disable32K();
+                }
+                doNothingOperation<readOperation>();
+            }
+            break;
         default:
             doNothingOperation<readOperation>();
             break;
