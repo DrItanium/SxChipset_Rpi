@@ -1,3 +1,6 @@
 [submodule "projects/common/microshell"]
 	path = projects/common/microshell
 	url = https://github.com/DrItanium/microshell
+[submodule "projects/common/WiFiNINA"]
+	path = projects/common/WiFiNINA
+	url = https://github.com/DrItanium/WiFiNINA
