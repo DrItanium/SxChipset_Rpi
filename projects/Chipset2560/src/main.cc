@@ -27,6 +27,7 @@
 #include <SPI.h>
 #include <Deception.h>
 #include <SD.h>
+#include <EEPROM.h>
 #include <RTClib.h>
 #include <Adafruit_Si7021.h>
 #include <Adafruit_LTR390.h>
@@ -64,7 +65,6 @@ namespace Pins {
     //constexpr auto PCJoystickInterrupt = Pin::PortE6;
     constexpr auto READY_SYNC_IN = Pin::PortE7;
 
-    constexpr auto WAITING = Pin::PortG3;
     constexpr auto PSRAM_EN = Pin::PortG4;
     constexpr auto READY = Pin::PortG5;
 
@@ -1179,8 +1179,6 @@ getAddress() noexcept {
 
 void
 configurePins() noexcept {
-    pinMode(Pins::WAITING, OUTPUT);
-    digitalWrite<Pins::WAITING, HIGH>();
     pinMode(Pins::RESET, OUTPUT);
     digitalWrite<Pins::RESET, LOW>();
     pinMode(Pins::PSRAM_EN, OUTPUT);
