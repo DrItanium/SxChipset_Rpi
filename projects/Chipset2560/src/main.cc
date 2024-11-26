@@ -514,6 +514,16 @@ inline void transmitValue(uint16_t value, TreatAs<uint16_t>) noexcept {
 }
 
 template<bool readOperation>
+inline void transmitValue(int16_t value, TreatAs<int16_t>) noexcept {
+    union {
+        int16_t value;
+        uint16_t to;
+    } conversion;
+    conversion.value = value;
+    transmitValue<readOperation>(conversion.to, TreatAs<uint16_t>{});
+}
+
+template<bool readOperation>
 inline void transmitValue(bool value, TreatAs<bool>) noexcept {
     if constexpr (readOperation) {
         send32BitConstant(value ? 0xFFFF'FFFF : 0);
@@ -895,6 +905,41 @@ handlePCJoystickOperation(uint8_t offset) noexcept {
             break;
     }
 }
+
+template<bool readOperation>
+inline void 
+handleGamepadQtOperation(uint8_t offset) noexcept {
+    // @todo implement
+    switch (offset) {
+        case 0x00:
+            handleAvailableRequest<readOperation>(gamepad);
+            break;
+        case 0x04: // version
+            transmitValue<readOperation>(gamepad->getVersion(), TreatAs<uint32_t>{});
+            break;
+        case 0x06: // version upper
+            transmitValue<readOperation>(static_cast<uint16_t>(gamepad->getVersion() >> 16), TreatAs<uint16_t>{});
+            break;
+        case 0x08: // options
+            transmitValue<readOperation>(gamepad->getOptions(), TreatAs<uint32_t>{});
+            break;
+        case 0x0C: // button mask
+            transmitValue<readOperation>(GamepadQt::ButtonMask, TreatAs<uint32_t>{});
+            break;
+        case 0x10:
+            transmitValue<readOperation>(1023 - gamepad->analogRead(GamepadQt::Joy_X), TreatAs<int16_t>{});
+            break;
+        case 0x12:
+            transmitValue<readOperation>(1023 - gamepad->analogRead(GamepadQt::Joy_Y), TreatAs<int16_t>{});
+            break;
+        case 0x20: // buttons
+            transmitValue<readOperation>(gamepad->digitalReadBulk(GamepadQt::ButtonMask), TreatAs<uint32_t>{});
+            break;
+        default:
+            doNothingOperation<readOperation>();
+            break;
+    }
+}
 template<bool readOperation>
 inline void
 doIOTransaction(SplitWord32 address) noexcept {
@@ -930,6 +975,8 @@ doIOTransaction(SplitWord32 address) noexcept {
         case 0x87:
             handlePCJoystickOperation<readOperation>(address.bytes[0]);
             break;
+        case 0x88:
+            handleGamepadQtOperation<readOperation>(address.bytes[0]);
         default:
             doNothingOperation<readOperation>();
             break;
