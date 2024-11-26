@@ -37,6 +37,7 @@
 #include <Adafruit_AHTX0.h>
 #include <Adafruit_SI5351.h>
 #include <hp_BH1750.h>
+#include <Adafruit_APDS9960.h>
 
 #include "Types.h"
 #include "Pinout.h"
@@ -116,7 +117,7 @@ struct OptionalDevice<Adafruit_SI5351> {
         }
         template<typename ... Args>
         bool begin(Args&& ... args) noexcept {
-            _valid = (_device.begin(args...) != ERROR_NONE);
+            _valid = (_device.begin(args...) == ERROR_NONE);
             return _valid;
         }
         auto& operator*() const noexcept { return _device; }
@@ -156,8 +157,7 @@ namespace PCJoystick {
     constexpr uint32_t Version = 5753;
 }
 namespace GamepadQt {
-    constexpr auto AddressBase = 0x50;
-    constexpr uint8_t Addresses[4] = { AddressBase + 0, AddressBase + 1, AddressBase + 2, AddressBase + 3, };
+    constexpr auto Address = 0x50;
     constexpr auto ButtonX = 6;
     constexpr auto ButtonY = 2;
     constexpr auto ButtonA = 5;
@@ -793,6 +793,9 @@ handleBuiltinDevices(uint8_t offset) noexcept {
         case 0x44:
             transmitValue<readOperation>(micros(), TreatAs<uint32_t>{});
             break;
+        case 0x80: // EEPROM Capacity
+            transmitValue<readOperation>(EEPROM.length(), TreatAs<uint16_t>{});
+            break;
         default:
             doNothingOperation<readOperation>();
             break;
@@ -942,6 +945,145 @@ handleGamepadQtOperation(uint8_t offset) noexcept {
 }
 template<bool readOperation>
 inline void
+handleEEPROMDevice(uint16_t index) noexcept {
+    do {
+        index &= 0xFFF;
+        if constexpr (readOperation) {
+            uint16_t curr = 0;
+            setDataValue(EEPROM.get<uint16_t>(index, curr));
+            if (isLastWordOfTransaction()) {
+                break;
+            }
+            signalReady<false>();
+            (void)EEPROM.get<uint16_t>(index+2, curr);
+            waitForReady();
+            setDataValue(curr);
+            if (isLastWordOfTransaction()) {
+                break;
+            }
+            signalReady<false>();
+            (void)EEPROM.get<uint16_t>(index+4, curr);
+            waitForReady();
+            setDataValue(curr);
+            if (isLastWordOfTransaction()) {
+                break;
+            }
+            signalReady<false>();
+            (void)EEPROM.get<uint16_t>(index+6, curr);
+            waitForReady();
+            setDataValue(curr);
+            if (isLastWordOfTransaction()) {
+                break;
+            }
+            signalReady<false>();
+            (void)EEPROM.get<uint16_t>(index+8, curr);
+            waitForReady();
+            setDataValue(curr);
+            if (isLastWordOfTransaction()) {
+                break;
+            }
+            signalReady<false>();
+            (void)EEPROM.get<uint16_t>(index+10, curr);
+            waitForReady();
+            setDataValue(curr);
+            if (isLastWordOfTransaction()) {
+                break;
+            }
+            signalReady<false>();
+            (void)EEPROM.get<uint16_t>(index+12, curr);
+            waitForReady();
+            setDataValue(curr);
+            if (isLastWordOfTransaction()) {
+                break;
+            }
+            signalReady<false>();
+            (void)EEPROM.get<uint16_t>(index+14, curr);
+            waitForReady();
+            setDataValue(curr);
+        } else {
+            /// @todo optimize
+            if (lowerByteEnabled()) {
+                EEPROM.update(index, lowerData());
+            }
+            if (upperByteEnabled()) {
+                EEPROM.update(index+1, upperData());
+            }
+            if (isLastWordOfTransaction()) {
+                break;
+            }
+            signalReady();
+            if (lowerByteEnabled()) {
+                EEPROM.update(index+2, lowerData());
+            }
+            if (upperByteEnabled()) {
+                EEPROM.update(index+3, upperData());
+            }
+            if (isLastWordOfTransaction()) {
+                break;
+            }
+            signalReady();
+            if (lowerByteEnabled()) {
+                EEPROM.update(index+4, lowerData());
+            }
+            if (upperByteEnabled()) {
+                EEPROM.update(index+5, upperData());
+            }
+            if (isLastWordOfTransaction()) {
+                break;
+            }
+            signalReady();
+            if (lowerByteEnabled()) {
+                EEPROM.update(index+6, lowerData());
+            }
+            if (upperByteEnabled()) {
+                EEPROM.update(index+7, upperData());
+            }
+            if (isLastWordOfTransaction()) {
+                break;
+            }
+            signalReady();
+            if (lowerByteEnabled()) {
+                EEPROM.update(index+8, lowerData());
+            }
+            if (upperByteEnabled()) {
+                EEPROM.update(index+9, upperData());
+            }
+            if (isLastWordOfTransaction()) {
+                break;
+            }
+            signalReady();
+            if (lowerByteEnabled()) {
+                EEPROM.update(index+10, lowerData());
+            }
+            if (upperByteEnabled()) {
+                EEPROM.update(index+11, upperData());
+            }
+            if (isLastWordOfTransaction()) {
+                break;
+            }
+            signalReady();
+            if (lowerByteEnabled()) {
+                EEPROM.update(index+12, lowerData());
+            }
+            if (upperByteEnabled()) {
+                EEPROM.update(index+13, upperData());
+            }
+            if (isLastWordOfTransaction()) {
+                break;
+            }
+            signalReady();
+            if (lowerByteEnabled()) {
+                EEPROM.update(index+14, lowerData());
+            }
+            if (upperByteEnabled()) {
+                EEPROM.update(index+15, upperData());
+            }
+        }
+    } while (false);
+    signalReady();
+}
+template<bool readOperation>
+inline void
 doIOTransaction(SplitWord32 address) noexcept {
     // only dispatch with bytes[1] 
     switch (address.bytes[1]) {
@@ -950,6 +1092,9 @@ doIOTransaction(SplitWord32 address) noexcept {
             break;
         case 0x01:
             handleSerialDeviceInterface<readOperation>(address.bytes[0], Serial);
+            break;
+        case 0x70 ... 0x7F:
+            handleEEPROMDevice<readOperation>(address.halves[0]);
             break;
         case 0x80:
             doLTROperation<readOperation>(address.bytes[0]);
@@ -1228,6 +1373,7 @@ setup() {
     Serial.begin(SerialBaudRate);
     Serial.print(F("Serial Up @ "));
     Serial.println(SerialBaudRate);
+    EEPROM.begin();
     SPI.begin();
     Wire.begin();
     Wire.setClock(Deception::TWI_ClockRate);
@@ -1411,7 +1557,7 @@ setupJoystickBreakout() noexcept {
 }
 void
 setupGamepadBreakout() noexcept {
-    if (!gamepad->begin(GamepadQt::Addresses[0])) {
+    if (!gamepad->begin(GamepadQt::Address)) {
         Serial.println(F("GamepadQt not found!"));
     } else {
         uint32_t version = ((gamepad->getVersion() >> 16) & 0xFFFF);
@@ -1433,6 +1579,7 @@ setupExternalDevices() noexcept {
     setupSI7021();
     setupLTR();
     setupCCS();
+    setupAHTX0();
     setupSI5351();
     setupBH1750();
     setupJoystickBreakout();
