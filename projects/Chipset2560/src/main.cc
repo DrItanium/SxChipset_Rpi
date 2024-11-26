@@ -147,7 +147,7 @@ namespace PCJoystick {
     constexpr auto Button2 = 13;
     constexpr auto Button3 = 2;
     constexpr auto Button4 = 14;
-    constexpr uint32_t ButtonMask = (1ul << Button1) | (1ul << Button2) | (1ul << button3) | (1ul << button4);
+    constexpr uint32_t ButtonMask = (1ul << Button1) | (1ul << Button2) | (1ul << Button3) | (1ul << Button4);
     constexpr auto Joy1_X = 1;
     constexpr auto Joy1_Y = 15;
     constexpr auto Joy2_X = 0;
@@ -157,6 +157,7 @@ namespace PCJoystick {
 }
 namespace GamepadQt {
     constexpr auto AddressBase = 0x50;
+    constexpr uint8_t Addresses[4] = { AddressBase + 0, AddressBase + 1, AddressBase + 2, AddressBase + 3, };
     constexpr auto ButtonX = 6;
     constexpr auto ButtonY = 2;
     constexpr auto ButtonA = 5;
@@ -1365,7 +1366,7 @@ setupJoystickBreakout() noexcept {
 }
 void
 setupGamepadBreakout() noexcept {
-    if (!gamepad->begin(GamepadQt::Address)) {
+    if (!gamepad->begin(GamepadQt::Addresses[0])) {
         Serial.println(F("GamepadQt not found!"));
     } else {
         uint32_t version = ((gamepad->getVersion() >> 16) & 0xFFFF);
