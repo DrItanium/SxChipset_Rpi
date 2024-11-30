@@ -1021,6 +1021,195 @@ handleEEPROMDevice(uint16_t index) noexcept {
     } while (false);
     signalReady();
 }
+uint8_t sramCache[2048];
+template<bool readOperation>
+inline void
+handleSRAMDevice(uint16_t address) noexcept {
+    uint8_t lo, hi;
+    do {
+        address &= 0x7FF;
+        if constexpr (readOperation) {
+            lo = sramCache[address + 0];
+            hi = sramCache[address + 1];
+            setLowerData(lo);
+            setUpperData(hi);
+            if (isLastWordOfTransaction()) { 
+                break; 
+            } 
+            signalReady<false>();
+            lo = sramCache[address + 2];
+            hi = sramCache[address + 3];
+            waitForReady();
+            setLowerData(lo);
+            setUpperData(hi);
+            if (isLastWordOfTransaction()) { 
+                break; 
+            } 
+            signalReady<false>();
+            lo = sramCache[address + 4];
+            hi = sramCache[address + 5];
+            waitForReady();
+            setLowerData(lo);
+            setUpperData(hi);
+            if (isLastWordOfTransaction()) { 
+                break; 
+            } 
+            signalReady<false>();
+            lo = sramCache[address + 6];
+            hi = sramCache[address + 7];
+            waitForReady();
+            setLowerData(lo);
+            setUpperData(hi);
+            if (isLastWordOfTransaction()) { 
+                break; 
+            } 
+            signalReady<false>();
+            lo = sramCache[address + 8];
+            hi = sramCache[address + 9];
+            waitForReady();
+            setLowerData(lo);
+            setUpperData(hi);
+            if (isLastWordOfTransaction()) { 
+                break; 
+            } 
+            signalReady<false>();
+            lo = sramCache[address + 10];
+            hi = sramCache[address + 11];
+            waitForReady();
+            setLowerData(lo);
+            setUpperData(hi);
+            if (isLastWordOfTransaction()) { 
+                break; 
+            } 
+            signalReady<false>();
+            lo = sramCache[address + 12];
+            hi = sramCache[address + 13];
+            waitForReady();
+            setLowerData(lo);
+            setUpperData(hi);
+        } else {
+#define X(a) \
+            if (lowerByteEnabled()) { \
+                sramCache[address + a + 0] = lowerData(); \
+            } \
+            if (upperByteEnabled()) { \
+                sramCache[address + a + 1] = upperData(); \
+            } \
+            if (isLastWordOfTransaction()) { \
+                break; \
+            } \
+            signalReady()
+            X(0);
+            X(2);
+            X(4);
+            X(6);
+            X(8);
+            X(10);
+            X(12);
+#undef X
+            lo = lowerData();
+            hi = upperData();
+            if (lowerByteEnabled()) {
+                sramCache[address + 0] = lo;
+            }
+            if (isLastWordOfTransaction) {
+                if (upperByteEnabled()) {
+                    sramCache[address + 1] = hi;
+                }
+                break;
+            }
+            signalReady<false>();
+            sramCache[address + 1] = hi;
+            waitForReady();
+            lo = lowerData();
+            hi = upperData();
+            if (isLastWordOfTransaction()) {
+                if (upperByteEnabled()) {
+                    sramCache[address + 3] = hi;
+                }
+                sramCache[address + 2] = lo;
+                break;
+            }
+            signalReady<false>();
+            sramCache[address + 2] = lo;
+            sramCache[address + 3] = hi;
+            waitForReady();
+            lo = lowerData();
+            hi = upperData();
+            if (isLastWordOfTransaction()) {
+                if (upperByteEnabled()) {
+                    sramCache[address + 4] = hi;
+                }
+                sramCache[address + 5] = lo;
+                break;
+            }
+            signalReady<false>();
+            sramCache[address + 4] = lo;
+            sramCache[address + 5] = hi;
+            waitForReady();
+            lo = lowerData();
+            hi = upperData();
+            if (isLastWordOfTransaction()) {
+                if (upperByteEnabled()) {
+                    sramCache[address + 7] = hi;
+                }
+                sramCache[address + 6] = lo;
+                break;
+            }
+            signalReady<false>();
+            sramCache[address + 6] = lo;
+            sramCache[address + 7] = hi;
+            waitForReady();
+            lo = lowerData();
+            hi = upperData();
+            if (isLastWordOfTransaction()) {
+                if (upperByteEnabled()) {
+                    sramCache[address + 9] = hi;
+                }
+                sramCache[address + 8] = lo;
+                break;
+            }
+            signalReady<false>();
+            sramCache[address + 8] = lo;
+            sramCache[address + 9] = hi;
+            waitForReady();
+
+            lo = lowerData();
+            hi = upperData();
+            if (isLastWordOfTransaction()) {
+                if (upperByteEnabled()) {
+                    sramCache[address + 11] = hi;
+                }
+                sramCache[address + 10] = lo;
+                break;
+            }
+            signalReady<false>();
+            sramCache[address + 10] = lo;
+            sramCache[address + 11] = hi;
+            waitForReady();
+            lo = lowerData();
+            hi = upperData();
+            if (isLastWordOfTransaction()) {
+                if (upperByteEnabled()) {
+                    sramCache[address + 13] = hi;
+                }
+                sramCache[address + 12] = lo;
+                break;
+            }
+            signalReady<false>();
+            sramCache[address + 12] = lo;
+            sramCache[address + 13] = hi;
+            waitForReady();
+            lo = lowerData();
+            hi = upperData();
+            if (upperByteEnabled()) {
+                sramCache[address + 15] = hi;
+            }
+            sramCache[address + 14] = lo;
+        }
+    } while (false);
+    signalReady();
+}
 template<bool readOperation>
 inline void
 doIOTransaction(SplitWord32 address) noexcept {
@@ -1032,9 +1221,9 @@ doIOTransaction(SplitWord32 address) noexcept {
         case 0x01:
             handleSerialDeviceInterface<readOperation>(address.bytes[0], Serial);
             break;
-        //case 0x60 ... 0x67: // 2k sram cache
-        //    handleSRAMDevice<readOperation>(address.halves[0]);
-        //    break;
+        case 0x60 ... 0x67: // 2k sram cache
+            handleSRAMDevice<readOperation>(address.halves[0]);
+            break;
         case 0x70 ... 0x7F:
             handleEEPROMDevice<readOperation>(address.halves[0]);
             break;
