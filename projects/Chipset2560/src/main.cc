@@ -86,14 +86,15 @@ struct FixedCacheLine {
     static constexpr auto AddressMask = 0xFFFF'FFF0;
     static constexpr Address_t normalizeAddress(Address_t input) noexcept { return input & AddressMask; }
     static constexpr uint8_t computeByteOffset(uint8_t input) noexcept { return static_cast<uint8_t>(input) & 0x0F; }
-    constexpr bool dirty() const noexcept { return (_flags & FlagDirty); }
+    constexpr bool dirty() const noexcept { return _dirty; }
     
+private:
     bool matches(Address_t other) const volatile noexcept { 
         // only need to compare the upper halves of the key to the other
         return (static_cast<uint16_t>(_key >> 16) == static_cast<uint16_t>(other >> 16)); 
     }
     void replace(Address_t newAddress) volatile noexcept {
-        if (_flags >= FlagReplace) {
+        if (_valid && _dirty) {
             // just do a compare of the two parts valid and dirty if we
             // hit 3 or greater then it means we have to perform the
             // replacement
@@ -102,19 +103,22 @@ struct FixedCacheLine {
         load(newAddress);
     }
     void load(Address_t newAddress) volatile noexcept {
-        _flags = FlagValid;
+        _dirty = false;
+        _valid = true;
         _key = newAddress;
         (void)CommunicationPrimitive.read(_key, const_cast<uint8_t*>(_bytes), NumBytes);
     }
+public:
     void clear() volatile noexcept {
+        _dirty = false;
+        _valid = false;
         _key = 0;
-        _flags = 0;
         for (auto i = 0u; i < NumBytes; ++i) {
             _bytes[i] = 0;
         }
     }
     volatile uint8_t* sync(Address_t newAddress) volatile noexcept {
-        if (auto normalized = normalizeAddress(newAddress); valid()) {
+        if (auto normalized = normalizeAddress(newAddress); _valid) {
             if (!matches(normalized)) {
                 replace(normalized);
             }
@@ -123,14 +127,12 @@ struct FixedCacheLine {
         }
         return &_bytes[computeByteOffset(newAddress)];
     }
-    [[nodiscard]] volatile uint8_t* getLineData(uint8_t offset = 0) volatile noexcept { return &_bytes[offset]; }
-    void markDirty() volatile noexcept { _flags |= FlagDirty ; }
-    [[nodiscard]] bool valid() const volatile noexcept { return (_flags & FlagValid); }
-    [[nodiscard]] auto getKey() const volatile noexcept { return _key; }
+    void markDirty() volatile noexcept { _dirty = true; }
     private:
         uint8_t _bytes[NumBytes];
         Address_t _key;
-        uint8_t _flags;
+        bool _valid;
+        bool _dirty;
 };
 [[gnu::address(0xFF00)]] volatile FixedCacheLine externalCacheLine;
 union [[gnu::packed]] CH351 {
