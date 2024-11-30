@@ -1021,7 +1021,7 @@ handleEEPROMDevice(uint16_t index) noexcept {
     } while (false);
     signalReady();
 }
-uint8_t sramCache[2048];
+uint8_t sramCache[2048] = { 0 };
 template<bool readOperation>
 inline void
 handleSRAMDevice(uint16_t address) noexcept {
