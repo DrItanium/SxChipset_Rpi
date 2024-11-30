@@ -29,14 +29,9 @@
 #include <SD.h>
 #include <EEPROM.h>
 #include <RTClib.h>
-#include <Adafruit_Si7021.h>
-#include <Adafruit_LTR390.h>
 #include <Adafruit_SPITFT.h>
-#include <Adafruit_CCS811.h>
-#include <Adafruit_AHTX0.h>
 #include <Adafruit_SI5351.h>
 #include <hp_BH1750.h>
-#include <Adafruit_APDS9960.h>
 
 #include "Types.h"
 #include "Pinout.h"
@@ -82,10 +77,6 @@ struct OptionalDevice<Adafruit_SI5351> {
 
 // use a ds3231 chip
 OptionalDevice<RTC_DS3231> rtc;
-OptionalDevice<Adafruit_Si7021> sensor_si7021;
-OptionalDevice<Adafruit_LTR390> ltr;
-OptionalDevice<Adafruit_CCS811> ccs;
-OptionalDevice<Adafruit_AHTX0> aht;
 OptionalDevice<Adafruit_SI5351> externalClockGenerator;
 OptionalDevice<hp_BH1750> bh1750;
 SeesawDevice pcJoystick{&Wire};
@@ -532,32 +523,6 @@ inline void handleAvailableRequest(const T& item) noexcept {
 }
 template<bool readOperation>
 inline void
-doSI7021Operation(uint8_t offset) noexcept {
-    switch (offset) {
-        case 0x00: // available
-            handleAvailableRequest<readOperation>(sensor_si7021);
-            break;
-        case 0x04: // temperature
-            transmitValue<readOperation>(sensor_si7021->readTemperature(), TreatAs<float>{});
-            break;
-        case 0x08: // humidity
-            transmitValue<readOperation>(sensor_si7021->readHumidity(), TreatAs<float>{});
-            break;
-        case 0x0C: // heater
-            if constexpr (readOperation) {
-                transmitValue<readOperation>(sensor_si7021->isHeaterEnabled(), TreatAs<bool>{});
-            } else {
-                sensor_si7021->heater(lowerData() != 0);
-                doNothingOperation<readOperation>();
-            }
-            break;
-        default:
-            doNothingOperation<readOperation>();
-            break;
-    }
-}
-template<bool readOperation>
-inline void
 doRTCOperation(uint8_t offset) noexcept {
     switch (offset) {
         case 0x00: // available
@@ -621,88 +586,6 @@ doRTCOperation(uint8_t offset) noexcept {
     }
 }
 template<bool readOperation>
-inline void
-doLTROperation(uint8_t offset) noexcept {
-    switch(offset) {
-        case 0x00: // LTR.available
-            handleAvailableRequest<readOperation>(ltr);
-            break;
-        case 0x04: // UVS
-            if constexpr (readOperation) {
-                send32BitConstant(ltr->readUVS());
-            } else {
-                doNothingOperation<readOperation>();
-            }
-            break;
-        case 0x08: // ALS
-            if constexpr (readOperation) {
-                send32BitConstant(ltr->readALS());
-            } else {
-                doNothingOperation<readOperation>();
-            }
-            break;
-        case 0x0C: // LTR.Mode
-            if constexpr (readOperation) {
-                send32BitConstant(ltr->getMode());
-            } else {
-                ltr->setMode(static_cast<ltr390_mode_t>(lowerData()));
-                doNothingOperation<readOperation>();
-            }
-
-            break;
-        case 0x10: // LTR.Gain
-            if constexpr (readOperation) {
-                send32BitConstant(ltr->getGain());
-            } else {
-                ltr->setGain(static_cast<ltr390_gain_t>(lowerData()));
-                doNothingOperation<readOperation>();
-            }
-            break;
-        case 0x14: // LTR.Resolution
-            if constexpr (readOperation) {
-                send32BitConstant(ltr->getResolution());
-            } else {
-                ltr->setResolution(static_cast<ltr390_resolution_t>(lowerData()));
-                doNothingOperation<readOperation>();
-            }
-            break;
-        case 0x18: // LTR.newDataAvailable
-            if constexpr (readOperation) {
-                send32BitConstant(ltr->newDataAvailable() ? 0xFFFF'FFFF : 0x0000'0000);
-            } else {
-                doNothingOperation<readOperation>();
-            }
-            break;
-        default:
-            doNothingOperation<readOperation>();
-            break;
-    }
-}
-template<bool readOperation>
-inline void 
-handleCCSOperation(uint8_t offset) noexcept {
-    switch (offset) {
-        case 0x00:
-            handleAvailableRequest<readOperation>(ccs);
-            break;
-        case 0x04:
-            transmitValue<readOperation>(ccs->available(), TreatAs<bool>{});
-            break;
-        case 0x08:
-            transmitValue<readOperation>(!ccs->readData(), TreatAs<bool>{});
-            break;
-        case 0x0c: // tvoc
-            transmitValue<readOperation>(ccs->getTVOC(), TreatAs<uint16_t>{});
-            break;
-        case 0x0e: // eCO2
-            transmitValue<readOperation>(ccs->geteCO2(), TreatAs<uint16_t>{});
-            break;
-        default:
-            doNothingOperation<readOperation>();
-            break;
-    }
-}
-template<bool readOperation>
 inline void 
 handleBuiltinDevices(uint8_t offset) noexcept {
     switch (offset) {
@@ -755,30 +638,6 @@ handleSerialDeviceInterface(uint8_t offset, HardwareSerial& device) noexcept {
             break;
     }
 }
-sensors_event_t _humidity, 
-                _temperature;
-template<bool readOperation>
-inline void 
-handleAHTx0Operation(uint8_t offset) noexcept {
-    switch (offset) {
-        case 0x00:
-            handleAvailableRequest<readOperation>(aht);
-            break;
-        case 0x04: // sample data
-            transmitValue<readOperation>(aht->getEvent(&_humidity, &_temperature), TreatAs<bool>{});
-            break;
-        case 0x08: // humidity
-            transmitValue<readOperation>(_humidity.relative_humidity, _temperature.temperature, TreatAs<uint64_t>{});
-            break;
-        case 0x0C: // temperature
-            transmitValue<readOperation>(_temperature.temperature, TreatAs<float>{});
-            break;
-        default:
-            doNothingOperation<readOperation>();
-            break;
-    }
-}
-
 template<bool readOperation>
 inline void 
 handleSi5351Operation(uint8_t offset) noexcept {
@@ -1227,20 +1086,8 @@ doIOTransaction(SplitWord32 address) noexcept {
         case 0x70 ... 0x7F:
             handleEEPROMDevice<readOperation>(address.halves[0]);
             break;
-        case 0x80:
-            doLTROperation<readOperation>(address.bytes[0]);
-            break;
         case 0x81:
             doRTCOperation<readOperation>(address.bytes[0]);
-            break;
-        case 0x82:
-            doSI7021Operation<readOperation>(address.bytes[0]);
-            break;
-        case 0x83:
-            handleCCSOperation<readOperation>(address.bytes[0]);
-            break;
-        case 0x84:
-            handleAHTx0Operation<readOperation>(address.bytes[0]);
             break;
         case 0x85:
             handleSi5351Operation<readOperation>(address.bytes[0]);
@@ -1536,116 +1383,6 @@ setupRTC() noexcept {
         Serial.printf(F(" since midnight 1/1/1970 = %lds = %ldd\n"), now.unixtime(), now.unixtime() / 86400L);
     }
 }
-void 
-setupSI7021() noexcept {
-    if (!sensor_si7021.begin()) {
-        Serial.println(F("Si7021 Sensor not found!"));
-    } else {
-        Serial.print(F("Found model "));
-        switch (sensor_si7021->getModel()) {
-            case SI_Engineering_Samples: 
-                Serial.print(F("SI engineering samples")); 
-                break;
-            case SI_7013: 
-                Serial.print(F("Si7013")); 
-                break;
-            case SI_7020: 
-                Serial.print(F("Si7020")); 
-                break;
-            case SI_7021: 
-                Serial.print(F("Si7021")); 
-                break;
-            default: 
-                Serial.print(F("Unknown")); 
-                break;
-        }
-        Serial.printf(F(" Rev(%d) Serial #"), sensor_si7021->getRevision());
-        Serial.print(sensor_si7021->sernum_a, HEX);
-        Serial.println(sensor_si7021->sernum_b, HEX);
-
-        Serial.println();
-        Serial.print(F("Humidity:    ")); 
-        Serial.print(sensor_si7021->readHumidity(), 2);
-        Serial.print(F("\tTemperature:    ")); 
-        Serial.println(sensor_si7021->readTemperature(), 2);
-    }
-}
-void
-setupLTR() noexcept {
-    if (!ltr.begin()) {
-        Serial.println(F("Couldn't find LTR sensor!"));
-    } else {
-        Serial.println(F("Found LTR sensor!"));
-
-        ltr->setMode(LTR390_MODE_UVS);
-        if (ltr->getMode() == LTR390_MODE_ALS) {
-            Serial.println(F("In ALS mode"));
-        } else {
-            Serial.println(F("In UVS mode"));
-        }
-
-        ltr->setGain(LTR390_GAIN_3);
-        Serial.print(F("Gain : "));
-        switch (ltr->getGain()) {
-            case LTR390_GAIN_1: 
-                Serial.println(1); 
-                break;
-            case LTR390_GAIN_3: 
-                Serial.println(3); 
-                break;
-            case LTR390_GAIN_6: 
-                Serial.println(6); 
-                break;
-            case LTR390_GAIN_9: 
-                Serial.println(9); 
-                break;
-            case LTR390_GAIN_18: 
-                Serial.println(18); 
-                break;
-            default:
-                Serial.println('?');
-                break;
-        }
-
-        ltr->setThresholds(100, 1000);
-        ltr->configInterrupt(true, LTR390_MODE_UVS);
-        while (!ltr->newDataAvailable()) {
-            delay(100);
-        }
-        Serial.printf(F("UV data: %d\n"), ltr->readUVS());
-    }
-}
-void
-setupCCS() noexcept {
-    if (!ccs.begin()) {
-        Serial.println(F("Couldn't find CCS811 gas sensor"));
-    } else {
-        Serial.println(F("Found a CCS811 gas sensor!"));
-        while(!ccs->available());
-        if(ccs->available()) {
-            if (!ccs->readData()) {
-                Serial.print(F("CO2: "));
-                Serial.print(ccs->geteCO2());
-                Serial.print(F("ppm, TVOC: "));
-                Serial.println(ccs->getTVOC());
-            } else {
-                Serial.println(F("Error sampling data from CCS811"));
-            }
-        }
-    }
-}
-void
-setupAHTX0() noexcept {
-    if (!aht.begin()) {
-        Serial.println(F("Couldn't find an AHTx0 device!"));
-    } else {
-        Serial.println(F("Found an AHTx0 device!"));
-        sensors_event_t humidity, temp;
-        aht->getEvent(&humidity, &temp); // populate
-        Serial.printf(F("Temperature: %f degrees C\n"), temp.temperature);
-        Serial.printf(F("Humidity: %f%% rH\n"), humidity.relative_humidity);
-    }
-}
 void
 setupSI5351() noexcept {
     if (!externalClockGenerator.begin()) {
@@ -1670,7 +1407,7 @@ setupBH1750() noexcept {
 }
 void
 setupJoystickBreakout() noexcept {
-    if (!pcJoystick->begin(PCJoystick::Address)) {
+    if (!pcJoystick.begin(PCJoystick::Address)) {
         Serial.println(F("PC Joystick port not found!"));
     } else {
         uint32_t version = ((pcJoystick->getVersion() >> 16) & 0xFFFF);
@@ -1688,7 +1425,7 @@ setupJoystickBreakout() noexcept {
 }
 void
 setupGamepadBreakout() noexcept {
-    if (!gamepad->begin(GamepadQt::Address)) {
+    if (!gamepad.begin(GamepadQt::Address)) {
         Serial.println(F("GamepadQt not found!"));
     } else {
         uint32_t version = ((gamepad->getVersion() >> 16) & 0xFFFF);
@@ -1707,10 +1444,6 @@ setupGamepadBreakout() noexcept {
 void
 setupExternalDevices() noexcept {
     setupRTC();
-    setupSI7021();
-    setupLTR();
-    setupCCS();
-    setupAHTX0();
     setupSI5351();
     setupBH1750();
     setupJoystickBreakout();
