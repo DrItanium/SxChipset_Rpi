@@ -1155,7 +1155,6 @@ setup() {
     Serial.begin(SerialBaudRate);
     Serial1.begin(SerialBaudRate);
     Serial.printf(F("Serial Up @ %ld\n"), SerialBaudRate);
-    Serial1.printf(F("Serial Up @ %ld\n"), SerialBaudRate);
     EEPROM.begin();
     SPI.begin();
     Wire.begin();
@@ -1173,19 +1172,10 @@ setup() {
 }
 void
 setupRTC() noexcept {
-    Serial1.println(F("Setting up RTC"));
-    // setup the RTC
-    if (!rtc.begin()) {
-        Serial1.println(F("Couldn't find RTC"));
-        Serial1.flush();
-    } else {
+    if (rtc.begin()) {
         if (rtc->lostPower()) {
-            Serial1.println(F("RTC lost power, setting time"));
             rtc->adjust(DateTime(F(__DATE__), F(__TIME__)));
         }
-
-        DateTime now = rtc->now();
-        Serial1.printf(F(" since midnight 1/1/1970 = %lds = %ldd\n"), now.unixtime(), now.unixtime() / 86400L);
     }
 }
 void
@@ -1266,7 +1256,7 @@ PSRAMBackingStore<LS>::begin() noexcept {
             _link.transfer(tmp.bytes, 8);
             digitalWrite<Pins::PSRAM_EN, HIGH>();
             delay(100);
-            Serial1.printf(F("MFID: 0x%x, KGD: 0x%x, EIDHi: 0x%x, EIDLo: 0x%lx\n"), tmp.mfid, tmp.kgd, tmp.eidHi, tmp.eidLo);
+            Serial.printf(F("MFID: 0x%x, KGD: 0x%x, EIDHi: 0x%x, EIDLo: 0x%lx\n"), tmp.mfid, tmp.kgd, tmp.eidHi, tmp.eidLo);
         }
         if (performSanityChecking) {
             // now we need to do some amount of sanity checking to see if we can do
@@ -1297,7 +1287,7 @@ PSRAMBackingStore<LS>::begin() noexcept {
     for (uint8_t i = 0; i < 8; ++i) {
         // can't use setAddress since that is setup for direct addresses
         getOutputRegister<Ports::PSRAMSel>() = i;
-        activatePSRAM(true, true);
+        activatePSRAM(false, true);
     }
     _link.endTransaction();
     getOutputRegister<Ports::PSRAMSel>() = 0;
@@ -1306,16 +1296,16 @@ PSRAMBackingStore<LS>::begin() noexcept {
 void
 installInitialBootImage() noexcept {
     if (!SD.begin(static_cast<int>(Pins::SD_EN))) {
-        Serial1.println(F("No SDCard found!"));
+        Serial.println(F("No SDCard found!"));
     } else {
-        Serial1.println(F("Found an SDCard, will try to transfer the contents of prog.bin to onboard psram"));
+        Serial.println(F("Found an SDCard, will try to transfer the contents of prog.bin to onboard psram"));
         auto f = SD.open(F("prog.bin"), FILE_READ); 
         if (!f) {
-            Serial1.println(F("Could not open prog.bin...skipping!"));
+            Serial.println(F("Could not open prog.bin...skipping!"));
         } else {
-            Serial1.println(F("Found prog.bin..."));
+            Serial.println(F("Found prog.bin..."));
             if (f.size() <= 0x0100'0000) {
-                Serial1.println(F("Transferring prog.bin to memory"));
+                Serial.println(F("Transferring prog.bin to memory"));
                 static constexpr auto ByteCount = 32;
                 uint8_t dataBytes[ByteCount] = { 0 };
                 for (uint32_t i = 0, j = 0; i < f.size(); i+=ByteCount, ++j) {
@@ -1327,15 +1317,15 @@ installInitialBootImage() noexcept {
                         Serial1.print('.');
                     }
                 }
-                Serial1.println(F("Transfer complete!"));
-                Serial1.println(F("Header Contents:"));
+                Serial.println(F("Transfer complete!"));
+                Serial.println(F("Header Contents:"));
                 psramMemory.read(0, dataBytes, ByteCount);
                 auto* header = reinterpret_cast<uint32_t*>(dataBytes);
                 for (size_t i = 0; i < (ByteCount / sizeof(uint32_t)); ++i) {
-                    Serial1.printf(F("\t0x%x: 0x%x\n"), i, header[i]);
+                    Serial.printf(F("\t0x%x: 0x%x\n"), i, header[i]);
                 }
             } else {
-                Serial1.println(F("prog.bin is too large to fit in 16 megabytes!"));
+                Serial.println(F("prog.bin is too large to fit in 16 megabytes!"));
             }
             f.close();
         }
@@ -1393,16 +1383,16 @@ PSRAMBackingStore<LS>::write(Address addr, uint8_t* storage, size_t count) noexc
 
 void
 sanityCheckHardwareAcceleratedCacheLine() noexcept {
-    Serial1.println(F("Using External Hardware Accelerated Cache!"));
-    Serial1.println(F("Zeroing out cache memory"));
+    Serial.println(F("Using External Hardware Accelerated Cache!"));
+    Serial.println(F("Zeroing out cache memory"));
     for (uint32_t i = 0; i < (1024ul * 1024ul); i += 16) {
         interface960.addressLines.view32.data = i;
         if (static_cast<uint16_t>(i) == 0) {
-            Serial1.print('.');
+            Serial.print('.');
         }
         externalCacheLine.clear();
     }
-    Serial1.println(F("DONE!"));
+    Serial.println(F("DONE!"));
 }
 
 void 
