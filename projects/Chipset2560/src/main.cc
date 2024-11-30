@@ -42,6 +42,7 @@
 #include "Types.h"
 #include "Pinout.h"
 #include "Setup.h"
+#include "Pins.h"
 
 // stable configuration
 constexpr bool UseDirectPortsForDataLines = true;
@@ -49,34 +50,6 @@ constexpr bool UseBusKeeper = true;
 constexpr auto SerialBaudRate = 115200;
 [[gnu::noinline]] void installInitialBootImage() noexcept;
 void configureExternalBus() noexcept;
-namespace Pins {
-    constexpr auto SD_EN = Pin::PortB0;
-    constexpr auto INT960_0 = Pin::PortB4;
-    constexpr auto INT960_1 = Pin::PortB5;
-    constexpr auto INT960_2 = Pin::PortB6;
-    constexpr auto INT960_3 = Pin::PortB7;
-    constexpr auto BE1 = Pin::PortD4;
-    constexpr auto BE0 = Pin::PortD5;
-    constexpr auto WR = Pin::PortD6;
-    constexpr auto BLAST = Pin::PortD7;
-    constexpr auto RESET = Pin::PortE2;
-    constexpr auto HOLD = Pin::PortE3;
-    constexpr auto ADS = Pin::PortE4;
-    constexpr auto HLDA = Pin::PortE5;
-    //constexpr auto PCJoystickInterrupt = Pin::PortE6;
-    constexpr auto READY_SYNC_IN = Pin::PortE7;
-
-    constexpr auto PSRAM_EN = Pin::PortG4;
-    constexpr auto READY = Pin::PortG5;
-
-
-
-}
-namespace Ports {
-    constexpr auto DataLower = Port::C;
-    constexpr auto DataUpper = Port::F;
-    constexpr auto PSRAMSel = Port::L;
-}
 
 template<typename T>
 struct OptionalDevice {
