@@ -909,66 +909,63 @@ handleSRAMDevice(uint16_t address) noexcept {
 struct [[gnu::packed]] DeviceInformation {
     union {
         uint8_t bytes[16];
+        uint16_t shorts[8];
+        uint32_t words[4];
+        uint64_t longs[2];
         struct {
-            uint8_t kind;
+            uint16_t kind;
+            uint16_t size;
+            uint32_t baseAddress;
         };
     };
     template<bool readOperation>
-    void transmit(uint8_t offset = 0) noexcept {
+    inline void transmit(uint8_t offset = 0) noexcept {
         if constexpr (readOperation) {
             switch (offset & 0b0000'1110) {
                 case 0x0:
-                    setLowerData(bytes[0]);
-                    setUpperData(bytes[1]);
+                    setDataValue(shorts[0]);
                     if (isLastWordOfTransaction()) {
                         break;
                     }
                     signalReady();
                 case 0x2:
-                    setLowerData(bytes[2]);
-                    setUpperData(bytes[3]);
+                    setDataValue(shorts[1]);
                     if (isLastWordOfTransaction()) {
                         break;
                     }
                     signalReady();
                 case 0x4:
-                    setLowerData(bytes[4]);
-                    setUpperData(bytes[5]);
+                    setDataValue(shorts[2]);
                     if (isLastWordOfTransaction()) {
                         break;
                     }
                     signalReady();
                 case 0x6:
-                    setLowerData(bytes[6]);
-                    setUpperData(bytes[7]);
+                    setDataValue(shorts[3]);
                     if (isLastWordOfTransaction()) {
                         break;
                     }
                     signalReady();
                 case 0x8:
-                    setLowerData(bytes[8]);
-                    setUpperData(bytes[9]);
+                    setDataValue(shorts[4]);
                     if (isLastWordOfTransaction()) {
                         break;
                     }
                     signalReady();
                 case 0xa:
-                    setLowerData(bytes[10]);
-                    setUpperData(bytes[11]);
+                    setDataValue(shorts[5]);
                     if (isLastWordOfTransaction()) {
                         break;
                     }
                     signalReady();
                 case 0xc:
-                    setLowerData(bytes[12]);
-                    setUpperData(bytes[13]);
+                    setDataValue(shorts[6]);
                     if (isLastWordOfTransaction()) {
                         break;
                     }
                     signalReady();
                 case 0xe:
-                    setLowerData(bytes[14]);
-                    setUpperData(bytes[15]);
+                    setDataValue(shorts[7]);
                     break;
             }
             signalReady();
