@@ -43,7 +43,14 @@ constexpr auto SerialBaudRate = 115200;
 [[gnu::noinline]] void installInitialBootImage() noexcept;
 void configureExternalBus() noexcept;
 
-
+// onboard devices
+// EEPROM - [implemented]
+// SRAM Cache - [implemented]
+// Serial basic interface - [implemented]
+// SD Card interface - Partially implemented, need to expose a micro filesystem
+// Timer 1, 2, 3, 4, 5 - to do
+// USART 2 and 3
+//   USART as SPI is another effective mode as well!
 // use a ds3231 chip
 OptionalDevice<RTC_DS3231> rtc;
 
