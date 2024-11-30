@@ -71,93 +71,6 @@ class PSRAMBackingStore {
         SPIDevice& _link;
 };
 
-
-using PrimaryBackingStore = PSRAMBackingStore<5'000'000>;
-PrimaryBackingStore psramMemory(SPI);
-#define CommunicationPrimitive psramMemory
-// this is a special case cache line implementation so we can be very specific
-struct FixedCacheLine {
-    using Address_t = uint32_t;
-    static constexpr uint8_t FlagValid = 0b0000'0001;
-    static constexpr uint8_t FlagDirty = 0b0000'0010;
-    static constexpr uint8_t FlagReplace = FlagValid | FlagDirty;
-    static constexpr auto NumBytes = 16;
-    static constexpr auto ShiftAmount = 4;
-    static constexpr auto AddressMask = 0xFFFF'FFF0;
-    static constexpr Address_t normalizeAddress(Address_t input) noexcept { return input & AddressMask; }
-    static constexpr uint8_t computeByteOffset(uint8_t input) noexcept { return static_cast<uint8_t>(input) & 0x0F; }
-    constexpr bool dirty() const noexcept { return _dirty; }
-    
-private:
-    bool matches(Address_t other) const volatile noexcept { 
-        // only need to compare the upper halves of the key to the other
-        return (static_cast<uint16_t>(_key >> 16) == static_cast<uint16_t>(other >> 16)); 
-    }
-    void replace(Address_t newAddress) volatile noexcept {
-        if (_valid && _dirty) {
-            // just do a compare of the two parts valid and dirty if we
-            // hit 3 or greater then it means we have to perform the
-            // replacement
-            (void)CommunicationPrimitive.write(_key, const_cast<uint8_t*>(_bytes), NumBytes);
-        }
-        load(newAddress);
-    }
-    void load(Address_t newAddress) volatile noexcept {
-        _dirty = false;
-        _valid = true;
-        _key = newAddress;
-        (void)CommunicationPrimitive.read(_key, const_cast<uint8_t*>(_bytes), NumBytes);
-    }
-public:
-    void clear() volatile noexcept {
-        _dirty = false;
-        _valid = false;
-        _key = 0;
-        for (auto i = 0u; i < NumBytes; ++i) {
-            _bytes[i] = 0;
-        }
-    }
-    volatile uint8_t* sync(Address_t newAddress) volatile noexcept {
-        if (auto normalized = normalizeAddress(newAddress); _valid) {
-            if (!matches(normalized)) {
-                replace(normalized);
-            }
-        } else {
-            load(normalized);
-        }
-        return &_bytes[computeByteOffset(newAddress)];
-    }
-    void markDirty() volatile noexcept { _dirty = true; }
-    private:
-        uint8_t _bytes[NumBytes];
-        Address_t _key;
-        bool _valid;
-        bool _dirty;
-};
-[[gnu::address(0xFF00)]] volatile FixedCacheLine externalCacheLine;
-union [[gnu::packed]] CH351 {
-    struct {
-        uint32_t data;
-        uint32_t direction;
-    } view32;
-    struct {
-        uint16_t data[2];
-        uint16_t direction[2];
-    } view16;
-    struct {
-        uint8_t data[4];
-        uint8_t direction[4];
-    } view8;
-};
-
-static_assert(sizeof(CH351) == 8);
-[[gnu::address(0xFF40)]] volatile struct [[gnu::packed]] {
-    CH351 addressLines;
-    CH351 dataLines;
-} interface960;
-
-
-
 template<typename T, typename V>
 using TypeView = V[sizeof(T) / sizeof(V)];
 template<typename T>
@@ -185,6 +98,82 @@ union SplitWord16 {
 };
 
 static_assert(sizeof(SplitWord16) == sizeof(uint16_t));
+
+
+using PrimaryBackingStore = PSRAMBackingStore<5'000'000>;
+PrimaryBackingStore psramMemory(SPI);
+#define CommunicationPrimitive psramMemory
+// this is a special case cache line implementation so we can be very specific
+struct FixedCacheLine {
+    using Address_t = uint32_t;
+    static constexpr auto NumBytes = 16;
+    static constexpr auto ShiftAmount = 4;
+    static constexpr auto AddressMask = 0xFFFF'FFF0;
+private:
+    void load(SplitWord32 newAddress) volatile noexcept {
+        _dirty = false;
+        _valid = true;
+        _key.full = newAddress.full;
+        (void)CommunicationPrimitive.read(_key.full, const_cast<uint8_t*>(_bytes), NumBytes);
+    }
+public:
+    void clear() volatile noexcept {
+        _dirty = false;
+        _valid = false;
+        _key.full = 0;
+        for (auto i = 0u; i < NumBytes; ++i) {
+            _bytes[i] = 0;
+        }
+    }
+    volatile uint8_t* sync(SplitWord32 newAddress) volatile noexcept {
+        uint8_t offset = newAddress.bytes[0] & 0x0F;
+        newAddress.bytes[0] &= 0xF0;
+        if (_valid) {
+            if (_key.halves[1] != newAddress.halves[1]) {
+                if (_dirty) {
+                    // just do a compare of the two parts valid and dirty if we
+                    // hit 3 or greater then it means we have to perform the
+                    // replacement
+                    (void)CommunicationPrimitive.write(_key.full, const_cast<uint8_t*>(_bytes), NumBytes);
+                }
+                load(newAddress);
+            }
+        } else {
+            load(newAddress);
+        }
+        return &_bytes[offset];
+    }
+    void markDirty() volatile noexcept { _dirty = true; }
+    private:
+        uint8_t _bytes[NumBytes];
+        SplitWord32 _key;
+        bool _valid;
+        bool _dirty;
+};
+[[gnu::address(0xFF00)]] volatile FixedCacheLine externalCacheLine;
+union [[gnu::packed]] CH351 {
+    struct {
+        uint32_t data;
+        uint32_t direction;
+    } view32;
+    struct {
+        uint16_t data[2];
+        uint16_t direction[2];
+    } view16;
+    struct {
+        uint8_t data[4];
+        uint8_t direction[4];
+    } view8;
+};
+
+static_assert(sizeof(CH351) == 8);
+[[gnu::address(0xFF40)]] volatile struct [[gnu::packed]] {
+    CH351 addressLines;
+    CH351 dataLines;
+} interface960;
+
+
+
 
 
 
