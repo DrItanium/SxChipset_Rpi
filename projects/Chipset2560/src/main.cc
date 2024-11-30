@@ -91,7 +91,7 @@ struct FixedCacheLine {
     
     bool matches(Address_t other) const volatile noexcept { 
         // only need to compare the upper halves of the key to the other
-        return valid() && (static_cast<uint16_t>(_key >> 16) == static_cast<uint16_t>(other >> 16)); 
+        return (static_cast<uint16_t>(_key >> 16) == static_cast<uint16_t>(other >> 16)); 
     }
     void replace(Address_t newAddress) volatile noexcept {
         if (_flags >= FlagReplace) {
@@ -162,10 +162,13 @@ class ExternalCacheLineInterface {
         }
         void sync(Address_t address) noexcept {
             // we've already selected the line via hardware acceleration
-            auto addr = normalizeAddress(address);
-            if (!externalCacheLine.matches(addr)) {
-                externalCacheLine.replace(addr);
-            } 
+            if (auto addr = normalizeAddress(address); externalCacheLine.valid()) {
+                if (!externalCacheLine.matches(addr)) {
+                    externalCacheLine.replace(addr);
+                }
+            } else {
+                externalCacheLine.load(addr);
+            }
         }
     private:
         bool _initialized = false;
