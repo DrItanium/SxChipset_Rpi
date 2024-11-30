@@ -906,6 +906,78 @@ handleSRAMDevice(uint16_t address) noexcept {
     } while (false);
     signalReady();
 }
+struct [[gnu::packed]] DeviceInformation {
+    union {
+        uint8_t bytes[16];
+        struct {
+            uint8_t kind;
+        };
+    };
+    template<bool readOperation>
+    void transmit(uint8_t offset = 0) noexcept {
+        if constexpr (readOperation) {
+            switch (offset & 0b0000'1110) {
+                case 0x0:
+                    setLowerData(bytes[0]);
+                    setUpperData(bytes[1]);
+                    if (isLastWordOfTransaction()) {
+                        break;
+                    }
+                    signalReady();
+                case 0x2:
+                    setLowerData(bytes[2]);
+                    setUpperData(bytes[3]);
+                    if (isLastWordOfTransaction()) {
+                        break;
+                    }
+                    signalReady();
+                case 0x4:
+                    setLowerData(bytes[4]);
+                    setUpperData(bytes[5]);
+                    if (isLastWordOfTransaction()) {
+                        break;
+                    }
+                    signalReady();
+                case 0x6:
+                    setLowerData(bytes[6]);
+                    setUpperData(bytes[7]);
+                    if (isLastWordOfTransaction()) {
+                        break;
+                    }
+                    signalReady();
+                case 0x8:
+                    setLowerData(bytes[8]);
+                    setUpperData(bytes[9]);
+                    if (isLastWordOfTransaction()) {
+                        break;
+                    }
+                    signalReady();
+                case 0xa:
+                    setLowerData(bytes[10]);
+                    setUpperData(bytes[11]);
+                    if (isLastWordOfTransaction()) {
+                        break;
+                    }
+                    signalReady();
+                case 0xc:
+                    setLowerData(bytes[12]);
+                    setUpperData(bytes[13]);
+                    if (isLastWordOfTransaction()) {
+                        break;
+                    }
+                    signalReady();
+                case 0xe:
+                    setLowerData(bytes[14]);
+                    setUpperData(bytes[15]);
+                    break;
+            }
+            signalReady();
+        } else {
+            doNothingOperation<readOperation>();
+        }
+    }
+};
+static_assert(sizeof(DeviceInformation) == 16);
 template<bool readOperation>
 inline void 
 handleBuiltinDevices(uint8_t offset) noexcept {
@@ -936,10 +1008,19 @@ handleBuiltinDevices(uint8_t offset) noexcept {
         case 0x14:
             transmitValue<readOperation>(micros(), TreatAs<uint32_t>{});
             break;
-        case 0x18: // EEPROM Capacity
+        case 0x18: // EEPROM Base Address
+            transmitValue<readOperation>(0xFE001000, TreatAs<uint32_t>{});
+            break;
+        case 0x1c: // SRAM Base Address
+            transmitValue<readOperation>(0xFE000800, TreatAs<uint32_t>{});
+            break;
+        case 0x20: // RTC Base Address
+            transmitValue<readOperation>(0xFE000200, TreatAs<uint32_t>{});
+            break;
+        case 0x24: // EEPROM Capacity
             transmitValue<readOperation>(EEPROM.length(), TreatAs<uint16_t>{});
             break;
-        case 0x1a: // SRAM Capacity
+        case 0x26: // SRAM Capacity
             transmitValue<readOperation>(SRAMCacheCapacity, TreatAs<uint16_t>{});
             break;
         default:
@@ -958,14 +1039,14 @@ doIOTransaction(SplitWord32 address) noexcept {
         case 0x01:
             handleSerialDeviceInterface<readOperation>(address.bytes[0], Serial);
             break;
-        case 0x60 ... 0x67: // 2k sram cache
+        case 0x02:
+            doRTCOperation<readOperation>(address.bytes[0]);
+            break;
+        case 0x08 ... 0x0F: // 2k sram cache
             handleSRAMDevice<readOperation>(address.halves[0]);
             break;
-        case 0x70 ... 0x7F:
+        case 0x10 ... 0x1F:
             handleEEPROMDevice<readOperation>(address.halves[0]);
-            break;
-        case 0x80:
-            doRTCOperation<readOperation>(address.bytes[0]);
             break;
         default:
             doNothingOperation<readOperation>();
