@@ -1192,13 +1192,14 @@ void
 setupExternalDevices() noexcept {
     setupRTC();
 }
+void processMicroshell() noexcept;
 void 
 loop() {
     do {
         // clear the READY signal interrupt ahead of waiting for the last
         clearREADYInterrupt();
         do { 
-            yield();
+            processMicroshell();
         } while (bit_is_clear(EIFR, ADSFLAG));
         clearADSInterrupt();
         if (auto address = getAddress(); isReadOperation()) {
@@ -1509,8 +1510,6 @@ configureMicroshell() noexcept {
 
 }
 void
-yield() {
-    if (ushConfigured) {
-        ush_service(&ush);
-    }
+processMicroshell() {
+    ush_service(&ush);
 }
