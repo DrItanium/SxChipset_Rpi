@@ -916,7 +916,7 @@ struct [[gnu::packed]] DeviceInformation {
             uint16_t kind;
             uint16_t size;
             uint32_t baseAddress;
-        };
+        } block;
     };
     template<bool readOperation>
     inline void transmit(uint8_t offset = 0) noexcept {
@@ -975,6 +975,10 @@ struct [[gnu::packed]] DeviceInformation {
     }
 };
 static_assert(sizeof(DeviceInformation) == 16);
+
+
+
+
 template<bool readOperation>
 inline void 
 handleBuiltinDevices(uint8_t offset) noexcept {
