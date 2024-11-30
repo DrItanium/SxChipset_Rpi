@@ -1458,8 +1458,8 @@ const struct ush_io_interface ush_iface = {
 };
 
 
-constexpr auto USH_BUF_IN_SIZE = 32;
-constexpr auto USH_BUF_OUT_SIZE = 32;
+constexpr auto USH_BUF_IN_SIZE = 128;
+constexpr auto USH_BUF_OUT_SIZE = 128;
 constexpr auto USH_PATH_MAX_SIZE = 128;
 char ush_in_buf[USH_BUF_IN_SIZE];
 char ush_out_buf[USH_BUF_OUT_SIZE];
