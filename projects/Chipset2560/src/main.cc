@@ -1486,10 +1486,25 @@ const struct ush_descriptor ush_desc = {
     .path_max_length = USH_PATH_MAX_SIZE,
     .hostname = "chipset2560", // this will generate a warning
 };
-
+struct ush_node_object rootNode;
+#define STRINGIFY(x) #x
+const struct ush_file_descriptor rootDesc[] = {
+    {
+        .name = "info.txt",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](struct ush_object* self, struct ush_file_descriptor const* file, uint8_t **data) -> size_t {
+            static const char* text = "Chipset 2560 by Joshua Scoggins\nBuilt On: " __DATE__ " @ " __TIME__ "\n";
+            *data = (uint8_t*)text;
+            return strlen(text);
+        },
+    }
+};
 void
 configureMicroshell() noexcept {
     ush_init(&ush, &ush_desc);
+    ush_node_mount(&ush, "/", &rootNode, rootDesc, sizeof(rootDesc) / sizeof(rootDesc[0]));
     ushConfigured = true;
 
 }
