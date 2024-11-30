@@ -31,7 +31,6 @@
 #include <RTClib.h>
 #include <Adafruit_SPITFT.h>
 #include <Adafruit_SI5351.h>
-#include <hp_BH1750.h>
 
 #include "Types.h"
 #include "Pinout.h"
@@ -78,7 +77,6 @@ struct OptionalDevice<Adafruit_SI5351> {
 // use a ds3231 chip
 OptionalDevice<RTC_DS3231> rtc;
 OptionalDevice<Adafruit_SI5351> externalClockGenerator;
-OptionalDevice<hp_BH1750> bh1750;
 SeesawDevice pcJoystick{&Wire};
 SeesawDevice gamepad{&Wire};
 
@@ -652,19 +650,6 @@ handleSi5351Operation(uint8_t offset) noexcept {
     }
 }
 
-template<bool readOperation>
-inline void 
-handleBH1750Operation(uint8_t offset) noexcept {
-    // @todo implement
-    switch (offset) {
-        case 0x00:
-            handleAvailableRequest<readOperation>(bh1750);
-            break;
-        default:
-            doNothingOperation<readOperation>();
-            break;
-    }
-}
 
 template<bool readOperation>
 inline void 
@@ -1092,9 +1077,6 @@ doIOTransaction(SplitWord32 address) noexcept {
         case 0x85:
             handleSi5351Operation<readOperation>(address.bytes[0]);
             break;
-        case 0x86:
-            handleBH1750Operation<readOperation>(address.bytes[0]);
-            break;
         case 0x87:
             handlePCJoystickOperation<readOperation>(address.bytes[0]);
             break;
@@ -1393,19 +1375,6 @@ setupSI5351() noexcept {
     }
 }
 void
-setupBH1750() noexcept {
-    if (!bh1750.begin(BH1750_TO_GROUND)) {
-        Serial.println(F("No BH1750 Sensor Found"));
-    } else {
-        Serial.println(F("Found a BH1750 Sensor!"));
-        bh1750->start();
-        while (!bh1750->hasValue());
-        auto lux = bh1750->getLux();
-        Serial.printf(F("Current LUX: %f\n"), lux);
-        bh1750->start();
-    }
-}
-void
 setupJoystickBreakout() noexcept {
     if (!pcJoystick.begin(PCJoystick::Address)) {
         Serial.println(F("PC Joystick port not found!"));
@@ -1445,7 +1414,6 @@ void
 setupExternalDevices() noexcept {
     setupRTC();
     setupSI5351();
-    setupBH1750();
     setupJoystickBreakout();
     setupGamepadBreakout();
 }
