@@ -1153,7 +1153,6 @@ setup() {
     }
     configureInterruptSources();
     Serial.begin(SerialBaudRate);
-    Serial1.begin(SerialBaudRate);
     Serial.printf(F("Serial Up @ %ld\n"), SerialBaudRate);
     EEPROM.begin();
     SPI.begin();
@@ -1276,7 +1275,7 @@ PSRAMBackingStore<LS>::begin() noexcept {
                 auto against = storage2[i];
                 auto compare = storage[i];
                 if (against != compare) {
-                    Serial1.printf(F("@0x%x: (in)0x%x != (control)0x%x\n"), i, compare, against);
+                    Serial.printf(F("@0x%x: (in)0x%x != (control)0x%x\n"), i, compare, against);
                 } 
             }
         }
@@ -1314,7 +1313,7 @@ installInitialBootImage() noexcept {
                     psramMemory.write(i, dataBytes, count);
                     // put a blip out every 64k
                     if ((j & 0xFF) == 0) {
-                        Serial1.print('.');
+                        Serial.print('.');
                     }
                 }
                 Serial.println(F("Transfer complete!"));
@@ -1494,6 +1493,7 @@ const struct ush_file_descriptor rootDesc[] = {
 };
 void
 configureMicroshell() noexcept {
+    Serial1.begin(SerialBaudRate);
     ush_init(&ush, &ush_desc);
     ush_node_mount(&ush, "/", &rootNode, rootDesc, sizeof(rootDesc) / sizeof(rootDesc[0]));
     ushConfigured = true;
