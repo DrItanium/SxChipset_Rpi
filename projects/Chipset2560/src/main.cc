@@ -43,6 +43,7 @@
 #include "Pinout.h"
 #include "Setup.h"
 #include "Pins.h"
+#include "OptionalDevice.h"
 
 // stable configuration
 constexpr bool UseDirectPortsForDataLines = true;
@@ -51,31 +52,6 @@ constexpr auto SerialBaudRate = 115200;
 [[gnu::noinline]] void installInitialBootImage() noexcept;
 void configureExternalBus() noexcept;
 
-template<typename T>
-struct OptionalDevice {
-    public:
-        template<typename ... Args>
-            OptionalDevice(Args ... args) : _device(args...) { }
-        constexpr bool valid() const noexcept {
-            return _valid;
-        }
-        auto& get() noexcept {
-            return _device;
-        }
-        template<typename ... Args>
-            bool begin(Args&& ... args) noexcept {
-                _valid = _device.begin(args...);
-                return _valid;
-            }
-        auto& operator*() const noexcept { return _device; }
-        auto* operator->() noexcept { return &_device; }
-        const auto* operator->() const noexcept { return &_device; }
-        explicit operator bool() const noexcept { return _valid; }
-        void disable() noexcept { _valid = false; }
-    private:
-        bool _valid = false;
-        T _device;
-};
 
 template<>
 struct OptionalDevice<Adafruit_SI5351> {
