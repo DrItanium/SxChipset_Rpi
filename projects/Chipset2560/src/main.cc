@@ -30,7 +30,6 @@
 #include <EEPROM.h>
 #include <RTClib.h>
 #include <Adafruit_SPITFT.h>
-#include <Adafruit_SI5351.h>
 
 #include "Types.h"
 #include "Pinout.h"
@@ -47,36 +46,8 @@ constexpr auto SerialBaudRate = 115200;
 void configureExternalBus() noexcept;
 
 
-template<>
-struct OptionalDevice<Adafruit_SI5351> {
-    public:
-        template<typename ... Args>
-        OptionalDevice(Args ... args) : _device(args...) { }
-        constexpr bool valid() const noexcept {
-            return _valid;
-        }
-        auto& get() noexcept {
-            return _device;
-        }
-        template<typename ... Args>
-        bool begin(Args&& ... args) noexcept {
-            _valid = (_device.begin(args...) == ERROR_NONE);
-            return _valid;
-        }
-        auto& operator*() const noexcept { return _device; }
-        auto* operator->() noexcept { return &_device; }
-        const auto* operator->() const noexcept { return &_device; }
-        explicit operator bool() const noexcept { return _valid; }
-        void disable() noexcept { _valid = false; }
-    private:
-        bool _valid = false;
-        Adafruit_SI5351 _device;
-};
-
-
 // use a ds3231 chip
 OptionalDevice<RTC_DS3231> rtc;
-OptionalDevice<Adafruit_SI5351> externalClockGenerator;
 SeesawDevice pcJoystick{&Wire};
 SeesawDevice gamepad{&Wire};
 
@@ -636,19 +607,6 @@ handleSerialDeviceInterface(uint8_t offset, HardwareSerial& device) noexcept {
             break;
     }
 }
-template<bool readOperation>
-inline void 
-handleSi5351Operation(uint8_t offset) noexcept {
-    // @todo implement
-    switch (offset) {
-        case 0x00:
-            handleAvailableRequest<readOperation>(externalClockGenerator);
-            break;
-        default:
-            doNothingOperation<readOperation>();
-            break;
-    }
-}
 
 
 template<bool readOperation>
@@ -1071,16 +1029,13 @@ doIOTransaction(SplitWord32 address) noexcept {
         case 0x70 ... 0x7F:
             handleEEPROMDevice<readOperation>(address.halves[0]);
             break;
-        case 0x81:
+        case 0x80:
             doRTCOperation<readOperation>(address.bytes[0]);
             break;
-        case 0x85:
-            handleSi5351Operation<readOperation>(address.bytes[0]);
-            break;
-        case 0x87:
+        case 0x81:
             handlePCJoystickOperation<readOperation>(address.bytes[0]);
             break;
-        case 0x88:
+        case 0x82:
             handleGamepadQtOperation<readOperation>(address.bytes[0]);
         default:
             doNothingOperation<readOperation>();
@@ -1366,15 +1321,6 @@ setupRTC() noexcept {
     }
 }
 void
-setupSI5351() noexcept {
-    if (!externalClockGenerator.begin()) {
-        Serial.println(F("Couldn't find a SI5351 device!"));
-    } else {
-        Serial.println(F("Found a SI5351 device!"));
-        /// @todo configure clock generator outputs?
-    }
-}
-void
 setupJoystickBreakout() noexcept {
     if (!pcJoystick.begin(PCJoystick::Address)) {
         Serial.println(F("PC Joystick port not found!"));
@@ -1413,7 +1359,6 @@ setupGamepadBreakout() noexcept {
 void
 setupExternalDevices() noexcept {
     setupRTC();
-    setupSI5351();
     setupJoystickBreakout();
     setupGamepadBreakout();
 }
