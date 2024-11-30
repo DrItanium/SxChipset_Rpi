@@ -84,9 +84,8 @@ struct FixedCacheLine {
     static constexpr auto NumBytes = 16;
     static constexpr auto ShiftAmount = 4;
     static constexpr auto AddressMask = 0xFFFF'FFF0;
-    static constexpr auto ByteOffsetMask = static_cast<uint8_t>(~AddressMask);
     static constexpr Address_t normalizeAddress(Address_t input) noexcept { return input & AddressMask; }
-    static constexpr uint8_t computeByteOffset(uint8_t input) noexcept { return input & ByteOffsetMask; }
+    static constexpr uint8_t computeByteOffset(uint8_t input) noexcept { return static_cast<uint8_t>(input) & 0x0F; }
     constexpr bool dirty() const noexcept { return (_flags & FlagDirty); }
     
     bool matches(Address_t other) const volatile noexcept { 
@@ -113,6 +112,16 @@ struct FixedCacheLine {
         for (auto i = 0u; i < NumBytes; ++i) {
             _bytes[i] = 0;
         }
+    }
+    volatile uint8_t* sync(Address_t newAddress) volatile noexcept {
+        if (auto normalized = normalizeAddress(newAddress); valid()) {
+            if (!matches(normalized)) {
+                replace(normalized);
+            }
+        } else {
+            load(normalized);
+        }
+        return &_bytes[computeByteOffset(newAddress)];
     }
     [[nodiscard]] volatile uint8_t* getLineData(uint8_t offset = 0) volatile noexcept { return &_bytes[offset]; }
     void markDirty() volatile noexcept { _flags |= FlagDirty ; }
@@ -145,37 +154,6 @@ static_assert(sizeof(CH351) == 8);
     CH351 dataLines;
 } interface960;
 
-class ExternalCacheLineInterface {
-    public:
-        using Line_t = FixedCacheLine;
-        using Address_t = typename Line_t::Address_t;
-        void begin() noexcept {
-            if (!_initialized) {
-                _initialized = true;
-            }
-        }
-        static constexpr Address_t normalizeAddress(Address_t address) noexcept {
-            return Line_t::normalizeAddress(address);
-        }
-        static constexpr uint8_t computeOffset(uint8_t input) noexcept {
-            return Line_t::computeByteOffset(input);
-        }
-        void sync(Address_t address) noexcept {
-            // we've already selected the line via hardware acceleration
-            if (auto addr = normalizeAddress(address); externalCacheLine.valid()) {
-                if (!externalCacheLine.matches(addr)) {
-                    externalCacheLine.replace(addr);
-                }
-            } else {
-                externalCacheLine.load(addr);
-            }
-        }
-    private:
-        bool _initialized = false;
-};
-using DataCache = ExternalCacheLineInterface;
-
-DataCache cacheInterface;
 
 
 template<typename T, typename V>
@@ -194,7 +172,6 @@ union SplitWord32 {
     constexpr SplitWord32(uint32_t value = 0) : full(value) { }
     constexpr SplitWord32(uint8_t a, uint8_t b, uint8_t c, uint8_t d) : bytes{a, b, c, d} { }
     constexpr bool isIOOperation() const noexcept { return bytes[3] == 0xFE; }
-    constexpr auto getCacheOffset() const noexcept { return DataCache::computeOffset(bytes[0]); }
 };
 static_assert(sizeof(SplitWord32) == sizeof(uint32_t));
 
@@ -1004,8 +981,7 @@ template<bool readOperation>
 inline void
 doMemoryTransaction(SplitWord32 address) noexcept {
     using MemoryPointer = volatile uint8_t*;
-    cacheInterface.sync(address.full);
-    MemoryPointer ptr = externalCacheLine.getLineData(address.getCacheOffset());
+    MemoryPointer ptr = externalCacheLine.sync(address.full);
     do {
         if constexpr (readOperation) {
             auto lo = ptr[0];
@@ -1250,7 +1226,6 @@ setup() {
     SPI.begin();
     Wire.begin();
     Wire.setClock(Deception::TWI_ClockRate);
-    cacheInterface.begin();
     psramMemory.begin();
     installInitialBootImage();
     setupExternalDevices();
