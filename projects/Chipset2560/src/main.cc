@@ -29,6 +29,7 @@
 #include <SD.h>
 #include <EEPROM.h>
 #include <RTClib.h>
+#include <microshell.h>
 
 #include "Types.h"
 #include "Pinout.h"
@@ -1138,6 +1139,7 @@ configurePins() noexcept {
 void sanityCheckHardwareAcceleratedCacheLine() noexcept;
 void setupExternalDevices() noexcept;
 void configureRandomSeed() noexcept;
+void configureMicroshell() noexcept;
 void
 setup() {
     configureRandomSeed();
@@ -1151,8 +1153,9 @@ setup() {
     }
     configureInterruptSources();
     Serial.begin(SerialBaudRate);
-    Serial.print(F("Serial Up @ "));
-    Serial.println(SerialBaudRate);
+    Serial1.begin(SerialBaudRate);
+    Serial.printf(F("Serial Up @ %ld\n"), SerialBaudRate);
+    Serial1.printf(F("Serial Up @ %ld\n"), SerialBaudRate);
     EEPROM.begin();
     SPI.begin();
     Wire.begin();
@@ -1160,6 +1163,7 @@ setup() {
     psramMemory.begin();
     installInitialBootImage();
     setupExternalDevices();
+    configureMicroshell();
     CommunicationPrimitive.waitForBackingStoreIdle();
     sanityCheckHardwareAcceleratedCacheLine();
     // do not cache anything to start with as we should instead just be ready
@@ -1169,19 +1173,19 @@ setup() {
 }
 void
 setupRTC() noexcept {
-    Serial.println(F("Setting up RTC"));
+    Serial1.println(F("Setting up RTC"));
     // setup the RTC
     if (!rtc.begin()) {
-        Serial.println(F("Couldn't find RTC"));
-        Serial.flush();
+        Serial1.println(F("Couldn't find RTC"));
+        Serial1.flush();
     } else {
         if (rtc->lostPower()) {
-            Serial.println(F("RTC lost power, setting time"));
+            Serial1.println(F("RTC lost power, setting time"));
             rtc->adjust(DateTime(F(__DATE__), F(__TIME__)));
         }
 
         DateTime now = rtc->now();
-        Serial.printf(F(" since midnight 1/1/1970 = %lds = %ldd\n"), now.unixtime(), now.unixtime() / 86400L);
+        Serial1.printf(F(" since midnight 1/1/1970 = %lds = %ldd\n"), now.unixtime(), now.unixtime() / 86400L);
     }
 }
 void
@@ -1193,7 +1197,9 @@ loop() {
     do {
         // clear the READY signal interrupt ahead of waiting for the last
         clearREADYInterrupt();
-        do { } while (bit_is_clear(EIFR, ADSFLAG));
+        do { 
+            yield();
+        } while (bit_is_clear(EIFR, ADSFLAG));
         clearADSInterrupt();
         if (auto address = getAddress(); isReadOperation()) {
             configureDataLinesForRead();
@@ -1259,7 +1265,7 @@ PSRAMBackingStore<LS>::begin() noexcept {
             _link.transfer(tmp.bytes, 8);
             digitalWrite<Pins::PSRAM_EN, HIGH>();
             delay(100);
-            Serial.printf(F("MFID: 0x%x, KGD: 0x%x, EIDHi: 0x%x, EIDLo: 0x%lx\n"), tmp.mfid, tmp.kgd, tmp.eidHi, tmp.eidLo);
+            Serial1.printf(F("MFID: 0x%x, KGD: 0x%x, EIDHi: 0x%x, EIDLo: 0x%lx\n"), tmp.mfid, tmp.kgd, tmp.eidHi, tmp.eidLo);
         }
         if (performSanityChecking) {
             // now we need to do some amount of sanity checking to see if we can do
@@ -1279,7 +1285,7 @@ PSRAMBackingStore<LS>::begin() noexcept {
                 auto against = storage2[i];
                 auto compare = storage[i];
                 if (against != compare) {
-                    Serial.printf(F("@0x%x: (in)0x%x != (control)0x%x\n"), i, compare, against);
+                    Serial1.printf(F("@0x%x: (in)0x%x != (control)0x%x\n"), i, compare, against);
                 } 
             }
         }
@@ -1299,16 +1305,16 @@ PSRAMBackingStore<LS>::begin() noexcept {
 void
 installInitialBootImage() noexcept {
     if (!SD.begin(static_cast<int>(Pins::SD_EN))) {
-        Serial.println(F("No SDCard found!"));
+        Serial1.println(F("No SDCard found!"));
     } else {
-        Serial.println(F("Found an SDCard, will try to transfer the contents of prog.bin to onboard psram"));
+        Serial1.println(F("Found an SDCard, will try to transfer the contents of prog.bin to onboard psram"));
         auto f = SD.open(F("prog.bin"), FILE_READ); 
         if (!f) {
-            Serial.println(F("Could not open prog.bin...skipping!"));
+            Serial1.println(F("Could not open prog.bin...skipping!"));
         } else {
-            Serial.println(F("Found prog.bin..."));
+            Serial1.println(F("Found prog.bin..."));
             if (f.size() <= 0x0100'0000) {
-                Serial.println(F("Transferring prog.bin to memory"));
+                Serial1.println(F("Transferring prog.bin to memory"));
                 static constexpr auto ByteCount = 32;
                 uint8_t dataBytes[ByteCount] = { 0 };
                 for (uint32_t i = 0, j = 0; i < f.size(); i+=ByteCount, ++j) {
@@ -1317,18 +1323,18 @@ installInitialBootImage() noexcept {
                     psramMemory.write(i, dataBytes, count);
                     // put a blip out every 64k
                     if ((j & 0xFF) == 0) {
-                        Serial.print('.');
+                        Serial1.print('.');
                     }
                 }
-                Serial.println(F("Transfer complete!"));
-                Serial.println(F("Header Contents:"));
+                Serial1.println(F("Transfer complete!"));
+                Serial1.println(F("Header Contents:"));
                 psramMemory.read(0, dataBytes, ByteCount);
                 auto* header = reinterpret_cast<uint32_t*>(dataBytes);
                 for (size_t i = 0; i < (ByteCount / sizeof(uint32_t)); ++i) {
-                    Serial.printf(F("\t0x%x: 0x%x\n"), i, header[i]);
+                    Serial1.printf(F("\t0x%x: 0x%x\n"), i, header[i]);
                 }
             } else {
-                Serial.println(F("prog.bin is too large to fit in 16 megabytes!"));
+                Serial1.println(F("prog.bin is too large to fit in 16 megabytes!"));
             }
             f.close();
         }
@@ -1386,16 +1392,16 @@ PSRAMBackingStore<LS>::write(Address addr, uint8_t* storage, size_t count) noexc
 
 void
 sanityCheckHardwareAcceleratedCacheLine() noexcept {
-    Serial.println(F("Using External Hardware Accelerated Cache!"));
-    Serial.println(F("Zeroing out cache memory"));
+    Serial1.println(F("Using External Hardware Accelerated Cache!"));
+    Serial1.println(F("Zeroing out cache memory"));
     for (uint32_t i = 0; i < (1024ul * 1024ul); i += 16) {
         interface960.addressLines.view32.data = i;
         if (static_cast<uint16_t>(i) == 0) {
-            Serial.print('.');
+            Serial1.print('.');
         }
         externalCacheLine.clear();
     }
-    Serial.println(F("DONE!"));
+    Serial1.println(F("DONE!"));
 }
 
 void 
@@ -1444,5 +1450,52 @@ configureRandomSeed() noexcept {
     randomSeed(newSeed);
 }
 
+int ush_read(struct ush_object* self, char* ch) {
+    if (Serial1.available() > 0) {
+        *ch = Serial1.read();
+        return 1;
+    }
+    return 0;
+}
+
+int ush_write(struct ush_object* self, char ch) {
+    return Serial1.write(ch) == 1;
+}
+
+const struct ush_io_interface ush_iface = {
+    .read = ush_read,
+    .write = ush_write,
+};
 
 
+constexpr auto USH_BUF_IN_SIZE = 32;
+constexpr auto USH_BUF_OUT_SIZE = 32;
+constexpr auto USH_PATH_MAX_SIZE = 128;
+char ush_in_buf[USH_BUF_IN_SIZE];
+char ush_out_buf[USH_BUF_OUT_SIZE];
+bool ushConfigured = false;
+struct ush_object ush;
+
+
+const struct ush_descriptor ush_desc = {
+    .io = &ush_iface,
+    .input_buffer = ush_in_buf,
+    .input_buffer_size = sizeof(ush_in_buf),
+    .output_buffer = ush_out_buf,
+    .output_buffer_size = sizeof(ush_out_buf),
+    .path_max_length = USH_PATH_MAX_SIZE,
+    .hostname = "chipset2560", // this will generate a warning
+};
+
+void
+configureMicroshell() noexcept {
+    ush_init(&ush, &ush_desc);
+    ushConfigured = true;
+
+}
+void
+yield() {
+    if (ushConfigured) {
+        ush_service(&ush);
+    }
+}
