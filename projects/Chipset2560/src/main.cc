@@ -166,9 +166,17 @@ using DataCache = ExternalCacheLineInterface;
 DataCache cacheInterface;
 
 
-union [[gnu::packed]] SplitWord32 {
-    uint8_t bytes[sizeof(uint32_t) / sizeof(uint8_t)];
-    uint16_t halves[sizeof(uint32_t) / sizeof(uint16_t)];
+template<typename T, typename V>
+using TypeView = V[sizeof(T) / sizeof(V)];
+template<typename T>
+using BytesView = TypeView<T, uint8_t>;
+template<typename T>
+using ShortsView = TypeView<T, uint16_t>;
+
+
+union SplitWord32 {
+    BytesView<uint32_t> bytes;
+    ShortsView<uint32_t> halves;
     __uint24 lo24;
     uint32_t full;
     constexpr SplitWord32(uint32_t value = 0) : full(value) { }
@@ -177,6 +185,16 @@ union [[gnu::packed]] SplitWord32 {
     constexpr auto getCacheOffset() const noexcept { return DataCache::computeOffset(bytes[0]); }
 };
 static_assert(sizeof(SplitWord32) == sizeof(uint32_t));
+
+union SplitWord16 {
+    BytesView<uint16_t> bytes;
+    uint16_t full;
+    constexpr SplitWord16(uint16_t value = 0) : full(value) { }
+    constexpr SplitWord16(uint8_t a, uint8_t b) : bytes{a, b} { }
+};
+
+static_assert(sizeof(SplitWord16) == sizeof(uint16_t));
+
 
 
 #define ADSFLAG INTF4
@@ -1014,6 +1032,9 @@ doIOTransaction(SplitWord32 address) noexcept {
         case 0x01:
             handleSerialDeviceInterface<readOperation>(address.bytes[0], Serial);
             break;
+        //case 0x60 ... 0x67: // 2k sram cache
+        //    handleSRAMDevice<readOperation>(address.halves[0]);
+        //    break;
         case 0x70 ... 0x7F:
             handleEEPROMDevice<readOperation>(address.halves[0]);
             break;
