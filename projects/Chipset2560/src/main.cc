@@ -575,21 +575,6 @@ doRTCOperation(uint8_t offset) noexcept {
             break;
     }
 }
-template<bool readOperation>
-inline void
-handleSerialDeviceInterface(uint8_t offset, HardwareSerial& device) noexcept {
-    // this is a wrapper interface over a given hardware serial device
-    // It should provide extra functions for making execution as easy as
-    // possible
-    switch (offset) {
-        case 0x00: // available
-            transmitValue<readOperation>(true, TreatAs<bool>{});
-            break;
-        default:
-            doNothingOperation<readOperation>();
-            break;
-    }
-}
 
 template<bool readOperation>
 inline void
@@ -906,77 +891,6 @@ handleSRAMDevice(uint16_t address) noexcept {
     } while (false);
     signalReady();
 }
-struct [[gnu::packed]] DeviceInformation {
-    union {
-        uint8_t bytes[16];
-        uint16_t shorts[8];
-        uint32_t words[4];
-        uint64_t longs[2];
-        struct {
-            uint16_t kind;
-            uint16_t size;
-            uint32_t baseAddress;
-        } block;
-    };
-    template<bool readOperation>
-    inline void transmit(uint8_t offset = 0) noexcept {
-        if constexpr (readOperation) {
-            switch (offset & 0b0000'1110) {
-                case 0x0:
-                    setDataValue(shorts[0]);
-                    if (isLastWordOfTransaction()) {
-                        break;
-                    }
-                    signalReady();
-                case 0x2:
-                    setDataValue(shorts[1]);
-                    if (isLastWordOfTransaction()) {
-                        break;
-                    }
-                    signalReady();
-                case 0x4:
-                    setDataValue(shorts[2]);
-                    if (isLastWordOfTransaction()) {
-                        break;
-                    }
-                    signalReady();
-                case 0x6:
-                    setDataValue(shorts[3]);
-                    if (isLastWordOfTransaction()) {
-                        break;
-                    }
-                    signalReady();
-                case 0x8:
-                    setDataValue(shorts[4]);
-                    if (isLastWordOfTransaction()) {
-                        break;
-                    }
-                    signalReady();
-                case 0xa:
-                    setDataValue(shorts[5]);
-                    if (isLastWordOfTransaction()) {
-                        break;
-                    }
-                    signalReady();
-                case 0xc:
-                    setDataValue(shorts[6]);
-                    if (isLastWordOfTransaction()) {
-                        break;
-                    }
-                    signalReady();
-                case 0xe:
-                    setDataValue(shorts[7]);
-                    break;
-            }
-            signalReady();
-        } else {
-            doNothingOperation<readOperation>();
-        }
-    }
-};
-static_assert(sizeof(DeviceInformation) == 16);
-
-
 
 
 template<bool readOperation>
@@ -1009,20 +923,32 @@ handleBuiltinDevices(uint8_t offset) noexcept {
         case 0x14:
             transmitValue<readOperation>(micros(), TreatAs<uint32_t>{});
             break;
-        case 0x18: // EEPROM Base Address
-            transmitValue<readOperation>(0xFE001000, TreatAs<uint32_t>{});
-            break;
-        case 0x1c: // SRAM Base Address
-            transmitValue<readOperation>(0xFE000800, TreatAs<uint32_t>{});
-            break;
-        case 0x20: // RTC Base Address
-            transmitValue<readOperation>(0xFE000200, TreatAs<uint32_t>{});
-            break;
-        case 0x24: // EEPROM Capacity
+        case 0x18: // EEPROM Capacity
             transmitValue<readOperation>(EEPROM.length(), TreatAs<uint16_t>{});
             break;
-        case 0x26: // SRAM Capacity
+        case 0x1a: // SRAM Capacity
             transmitValue<readOperation>(SRAMCacheCapacity, TreatAs<uint16_t>{});
+            break;
+        case 0x20: // unixtime
+            transmitValue<readOperation>(rtc->now().unixtime(), TreatAs<uint32_t>{});
+            break;
+        case 0x24: // secondstime
+            transmitValue<readOperation>(rtc->now().secondstime(), TreatAs<uint32_t>{});
+            break;
+        case 0x28: // temperature
+            transmitValue<readOperation>(rtc->getTemperature(), TreatAs<float>{});
+            break;
+        case 0x2c: // 32k configure, read returns enabled, write configures
+            if constexpr (readOperation) {
+                transmitValue<readOperation>(rtc->isEnabled32K(), TreatAs<bool>{});
+            } else {
+                if (lowerData() != 0) {
+                    rtc->enable32K();
+                } else {
+                    rtc->disable32K();
+                }
+                doNothingOperation<readOperation>();
+            }
             break;
         default:
             doNothingOperation<readOperation>();
@@ -1036,12 +962,6 @@ doIOTransaction(SplitWord32 address) noexcept {
     switch (address.bytes[1]) {
         case 0x00:
             handleBuiltinDevices<readOperation>(address.bytes[0]);
-            break;
-        case 0x01:
-            handleSerialDeviceInterface<readOperation>(address.bytes[0], Serial);
-            break;
-        case 0x02:
-            doRTCOperation<readOperation>(address.bytes[0]);
             break;
         case 0x08 ... 0x0F: // 2k sram cache
             handleSRAMDevice<readOperation>(address.halves[0]);
