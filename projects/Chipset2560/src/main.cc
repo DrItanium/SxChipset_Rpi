@@ -36,7 +36,6 @@
 #include "Setup.h"
 #include "Pins.h"
 #include "OptionalDevice.h"
-#include "SeesawDevices.h"
 
 // stable configuration
 constexpr bool UseDirectPortsForDataLines = true;
@@ -48,8 +47,6 @@ void configureExternalBus() noexcept;
 
 // use a ds3231 chip
 OptionalDevice<RTC_DS3231> rtc;
-SeesawDevice pcJoystick{&Wire};
-SeesawDevice gamepad{&Wire};
 
 
 template<uint32_t LS>
@@ -608,82 +605,6 @@ handleSerialDeviceInterface(uint8_t offset, HardwareSerial& device) noexcept {
     }
 }
 
-
-template<bool readOperation>
-inline void 
-handlePCJoystickOperation(uint8_t offset) noexcept {
-    // @todo implement
-    switch (offset) {
-        case 0x00:
-            handleAvailableRequest<readOperation>(pcJoystick);
-            break;
-        case 0x04: // version
-            transmitValue<readOperation>(pcJoystick->getVersion(), TreatAs<uint32_t>{});
-            break;
-        case 0x06: // version upper
-            transmitValue<readOperation>(static_cast<uint16_t>(pcJoystick->getVersion() >> 16), TreatAs<uint16_t>{});
-            break;
-        case 0x08: // options
-            transmitValue<readOperation>(pcJoystick->getOptions(), TreatAs<uint32_t>{});
-            break;
-        case 0x0C: // button mask
-            transmitValue<readOperation>(PCJoystick::ButtonMask, TreatAs<uint32_t>{});
-            break;
-        case 0x10:
-            transmitValue<readOperation>(pcJoystick->analogRead(PCJoystick::Joy1_X), TreatAs<float>{});
-            break;
-        case 0x14:
-            transmitValue<readOperation>(pcJoystick->analogRead(PCJoystick::Joy1_Y), TreatAs<float>{});
-            break;
-        case 0x18:
-            transmitValue<readOperation>(pcJoystick->analogRead(PCJoystick::Joy2_X), TreatAs<float>{});
-            break;
-        case 0x1C:
-            transmitValue<readOperation>(pcJoystick->analogRead(PCJoystick::Joy2_Y), TreatAs<float>{});
-            break;
-        case 0x20: // buttons
-            transmitValue<readOperation>(pcJoystick->digitalReadBulk(PCJoystick::ButtonMask), TreatAs<uint32_t>{});
-            break;
-        default:
-            doNothingOperation<readOperation>();
-            break;
-    }
-}
-
-template<bool readOperation>
-inline void 
-handleGamepadQtOperation(uint8_t offset) noexcept {
-    // @todo implement
-    switch (offset) {
-        case 0x00:
-            handleAvailableRequest<readOperation>(gamepad);
-            break;
-        case 0x04: // version
-            transmitValue<readOperation>(gamepad->getVersion(), TreatAs<uint32_t>{});
-            break;
-        case 0x06: // version upper
-            transmitValue<readOperation>(static_cast<uint16_t>(gamepad->getVersion() >> 16), TreatAs<uint16_t>{});
-            break;
-        case 0x08: // options
-            transmitValue<readOperation>(gamepad->getOptions(), TreatAs<uint32_t>{});
-            break;
-        case 0x0C: // button mask
-            transmitValue<readOperation>(GamepadQt::ButtonMask, TreatAs<uint32_t>{});
-            break;
-        case 0x10:
-            transmitValue<readOperation>(1023 - gamepad->analogRead(GamepadQt::Joy_X), TreatAs<int16_t>{});
-            break;
-        case 0x12:
-            transmitValue<readOperation>(1023 - gamepad->analogRead(GamepadQt::Joy_Y), TreatAs<int16_t>{});
-            break;
-        case 0x20: // buttons
-            transmitValue<readOperation>(gamepad->digitalReadBulk(GamepadQt::ButtonMask), TreatAs<uint32_t>{});
-            break;
-        default:
-            doNothingOperation<readOperation>();
-            break;
-    }
-}
 template<bool readOperation>
 inline void
 handleEEPROMDevice(uint16_t index) noexcept {
@@ -1018,12 +939,6 @@ doIOTransaction(SplitWord32 address) noexcept {
         case 0x80:
             doRTCOperation<readOperation>(address.bytes[0]);
             break;
-        case 0x81:
-            handlePCJoystickOperation<readOperation>(address.bytes[0]);
-            break;
-        case 0x82:
-            handleGamepadQtOperation<readOperation>(address.bytes[0]);
-            break;
         default:
             doNothingOperation<readOperation>();
             break;
@@ -1308,46 +1223,8 @@ setupRTC() noexcept {
     }
 }
 void
-setupJoystickBreakout() noexcept {
-    if (!pcJoystick.begin(PCJoystick::Address)) {
-        Serial.println(F("PC Joystick port not found!"));
-    } else {
-        uint32_t version = ((pcJoystick->getVersion() >> 16) & 0xFFFF);
-        if (version != PCJoystick::Version) {
-            Serial.printf(F("Wrong firmware loaded? %lu\n"), version);
-            pcJoystick.disable();
-            return;
-        }
-        Serial.println(F("PC Joystick port found!"));
-        // configure everything as needed
-        pcJoystick->pinModeBulk(PCJoystick::ButtonMask, INPUT_PULLUP);
-        pcJoystick->setGPIOInterrupts(PCJoystick::ButtonMask, 1);
-        /// @todo enable interrupts eventually?
-    }
-}
-void
-setupGamepadBreakout() noexcept {
-    if (!gamepad.begin(GamepadQt::Address)) {
-        Serial.println(F("GamepadQt not found!"));
-    } else {
-        uint32_t version = ((gamepad->getVersion() >> 16) & 0xFFFF);
-        if (version != GamepadQt::Version) {
-            Serial.printf(F("Wrong firmware loaded? %lu\n"), version);
-            gamepad.disable();
-            return;
-        }
-        Serial.println(F("GamepadQt found!"));
-        // configure everything as needed
-        gamepad->pinModeBulk(GamepadQt::ButtonMask, INPUT_PULLUP);
-        gamepad->setGPIOInterrupts(GamepadQt::ButtonMask, 1);
-        /// @todo enable interrupts eventually?
-    }
-}
-void
 setupExternalDevices() noexcept {
     setupRTC();
-    setupJoystickBreakout();
-    setupGamepadBreakout();
 }
 void 
 loop() {
