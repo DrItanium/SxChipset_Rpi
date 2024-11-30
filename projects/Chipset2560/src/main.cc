@@ -576,44 +576,6 @@ doRTCOperation(uint8_t offset) noexcept {
     }
 }
 template<bool readOperation>
-inline void 
-handleBuiltinDevices(uint8_t offset) noexcept {
-    switch (offset) {
-        case 0x0:
-            transmitValue<readOperation>(F_CPU, TreatAs<uint32_t>{});
-            break;
-        case 0x4:
-            transmitValue<readOperation>(F_CPU / 2, TreatAs<uint32_t>{});
-            break;
-        case 0x8:
-            if constexpr (readOperation) {
-                send16BitValue(Serial.read());
-            } else {
-                Serial.write(lowerData());
-                doNothingOperation<readOperation>();
-            }
-            break;
-        case 0xC:
-            if constexpr (!readOperation) {
-                Serial.flush();
-            }
-            doNothingOperation<readOperation>();
-            break;
-        case 0x40:
-            transmitValue<readOperation>(millis(), TreatAs<uint32_t>{});
-            break;
-        case 0x44:
-            transmitValue<readOperation>(micros(), TreatAs<uint32_t>{});
-            break;
-        case 0x80: // EEPROM Capacity
-            transmitValue<readOperation>(EEPROM.length(), TreatAs<uint16_t>{});
-            break;
-        default:
-            doNothingOperation<readOperation>();
-            break;
-    }
-}
-template<bool readOperation>
 inline void
 handleSerialDeviceInterface(uint8_t offset, HardwareSerial& device) noexcept {
     // this is a wrapper interface over a given hardware serial device
@@ -754,7 +716,8 @@ handleEEPROMDevice(uint16_t index) noexcept {
     } while (false);
     signalReady();
 }
-uint8_t sramCache[2048] = { 0 };
+constexpr auto SRAMCacheCapacity = 2048;
+uint8_t sramCache[SRAMCacheCapacity] = { 0 };
 template<bool readOperation>
 inline void
 handleSRAMDevice(uint16_t address) noexcept {
@@ -942,6 +905,47 @@ handleSRAMDevice(uint16_t address) noexcept {
         }
     } while (false);
     signalReady();
+}
+template<bool readOperation>
+inline void 
+handleBuiltinDevices(uint8_t offset) noexcept {
+    switch (offset) {
+        case 0x00:
+            transmitValue<readOperation>(F_CPU, TreatAs<uint32_t>{});
+            break;
+        case 0x04:
+            transmitValue<readOperation>(F_CPU / 2, TreatAs<uint32_t>{});
+            break;
+        case 0x08:
+            if constexpr (readOperation) {
+                send16BitValue(Serial.read());
+            } else {
+                Serial.write(lowerData());
+                doNothingOperation<readOperation>();
+            }
+            break;
+        case 0x0c:
+            if constexpr (!readOperation) {
+                Serial.flush();
+            }
+            doNothingOperation<readOperation>();
+            break;
+        case 0x10:
+            transmitValue<readOperation>(millis(), TreatAs<uint32_t>{});
+            break;
+        case 0x14:
+            transmitValue<readOperation>(micros(), TreatAs<uint32_t>{});
+            break;
+        case 0x18: // EEPROM Capacity
+            transmitValue<readOperation>(EEPROM.length(), TreatAs<uint16_t>{});
+            break;
+        case 0x1a: // SRAM Capacity
+            transmitValue<readOperation>(SRAMCacheCapacity, TreatAs<uint16_t>{});
+            break;
+        default:
+            doNothingOperation<readOperation>();
+            break;
+    }
 }
 template<bool readOperation>
 inline void
