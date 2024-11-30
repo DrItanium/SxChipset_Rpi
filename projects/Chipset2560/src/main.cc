@@ -71,12 +71,59 @@ class PSRAMBackingStore {
         SPIDevice& _link;
 };
 
+
 using PrimaryBackingStore = PSRAMBackingStore<5'000'000>;
 PrimaryBackingStore psramMemory(SPI);
 #define CommunicationPrimitive psramMemory
 // this is a special case cache line implementation so we can be very specific
-using CacheLine = Deception::CacheLine16<uint32_t, PrimaryBackingStore>;
-[[gnu::address(0xFF00)]] volatile CacheLine externalCacheLine;
+struct FixedCacheLine {
+    using Address_t = uint32_t;
+    static constexpr uint8_t FlagValid = 0b0000'0001;
+    static constexpr uint8_t FlagDirty = 0b0000'0010;
+    static constexpr uint8_t FlagReplace = FlagValid | FlagDirty;
+    static constexpr auto NumBytes = 16;
+    static constexpr auto ShiftAmount = 4;
+    static constexpr auto AddressMask = 0xFFFF'FFF0;
+    static constexpr auto ByteOffsetMask = static_cast<uint8_t>(~AddressMask);
+    static constexpr Address_t normalizeAddress(Address_t input) noexcept { return input & AddressMask; }
+    static constexpr uint8_t computeByteOffset(uint8_t input) noexcept { return input & ByteOffsetMask; }
+    constexpr bool dirty() const noexcept { return (_flags & FlagDirty); }
+    
+    bool matches(Address_t other) const volatile noexcept { 
+        // only need to compare the upper halves of the key to the other
+        return valid() && (static_cast<uint16_t>(_key >> 16) == static_cast<uint16_t>(other >> 16)); 
+    }
+    void replace(Address_t newAddress) volatile noexcept {
+        if (_flags >= FlagReplace) {
+            // just do a compare of the two parts valid and dirty if we
+            // hit 3 or greater then it means we have to perform the
+            // replacement
+            (void)CommunicationPrimitive.write(_key, const_cast<uint8_t*>(_bytes), NumBytes);
+        }
+        load(newAddress);
+    }
+    void load(Address_t newAddress) volatile noexcept {
+        _flags = FlagValid;
+        _key = newAddress;
+        (void)CommunicationPrimitive.read(_key, const_cast<uint8_t*>(_bytes), NumBytes);
+    }
+    void clear() volatile noexcept {
+        _key = 0;
+        _flags = 0;
+        for (auto i = 0u; i < NumBytes; ++i) {
+            _bytes[i] = 0;
+        }
+    }
+    [[nodiscard]] volatile uint8_t* getLineData(uint8_t offset = 0) volatile noexcept { return &_bytes[offset]; }
+    void markDirty() volatile noexcept { _flags |= FlagDirty ; }
+    [[nodiscard]] bool valid() const volatile noexcept { return (_flags & FlagValid); }
+    [[nodiscard]] auto getKey() const volatile noexcept { return _key; }
+    private:
+        uint8_t _bytes[NumBytes];
+        Address_t _key;
+        uint8_t _flags;
+};
+[[gnu::address(0xFF00)]] volatile FixedCacheLine externalCacheLine;
 union [[gnu::packed]] CH351 {
     struct {
         uint32_t data;
@@ -100,9 +147,8 @@ static_assert(sizeof(CH351) == 8);
 
 class ExternalCacheLineInterface {
     public:
-        using Line_t = CacheLine;
+        using Line_t = FixedCacheLine;
         using Address_t = typename Line_t::Address_t;
-        using BackingStore_t = typename Line_t::BackingStore_t;
         void begin() noexcept {
             if (!_initialized) {
                 _initialized = true;
@@ -114,11 +160,11 @@ class ExternalCacheLineInterface {
         static constexpr uint8_t computeOffset(uint8_t input) noexcept {
             return Line_t::computeByteOffset(input);
         }
-        void sync(BackingStore_t& store, Address_t address) noexcept {
+        void sync(Address_t address) noexcept {
             // we've already selected the line via hardware acceleration
             auto addr = normalizeAddress(address);
             if (!externalCacheLine.matches(addr)) {
-                externalCacheLine.replace(store, addr);
+                externalCacheLine.replace(addr);
             } 
         }
     private:
@@ -955,7 +1001,7 @@ template<bool readOperation>
 inline void
 doMemoryTransaction(SplitWord32 address) noexcept {
     using MemoryPointer = volatile uint8_t*;
-    cacheInterface.sync(CommunicationPrimitive, address.full);
+    cacheInterface.sync(address.full);
     MemoryPointer ptr = externalCacheLine.getLineData(address.getCacheOffset());
     do {
         if constexpr (readOperation) {
@@ -1398,7 +1444,7 @@ PSRAMBackingStore<LS>::setAddress(Address address) noexcept {
 }
 
 template<uint32_t LS>
-size_t
+inline size_t
 PSRAMBackingStore<LS>::read(Address addr, uint8_t* storage, size_t count) noexcept {
     setAddress(addr);
     _link.beginTransaction(SPISettings{LS, MSBFIRST, SPI_MODE0});
@@ -1414,7 +1460,7 @@ PSRAMBackingStore<LS>::read(Address addr, uint8_t* storage, size_t count) noexce
 }
 
 template<uint32_t LS>
-size_t
+inline size_t
 PSRAMBackingStore<LS>::write(Address addr, uint8_t* storage, size_t count) noexcept {
     setAddress(addr);
     _link.beginTransaction(SPISettings{LS, MSBFIRST, SPI_MODE0});
