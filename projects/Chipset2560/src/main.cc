@@ -32,7 +32,6 @@
 #include <Adafruit_Si7021.h>
 #include <Adafruit_LTR390.h>
 #include <Adafruit_SPITFT.h>
-#include <Adafruit_seesaw.h>
 #include <Adafruit_CCS811.h>
 #include <Adafruit_AHTX0.h>
 #include <Adafruit_SI5351.h>
@@ -44,6 +43,7 @@
 #include "Setup.h"
 #include "Pins.h"
 #include "OptionalDevice.h"
+#include "SeesawDevices.h"
 
 // stable configuration
 constexpr bool UseDirectPortsForDataLines = true;
@@ -88,37 +88,9 @@ OptionalDevice<Adafruit_CCS811> ccs;
 OptionalDevice<Adafruit_AHTX0> aht;
 OptionalDevice<Adafruit_SI5351> externalClockGenerator;
 OptionalDevice<hp_BH1750> bh1750;
-OptionalDevice<Adafruit_seesaw> pcJoystick{&Wire};
-OptionalDevice<Adafruit_seesaw> gamepad{&Wire};
+SeesawDevice pcJoystick{&Wire};
+SeesawDevice gamepad{&Wire};
 
-namespace PCJoystick {
-    constexpr auto Address = 0x49;
-    constexpr auto Button1 = 3;
-    constexpr auto Button2 = 13;
-    constexpr auto Button3 = 2;
-    constexpr auto Button4 = 14;
-    constexpr uint32_t ButtonMask = (1ul << Button1) | (1ul << Button2) | (1ul << Button3) | (1ul << Button4);
-    constexpr auto Joy1_X = 1;
-    constexpr auto Joy1_Y = 15;
-    constexpr auto Joy2_X = 0;
-    constexpr auto Joy2_Y = 16;
-    constexpr auto EnableInterrupt = false;
-    constexpr uint32_t Version = 5753;
-}
-namespace GamepadQt {
-    constexpr auto Address = 0x50;
-    constexpr auto ButtonX = 6;
-    constexpr auto ButtonY = 2;
-    constexpr auto ButtonA = 5;
-    constexpr auto ButtonB = 1;
-    constexpr auto ButtonSelect = 0;
-    constexpr auto ButtonStart = 16;
-    constexpr uint32_t ButtonMask = (1ul << ButtonX) | (1ul << ButtonY) | (1ul << ButtonA) | (1ul << ButtonB) | (1ul << ButtonSelect) | (1ul << ButtonStart);
-    constexpr auto EnableInterrupt = false;
-    constexpr auto Joy_X = 14;
-    constexpr auto Joy_Y = 15;
-    constexpr uint32_t Version = 5743;
-}
 
 template<uint32_t LS>
 class PSRAMBackingStore {
