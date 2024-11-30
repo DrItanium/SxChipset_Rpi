@@ -1037,6 +1037,7 @@ doIOTransaction(SplitWord32 address) noexcept {
             break;
         case 0x82:
             handleGamepadQtOperation<readOperation>(address.bytes[0]);
+            break;
         default:
             doNothingOperation<readOperation>();
             break;
