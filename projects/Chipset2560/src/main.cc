@@ -753,9 +753,7 @@ handleEEPROMDevice(uint16_t index) noexcept {
                 break;
             }
             signalReady();
-            if (lowerByteEnabled()) {
-                EEPROM.update(index+2, lowerData());
-            }
+            EEPROM.update(index+2, lowerData());
             if (upperByteEnabled()) {
                 EEPROM.update(index+3, upperData());
             }
@@ -763,9 +761,7 @@ handleEEPROMDevice(uint16_t index) noexcept {
                 break;
             }
             signalReady();
-            if (lowerByteEnabled()) {
-                EEPROM.update(index+4, lowerData());
-            }
+            EEPROM.update(index+4, lowerData());
             if (upperByteEnabled()) {
                 EEPROM.update(index+5, upperData());
             }
@@ -773,9 +769,7 @@ handleEEPROMDevice(uint16_t index) noexcept {
                 break;
             }
             signalReady();
-            if (lowerByteEnabled()) {
-                EEPROM.update(index+6, lowerData());
-            }
+            EEPROM.update(index+6, lowerData());
             if (upperByteEnabled()) {
                 EEPROM.update(index+7, upperData());
             }
@@ -783,9 +777,7 @@ handleEEPROMDevice(uint16_t index) noexcept {
                 break;
             }
             signalReady();
-            if (lowerByteEnabled()) {
-                EEPROM.update(index+8, lowerData());
-            }
+            EEPROM.update(index+8, lowerData());
             if (upperByteEnabled()) {
                 EEPROM.update(index+9, upperData());
             }
@@ -793,9 +785,7 @@ handleEEPROMDevice(uint16_t index) noexcept {
                 break;
             }
             signalReady();
-            if (lowerByteEnabled()) {
-                EEPROM.update(index+10, lowerData());
-            }
+            EEPROM.update(index+10, lowerData());
             if (upperByteEnabled()) {
                 EEPROM.update(index+11, upperData());
             }
@@ -803,9 +793,7 @@ handleEEPROMDevice(uint16_t index) noexcept {
                 break;
             }
             signalReady();
-            if (lowerByteEnabled()) {
-                EEPROM.update(index+12, lowerData());
-            }
+            EEPROM.update(index+12, lowerData());
             if (upperByteEnabled()) {
                 EEPROM.update(index+13, upperData());
             }
@@ -813,9 +801,7 @@ handleEEPROMDevice(uint16_t index) noexcept {
                 break;
             }
             signalReady();
-            if (lowerByteEnabled()) {
-                EEPROM.update(index+14, lowerData());
-            }
+            EEPROM.update(index+14, lowerData());
             if (upperByteEnabled()) {
                 EEPROM.update(index+15, upperData());
             }
