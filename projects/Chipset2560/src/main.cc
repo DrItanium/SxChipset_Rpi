@@ -29,7 +29,6 @@
 #include <SD.h>
 #include <EEPROM.h>
 #include <RTClib.h>
-#include <Adafruit_SPITFT.h>
 
 #include "Types.h"
 #include "Pinout.h"
