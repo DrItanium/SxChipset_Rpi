@@ -489,6 +489,7 @@ inline void handleAvailableRequest(const T& item) noexcept {
 template<bool readOperation>
 inline void
 doRTCOperation(uint8_t offset) noexcept {
+    // you cannot stream data from the rtc device using quad, triple, and long load/store
     switch (offset) {
         case 0x00: // available
             handleAvailableRequest<readOperation>(rtc);
