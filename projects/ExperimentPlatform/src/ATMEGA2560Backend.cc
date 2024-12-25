@@ -1,8 +1,14 @@
+#ifdef ARDUINO_AVR_ATmega2560
 #include <Arduino.h>
 #include <microshell.h>
+#include <Wire.h>
+#include <SPI.h>
+#include <EEPROM.h>
 #include "Concepts.h"
+#ifdef PLATFORM_CHIPSET
+#include <SD.h>
+#endif
 
-#ifdef ARDUINO_AVR_ATmega2560
 struct ush_node_object root;
 const struct ush_file_descriptor rootFiles[] = { };
 struct ush_node_object dev;
@@ -140,14 +146,6 @@ const struct ush_file_descriptor specificCmdFiles[] = {
         },
     },
 };
-uint32_t
-computeRandomSeed() {
-    uint32_t x = 0;
-#define X(id) x += analogRead ( id ) 
-#include <AnalogPins.def>
-#undef X
-    return x;
-}
 
 void
 configureFileSystem(ush_object& ush) {
@@ -172,6 +170,22 @@ configureFileSystem(ush_object& ush) {
 #include <AVRPorts.def>
 #undef X
 #undef RegisterPort
+}
+bool sdCardFound = false;
+void
+targetSpecificSetup() {
+#ifdef PLATFORM_CHIPSET
+    // want to be able to talk to the ClockChip
+    SPI.begin();
+    Wire.begin();
+    if (SD.begin(PIN_PB0)) {
+        Serial.println(F("SD Card Found!"));
+        sdCardFound = true;
+    } else {
+        Serial.println(F("SD Card Not Found!"));
+        sdCardFound = false;
+    }
+#endif
 }
 
 #endif // end defined(ARDUINO_AVR_ATmega2560)

@@ -109,7 +109,6 @@ const struct ush_descriptor ush_desc = {
 
 struct ush_node_object commonCmd;
 
-extern uint32_t computeRandomSeed();
 extern void configureFileSystem(ush_object& obj);
 const struct ush_file_descriptor commonCmdFiles[] = {
     {
@@ -142,9 +141,19 @@ const struct ush_file_descriptor commonCmdFiles[] = {
     },
 };
 
+uint32_t
+computeRandomSeed() {
+    uint32_t x = 0;
+#define X(id) x += analogRead ( id ) 
+#include <AnalogPins.def>
+#undef X
+    return x;
+}
+extern void targetSpecificSetup();
 void 
 setup() {
     Serial.begin(115200);
+    targetSpecificSetup();
     // setup a random source
     currentRandomSeed = computeRandomSeed();
 
