@@ -48,6 +48,18 @@ const struct ush_file_descriptor devFiles[] = {
 #undef X
 #undef AnalogFile
 };
+#define DefVPort(id) \
+const struct ush_file_descriptor gpioVPort ## id ## Files [] = { \
+    ByteFile("in", VPORT ## id . IN ), \
+    ByteFile("out", VPORT ## id . OUT ), \
+    ByteFile("dir", VPORT ## id . DIR ), \
+    ByteFile("intflags", VPORT ## id . INTFLAGS ), \
+}; \
+struct ush_node_object gpioVPort ## id ## Dir 
+#define X(id) DefVPort(id);
+#include <AVRPorts.def>
+#undef X
+#undef DefVPort
 
 struct ush_node_object specificCmd;
 const struct ush_file_descriptor specificCmdFiles[] = {
@@ -136,6 +148,12 @@ configureFileSystem(ush_object& ush) {
     ush_commands_add(&ush, &specificCmd, specificCmdFiles, NELEM(specificCmdFiles));
     ush_node_mount(&ush, "/", &root, rootFiles, NELEM(rootFiles));
     ush_node_mount(&ush, "/dev", &dev, devFiles, NELEM(devFiles));
+#define RegisterPort(path, id) \
+    ush_node_mount(&ush, path , & gpioVPort ## id ## Dir , gpioVPort ## id ## Files , NELEM( gpioVPort ## id ## Files ))
+#define X(index) RegisterPort( "/dev/vport" #index , index );
+#include <AVRPorts.def>
+#undef X
+#undef RegisterPort
 }
 void
 targetSpecificSetup() {
