@@ -156,9 +156,15 @@ const struct ush_file_descriptor devFiles[] = {
         .exec = nullptr, 
         .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) noexcept { return sendDword(PASS_FILE_DESCRIPTOR_ARGS, data, micros()); },
     },
+#ifdef GPIOR0
     ByteFile("gpr0", GPIOR0),
+#endif
+#ifdef GPIOR1
     ByteFile("gpr1", GPIOR1),
+#endif
+#ifdef GPIOR2
     ByteFile("gpr2", GPIOR2),
+#endif
 #define AnalogFile(n, reg) { \
         .name = n ,  \
         .description = nullptr, \
@@ -166,22 +172,9 @@ const struct ush_file_descriptor devFiles[] = {
         .exec = nullptr, \
         .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) noexcept { return sendWord(PASS_FILE_DESCRIPTOR_ARGS, data, analogRead( reg )); }, \
     } 
-    AnalogFile("ana0", A0),
-    AnalogFile("ana1", A1),
-    AnalogFile("ana2", A2),
-    AnalogFile("ana3", A3),
-    AnalogFile("ana4", A4),
-    AnalogFile("ana5", A5),
-    AnalogFile("ana6", A6),
-    AnalogFile("ana7", A7),
-    AnalogFile("ana8", A8),
-    AnalogFile("ana9", A9),
-    AnalogFile("ana10", A10),
-    AnalogFile("ana11", A11),
-    AnalogFile("ana12", A12),
-    AnalogFile("ana13", A13),
-    AnalogFile("ana14", A14),
-    AnalogFile("ana15", A15),
+#define X(pin) AnalogFile(#pin, pin)
+#include <AnalogPins.def>
+#undef X
 #undef AnalogFile
 };
 #define DefTimer(index) \
@@ -197,10 +190,22 @@ const struct ush_file_descriptor timer ## index ## Files [] = { \
     WordFile("ocrc", OCR ## index ## C ), \
 }; \
 struct ush_node_object timer ## index ## Dir 
+#ifdef TCCR1A
 DefTimer(1);
+#define HAVE_TIMER1
+#endif
+#ifdef TCCR3A
 DefTimer(3);
+#define HAVE_TIMER3
+#endif
+#ifdef TCCR4A
 DefTimer(4);
+#define HAVE_TIMER4
+#endif
+#ifdef TCCR5A
 DefTimer(5);
+#define HAVE_TIMER5
+#endif
 #undef DefTimer
 #define DefPort(id) \
 const struct ush_file_descriptor gpioPort ## id ## Files [] = { \
@@ -209,17 +214,9 @@ const struct ush_file_descriptor gpioPort ## id ## Files [] = { \
     ByteFile("dir", DDR ## id ), \
 }; \
 struct ush_node_object gpioPort ## id ## Dir 
-DefPort(A);
-DefPort(B);
-DefPort(C);
-DefPort(D);
-DefPort(E);
-DefPort(F);
-DefPort(G);
-DefPort(H);
-DefPort(J);
-DefPort(K);
-DefPort(L);
+#define X(id) DefPort(id);
+#include <AVRPorts.def>
+#undef X
 #undef DefPort
 const struct ush_file_descriptor cmdFiles[] = {
     {
@@ -237,22 +234,7 @@ const struct ush_file_descriptor cmdFiles[] = {
                 ush_printf(self, "%d\r\n", analogRead ( letter ) ); \
                 return; \
             } 
-            X(A0);
-            X(A1);
-            X(A2);
-            X(A3);
-            X(A4);
-            X(A5);
-            X(A6);
-            X(A7);
-            X(A8);
-            X(A9);
-            X(A10);
-            X(A11);
-            X(A12);
-            X(A13);
-            X(A14);
-            X(A15);
+#include <AnalogPins.def>
 #undef X
         },
     },
@@ -329,23 +311,10 @@ void
 setup() {
     Serial.begin(115200);
     // setup a random source
-    currentRandomSeed = analogRead(A0);
+    currentRandomSeed = 0;
+
 #define X(id) currentRandomSeed += analogRead ( id ) 
-    X(A1);
-    X(A2);
-    X(A3);
-    X(A4);
-    X(A5);
-    X(A6);
-    X(A7);
-    X(A8);
-    X(A9);
-    X(A10);
-    X(A11);
-    X(A12);
-    X(A13);
-    X(A14);
-    X(A15);
+#include <AnalogPins.def>
 #undef X
     randomSeed(currentRandomSeed);
     ush_init(&ush, &ush_desc);
@@ -353,23 +322,23 @@ setup() {
     ush_commands_add(&ush, &cmd, cmdFiles, NELEM(cmdFiles));
     ush_node_mount(&ush, "/", &root, rootFiles, NELEM(rootFiles));
     ush_node_mount(&ush, "/dev", &dev, devFiles, NELEM(devFiles));
+#ifdef HAVE_TIMER1
     ush_node_mount(&ush, "/dev/timer1", &timer1Dir, timer1Files, NELEM(timer1Files));
+#endif
+#ifdef HAVE_TIMER3
     ush_node_mount(&ush, "/dev/timer3", &timer3Dir, timer3Files, NELEM(timer3Files));
+#endif
+#ifdef HAVE_TIMER4
     ush_node_mount(&ush, "/dev/timer4", &timer4Dir, timer4Files, NELEM(timer4Files));
+#endif
+#ifdef HAVE_TIMER5
     ush_node_mount(&ush, "/dev/timer5", &timer5Dir, timer5Files, NELEM(timer5Files));
+#endif
 #define RegisterPort(path, id) \
     ush_node_mount(&ush, path , & gpioPort ## id ## Dir , gpioPort ## id ## Files , NELEM( gpioPort ## id ## Files ))
-    RegisterPort("/dev/porta", A);
-    RegisterPort("/dev/portb", B);
-    RegisterPort("/dev/portc", C);
-    RegisterPort("/dev/portd", D);
-    RegisterPort("/dev/porte", E);
-    RegisterPort("/dev/portf", F);
-    RegisterPort("/dev/portg", G);
-    RegisterPort("/dev/porth", H);
-    RegisterPort("/dev/portj", J);
-    RegisterPort("/dev/portk", K);
-    RegisterPort("/dev/portl", L);
+#define X(index) RegisterPort( "/dev/port" #index , index );
+#include <AVRPorts.def>
+#undef X
 #undef RegisterPort
 #undef NELEM
 }
