@@ -57,23 +57,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         .set_data = nullptr, \
     }
 
-#define ByteFile_CCP(n, reg) { \
-        .name = n , \
-        .description = nullptr, \
-        .help = nullptr, \
-        .exec = nullptr, \
-        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) noexcept { \
-            return sendByte(PASS_FILE_DESCRIPTOR_ARGS, data, reg ); \
-        }, \
-        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) noexcept { \
-            uint8_t value = 0; \
-            if (retrieveByte(PASS_FILE_DESCRIPTOR_ARGS, data, size, value)) { \
-                CCP = 0xD8; \
-                reg = value; \
-                asm volatile ("nop"); \
-            } \
-        }, \
-    }
 #define WordFile(n, reg) { \
         .name = n , \
         .description = nullptr, \
@@ -136,7 +119,7 @@ constexpr auto PathMaxSize = 128;
 char ushInBuf[BufferInSize];
 char ushOutBuf[BufferOutSize];
 uint32_t currentRandomSeed = 0;
-char hostname[16] = "atmega4809";
+char hostname[16] = "stm32_u575";
 
 struct ush_object ush;
 const struct ush_io_interface ushInterface = {
@@ -195,43 +178,6 @@ const struct ush_file_descriptor devFiles[] = {
 #undef X
 #undef AnalogFile
 };
-#define DefVPort(id) \
-const struct ush_file_descriptor gpioVPort ## id ## Files [] = { \
-    ByteFile("in", VPORT ## id . IN ), \
-    ByteFile("out", VPORT ## id . OUT ), \
-    ByteFile("dir", VPORT ## id . DIR ), \
-    ByteFile("intflags", VPORT ## id . INTFLAGS ), \
-}; \
-struct ush_node_object gpioVPort ## id ## Dir 
-#define X(id) DefVPort(id);
-#include <AVRPorts.def>
-#undef X
-#undef DefVPort
-void 
-printVPort(FILE_DESCRIPTOR_ARGS, VPORT_t& port) {
-    ush_printf(self, "\tIN: 0x%x\r\n", port.IN); 
-    ush_printf(self, "\tOUT: 0x%x\r\n", port.OUT); 
-    ush_printf(self, "\tDIR: 0x%x\r\n", port.DIR); 
-    ush_printf(self, "\tINTFLAGS: 0x%x\r\n", port.INTFLAGS);
-}
-void 
-printPort(FILE_DESCRIPTOR_ARGS, PORT_t& port) {
-#define X(idx) ush_printf(self, "\tPIN" #idx "CTRL: 0x%x\r\n", port . PIN ## idx ## CTRL )
-    ush_printf(self, "\tIN: 0x%x\r\n", port . IN); 
-    ush_printf(self, "\tOUT: 0x%x\r\n", port . OUT); 
-    ush_printf(self, "\tDIR: 0x%x\r\n", port . DIR); 
-    ush_printf(self, "\tINTFLAGS: 0x%x\r\n", port . INTFLAGS); 
-    ush_printf(self, "\tPORTCTRL: 0x%x\r\n", port . PORTCTRL); 
-    X(0);
-    X(1); 
-    X(2); 
-    X(3); 
-    X(4); 
-    X(5); 
-    X(6); 
-    X(7); 
-#undef X
-}
 struct ush_node_object specificCmd;
 const struct ush_file_descriptor specificCmdFiles[] = {
     {
@@ -271,46 +217,6 @@ const struct ush_file_descriptor specificCmdFiles[] = {
                     ush_print_status(self, USH_STATUS_ERROR_COMMAND_WRONG_ARGUMENTS);
                     break;
             }
-        },
-    },
-    {
-        .name = "lsvport",
-        .description = nullptr,
-        .help = "usage: lsvport ?port-letter\r\n",
-        .exec = [](FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
-            if (argc != 2) {
-                ush_print_status(self, USH_STATUS_ERROR_COMMAND_WRONG_ARGUMENTS);
-                return;
-            }
-            auto* arg1 = argv[1];
-#define X(letter) \
-            if (strcmp(arg1, #letter ) == 0) {  \
-                printVPort(PASS_FILE_DESCRIPTOR_ARGS, VPORT ## letter ); \
-                return; \
-            } 
-#include <AVRPorts.def>
-#undef X
-            ush_printf(self, "Unknown port %s\r\n", arg1);
-        },
-    },
-    {
-        .name = "lsport",
-        .description = nullptr,
-        .help = "usage: lsvport ?port-letter\r\n",
-        .exec = [](FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
-            if (argc != 2) {
-                ush_print_status(self, USH_STATUS_ERROR_COMMAND_WRONG_ARGUMENTS);
-                return;
-            }
-            auto* arg1 = argv[1];
-#define X(letter) \
-            if (strcmp(arg1, #letter ) == 0) {  \
-                printPort(PASS_FILE_DESCRIPTOR_ARGS, PORT ## letter ); \
-                return; \
-            } 
-#include <AVRPorts.def>
-#undef X
-            ush_printf(self, "Unknown port %s\r\n", arg1);
         },
     },
     {
@@ -424,18 +330,6 @@ const struct ush_file_descriptor specificCmdFiles[] = {
     },
 };
 
-struct ush_node_object clkCtrl;
-const struct ush_file_descriptor clkCtrlFiles[] = { 
-    ByteFile_CCP("ctrla", CLKCTRL.MCLKCTRLA),
-    ByteFile_CCP("ctrlb", CLKCTRL.MCLKCTRLB),
-    ByteFile_CCP("lock", CLKCTRL.MCLKLOCK),
-    ByteFile_RO("status", CLKCTRL.MCLKSTATUS),
-    ByteFile_CCP("osc20mctrla", CLKCTRL.OSC20MCTRLA),
-    ByteFile_CCP("osc20mcaliba", CLKCTRL.OSC20MCALIBA),
-    ByteFile_CCP("osc20mcalibb", CLKCTRL.OSC20MCALIBB),
-    ByteFile_CCP("osc32kctrla", CLKCTRL.OSC32KCTRLA),
-    ByteFile_CCP("xosc32kctrla", CLKCTRL.XOSC32KCTRLA),
-};
 
 
 
@@ -450,9 +344,7 @@ computeRandomSeed() {
 extern void targetSpecificSetup();
 void 
 setup() {
-    Serial1.swap(1);
     Serial1.begin(115200);
-    EEPROM.begin();
     // setup a random source
     currentRandomSeed = computeRandomSeed();
 
@@ -461,13 +353,6 @@ setup() {
     ush_commands_add(&ush, &specificCmd, specificCmdFiles, NELEM(specificCmdFiles));
     ush_node_mount(&ush, "/", &root, rootFiles, NELEM(rootFiles));
     ush_node_mount(&ush, "/dev", &dev, devFiles, NELEM(devFiles));
-    ush_node_mount(&ush, "/dev/clkctrl", &clkCtrl, clkCtrlFiles, NELEM(clkCtrlFiles));
-#define RegisterPort(path, id) \
-    ush_node_mount(&ush, path , & gpioVPort ## id ## Dir , gpioVPort ## id ## Files , NELEM( gpioVPort ## id ## Files ))
-#define X(index) RegisterPort( "/dev/vport" #index , index );
-#include <AVRPorts.def>
-#undef X
-#undef RegisterPort
 }
 
 
@@ -478,8 +363,8 @@ loop() {
 
 int 
 ushRead(struct ush_object* self, char* ch) {
-    if (Serial1.available() > 0) {
-        *ch = Serial1.read();
+    if (Serial.available() > 0) {
+        *ch = Serial.read();
         return 1;
     }
     return 0;
@@ -487,6 +372,6 @@ ushRead(struct ush_object* self, char* ch) {
 
 int 
 ushWrite(struct ush_object* self, char ch) {
-    return (Serial1.write(ch) == 1);
+    return (Serial.write(ch) == 1);
 }
 
