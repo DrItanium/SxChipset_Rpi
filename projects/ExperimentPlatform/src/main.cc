@@ -147,7 +147,31 @@ struct ush_node_object gpioVPort ## id ## Dir
 #include <AVRPorts.def>
 #undef X
 #undef DefVPort
-
+void 
+printVPort(FILE_DESCRIPTOR_ARGS, VPORT_t& port) {
+    ush_printf(self, "\tIN: 0x%x\r\n", port.IN); 
+    ush_printf(self, "\tOUT: 0x%x\r\n", port.OUT); 
+    ush_printf(self, "\tDIR: 0x%x\r\n", port.DIR); 
+    ush_printf(self, "\tINTFLAGS: 0x%x\r\n", port.INTFLAGS);
+}
+void 
+printPort(FILE_DESCRIPTOR_ARGS, PORT_t& port) {
+#define X(idx) ush_printf(self, "\tPIN" #idx "CTRL: 0x%x\r\n", port . PIN ## idx ## CTRL )
+    ush_printf(self, "\tIN: 0x%x\r\n", port . IN); 
+    ush_printf(self, "\tOUT: 0x%x\r\n", port . OUT); 
+    ush_printf(self, "\tDIR: 0x%x\r\n", port . DIR); 
+    ush_printf(self, "\tINTFLAGS: 0x%x\r\n", port . INTFLAGS); 
+    ush_printf(self, "\tPORTCTRL: 0x%x\r\n", port . PORTCTRL); 
+    X(0);
+    X(1); 
+    X(2); 
+    X(3); 
+    X(4); 
+    X(5); 
+    X(6); 
+    X(7); 
+#undef X
+}
 struct ush_node_object specificCmd;
 const struct ush_file_descriptor specificCmdFiles[] = {
     {
@@ -201,10 +225,7 @@ const struct ush_file_descriptor specificCmdFiles[] = {
             auto* arg1 = argv[1];
 #define X(letter) \
             if (strcmp(arg1, #letter ) == 0) {  \
-                ush_printf(self, "\tIN: 0x%x\r\n", VPORT ## letter . IN); \
-                ush_printf(self, "\tOUT: 0x%x\r\n", VPORT ## letter . OUT); \
-                ush_printf(self, "\tDIR: 0x%x\r\n", VPORT ## letter . DIR); \
-                ush_printf(self, "\tINTFLAGS: 0x%x\r\n", VPORT ## letter . INTFLAGS); \
+                printVPort(PASS_FILE_DESCRIPTOR_ARGS, VPORT ## letter ); \
                 return; \
             } 
 #include <AVRPorts.def>
@@ -222,27 +243,13 @@ const struct ush_file_descriptor specificCmdFiles[] = {
                 return;
             }
             auto* arg1 = argv[1];
-#define Y(letter, idx) ush_printf(self, "\tPIN" #idx "CTRL: 0x%x\r\n", PORT ## letter . PIN ## idx ## CTRL )
 #define X(letter) \
             if (strcmp(arg1, #letter ) == 0) {  \
-                ush_printf(self, "\tIN: 0x%x\r\n", PORT ## letter . IN); \
-                ush_printf(self, "\tOUT: 0x%x\r\n", PORT ## letter . OUT); \
-                ush_printf(self, "\tDIR: 0x%x\r\n", PORT ## letter . DIR); \
-                ush_printf(self, "\tINTFLAGS: 0x%x\r\n", PORT ## letter . INTFLAGS); \
-                ush_printf(self, "\tPORTCTRL: 0x%x\r\n", PORT ## letter . PORTCTRL); \
-                Y(letter, 0); \
-                Y(letter, 1); \
-                Y(letter, 2); \
-                Y(letter, 3); \
-                Y(letter, 4); \
-                Y(letter, 5); \
-                Y(letter, 6); \
-                Y(letter, 7); \
+                printPort(PASS_FILE_DESCRIPTOR_ARGS, PORT ## letter ); \
                 return; \
             } 
 #include <AVRPorts.def>
 #undef X
-#undef Y
             ush_printf(self, "Unknown port %s\r\n", arg1);
         },
     },
