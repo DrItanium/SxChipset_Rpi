@@ -76,7 +76,7 @@ constexpr auto PathMaxSize = 128;
 char ushInBuf[BufferInSize];
 char ushOutBuf[BufferOutSize];
 uint32_t currentRandomSeed = 0;
-char hostname[16] = "device";
+char hostname[16] = "atmega4809";
 
 struct ush_object ush;
 const struct ush_io_interface ushInterface = {
