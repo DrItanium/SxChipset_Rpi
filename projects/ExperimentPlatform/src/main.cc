@@ -274,6 +274,70 @@ const struct ush_file_descriptor specificCmdFiles[] = {
             }
         },
     },
+    {
+        .name = "digitalWrite",
+        .description = nullptr,
+        .help = "usage: digitalWrite [pin] [0|1]\r\n",
+        .exec = [](FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
+            switch (argc) {
+                case 0:
+                case 1:
+                case 2:
+                    ush_print_status(self, USH_STATUS_ERROR_COMMAND_WRONG_ARGUMENTS);
+                    break;
+                default: {
+                             long pin = 0;
+                             long value = 0;
+                             (void)sscanf(argv[1], "%ld", &pin);
+                             if (sscanf(argv[2], "%ld", &value) == EOF) {
+                                ush_print_status(self, USH_STATUS_ERROR_COMMAND_WRONG_ARGUMENTS);
+                                return;
+                             }
+                             digitalWrite(pin, value != 0 ? HIGH : LOW);
+                             break;
+                          }
+            }
+        },
+    },
+    {
+        .name = "pinMode",
+        .description = nullptr,
+        .help = "usage: pinMode [pin] [INPUT|OUTPUT|INPUT_PULLUP]\r\n",
+        .exec = [](FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
+            switch (argc) {
+                case 0:
+                case 1:
+                case 2:
+                    ush_print_status(self, USH_STATUS_ERROR_COMMAND_WRONG_ARGUMENTS);
+                    break;
+                default: {
+                             long pin = 0;
+                             (void)sscanf(argv[1], "%ld", &pin);
+                             char* direction = argv[2];
+#define X(cmp, val) \
+                             if (strcmp(direction, cmp) == 0) { \
+                                 pinMode(pin, val);  \
+                                 break; \
+                             }
+                             X("INPUT", INPUT);
+                             X("input", INPUT);
+                             X("in", INPUT);
+                             X("IN", INPUT);
+                             X("INPUT_PULLUP", INPUT_PULLUP);
+                             X("INPUT-PULLUP", INPUT_PULLUP);
+                             X("input-pullup", INPUT_PULLUP);
+                             X("input_pullup", INPUT_PULLUP);
+                             X("OUTPUT", OUTPUT);
+                             X("output", OUTPUT);
+                             X("out", OUTPUT);
+                             X("OUT", OUTPUT);
+#undef X
+                             ush_print_status(self, USH_STATUS_ERROR_COMMAND_WRONG_ARGUMENTS);
+                             break;
+                          }
+            }
+        },
+    },
 };
 
 
