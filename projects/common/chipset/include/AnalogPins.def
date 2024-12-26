@@ -1,48 +1,50 @@
-#ifdef A0
-X(A0)
+#define __X(kind) X( PIN_ ## kind , # kind , kind )
+#ifdef PIN_A0
+__X(A0)
 #endif
-#ifdef A1
-X(A1)
+#ifdef PIN_A1
+__X(A1)
 #endif
-#ifdef A2
-X(A2)
+#ifdef PIN_A2
+__X(A2)
 #endif
-#ifdef A3
-X(A3)
+#ifdef PIN_A3
+__X(A3)
 #endif
-#ifdef A4
-X(A4)
+#ifdef PIN_A4
+__X(A4)
 #endif
-#ifdef A5
-X(A5)
+#ifdef PIN_A5
+__X(A5)
 #endif
-#ifdef A6
-X(A6)
+#ifdef PIN_A6
+__X(A6)
 #endif
-#ifdef A7
-X(A7)
+#ifdef PIN_A7
+__X(A7)
 #endif
-#ifdef A8
-X(A8)
+#ifdef PIN_A8
+__X(A8)
 #endif
-#ifdef A9
-X(A9)
+#ifdef PIN_A9
+__X(A9)
 #endif
-#ifdef A10
-X(A10)
+#ifdef PIN_A10
+__X(A10)
 #endif
-#ifdef A11
-X(A11)
+#ifdef PIN_A11
+__X(A11)
 #endif
-#ifdef A12
-X(A12)
+#ifdef PIN_A12
+__X(A12)
 #endif
-#ifdef A13
-X(A13)
+#ifdef PIN_A13
+__X(A13)
 #endif
-#ifdef A14
-X(A14)
+#ifdef PIN_A14
+__X(A14)
 #endif
-#ifdef A15
-X(A15)
+#ifdef PIN_A15
+__X(A15)
 #endif
+#undef __X

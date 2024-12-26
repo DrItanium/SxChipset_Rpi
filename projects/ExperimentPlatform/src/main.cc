@@ -130,7 +130,7 @@ const struct ush_file_descriptor devFiles[] = {
         .exec = nullptr, \
         .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) noexcept { return sendWord(PASS_FILE_DESCRIPTOR_ARGS, data, analogRead( reg )); }, \
     } 
-#define X(pin) AnalogFile(#pin, pin)
+#define X(id, str, letter) AnalogFile(str, id),
 #include <AnalogPins.def>
 #undef X
 #undef AnalogFile
@@ -160,8 +160,8 @@ const struct ush_file_descriptor specificCmdFiles[] = {
                 return;
             }
             auto* arg1 = argv[1];
-#define X(letter) \
-            if (strcmp(arg1, #letter ) == 0) {  \
+#define X(id, str, letter) \
+            if (strcmp(arg1, str ) == 0) {  \
                 ush_printf(self, "%d\r\n", analogRead ( letter ) ); \
                 return; \
             } 
@@ -286,7 +286,7 @@ const struct ush_file_descriptor commonCmdFiles[] = {
 uint32_t
 computeRandomSeed() {
     uint32_t x = 0;
-#define X(id) x += analogRead ( id ) 
+#define X(id, str, letter) x += analogRead ( id );
 #include <AnalogPins.def>
 #undef X
     return x;
