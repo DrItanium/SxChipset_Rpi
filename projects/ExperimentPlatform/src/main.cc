@@ -172,6 +172,24 @@ const struct ush_file_descriptor specificCmdFiles[] = {
         },
     },
     {
+        .name = "digitalRead",
+        .description = nullptr,
+        .help = "usage: digitalRead ?idx\r\n",
+        .exec = [](FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
+            switch (argc) {
+                case 2: {
+                            long idx = 0;
+                            (void)sscanf(argv[1], "%ld", &idx);
+                            ush_printf(self, "%s\r\n", digitalRead(idx) ? "HIGH" : "LOW");
+                            break;
+                        }
+                default:
+                    ush_print_status(self, USH_STATUS_ERROR_COMMAND_WRONG_ARGUMENTS);
+                    break;
+            }
+        },
+    },
+    {
         .name = "lsvport",
         .description = nullptr,
         .help = "usage: lsvport ?port-letter\r\n",
