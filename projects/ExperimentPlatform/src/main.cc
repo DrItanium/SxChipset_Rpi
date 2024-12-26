@@ -64,32 +64,19 @@ bool retrieveByte(FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size, uint8_t& res
     return false;
 }
 
+extern int ushRead(struct ush_object* self, char* ch);
+extern int ushWrite(struct ush_object* self, char ch);
 
 
-// taken from the BasicExample
-int 
-ushRead(struct ush_object* self, char* ch) {
-    if (Serial.available() > 0) {
-        *ch = Serial.read();
-        return 1;
-    }
-    return 0;
-}
 
-int 
-ushWrite(struct ush_object* self, char ch) {
-    return (Serial.write(ch) == 1);
-}
-
-
-constexpr auto BufferInSize = 128;
-constexpr auto BufferOutSize = 128;
+constexpr auto BufferInSize = 256;
+constexpr auto BufferOutSize = 256;
 constexpr auto PathMaxSize = 128;
 
 char ushInBuf[BufferInSize];
 char ushOutBuf[BufferOutSize];
 uint32_t currentRandomSeed = 0;
-char hostname[16] = "atmega2560";
+char hostname[16] = "device";
 
 struct ush_object ush;
 const struct ush_io_interface ushInterface = {
@@ -152,7 +139,6 @@ computeRandomSeed() {
 extern void targetSpecificSetup();
 void 
 setup() {
-    Serial.begin(115200);
     targetSpecificSetup();
     // setup a random source
     currentRandomSeed = computeRandomSeed();

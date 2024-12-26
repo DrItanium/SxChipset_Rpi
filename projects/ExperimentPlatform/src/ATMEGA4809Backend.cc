@@ -117,7 +117,7 @@ const struct ush_file_descriptor specificCmdFiles[] = {
                 return;
             }
             auto* arg1 = argv[1];
-#define Y(letter, idx) ush_printf(self, "\tPIN%dCTRL: 0x%x\r\n", idx, PORT ## letter . PIN ## idx ## CTRL )
+#define Y(letter, idx) ush_printf(self, "\tPIN" #idx "CTRL: 0x%x\r\n", PORT ## letter . PIN ## idx ## CTRL )
 #define X(letter) \
             if (strcmp(arg1, #letter ) == 0) {  \
                 ush_printf(self, "\tIN: 0x%x\r\n", PORT ## letter . IN); \
@@ -157,17 +157,22 @@ configureFileSystem(ush_object& ush) {
 }
 void
 targetSpecificSetup() {
-#ifdef PLATFORM_CHIPSET
-    // want to be able to talk to the ClockChip
-    SPI.begin();
-    Wire.begin();
-    if (SD.begin(PIN_PB0)) {
-        Serial.println(F("SD Card Found!"));
-        sdCardFound = true;
-    } else {
-        Serial.println(F("SD Card Not Found!"));
-        sdCardFound = false;
+    Serial1.swap(1);
+    Serial1.begin(115200);
+}
+
+// taken from the BasicExample
+int 
+ushRead(struct ush_object* self, char* ch) {
+    if (Serial1.available() > 0) {
+        *ch = Serial1.read();
+        return 1;
     }
-#endif
+    return 0;
+}
+
+int 
+ushWrite(struct ush_object* self, char ch) {
+    return (Serial1.write(ch) == 1);
 }
 #endif

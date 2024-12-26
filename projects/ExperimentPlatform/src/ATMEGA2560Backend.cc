@@ -174,6 +174,7 @@ configureFileSystem(ush_object& ush) {
 bool sdCardFound = false;
 void
 targetSpecificSetup() {
+    Serial.begin(115200);
 #ifdef PLATFORM_CHIPSET
     // want to be able to talk to the ClockChip
     SPI.begin();
@@ -186,6 +187,21 @@ targetSpecificSetup() {
         sdCardFound = false;
     }
 #endif
+}
+
+// taken from the BasicExample
+int 
+ushRead(struct ush_object* self, char* ch) {
+    if (Serial.available() > 0) {
+        *ch = Serial.read();
+        return 1;
+    }
+    return 0;
+}
+
+int 
+ushWrite(struct ush_object* self, char ch) {
+    return (Serial.write(ch) == 1);
 }
 
 #endif // end defined(ARDUINO_AVR_ATmega2560)
