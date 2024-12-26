@@ -430,6 +430,11 @@ const struct ush_file_descriptor clkCtrlFiles[] = {
     ByteFile_CCP("ctrlb", CLKCTRL.MCLKCTRLB),
     ByteFile_CCP("lock", CLKCTRL.MCLKLOCK),
     ByteFile_RO("status", CLKCTRL.MCLKSTATUS),
+    ByteFile_CCP("osc20mctrla", CLKCTRL.OSC20MCTRLA),
+    ByteFile_CCP("osc20mcaliba", CLKCTRL.OSC20MCALIBA),
+    ByteFile_CCP("osc20mcalibb", CLKCTRL.OSC20MCALIBB),
+    ByteFile_CCP("osc32kctrla", CLKCTRL.OSC32KCTRLA),
+    ByteFile_CCP("xosc32kctrla", CLKCTRL.XOSC32KCTRLA),
 };
 
 
