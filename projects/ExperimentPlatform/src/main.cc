@@ -328,6 +328,43 @@ const struct ush_file_descriptor specificCmdFiles[] = {
             }
         },
     },
+    {
+        .name = "pinInfo",
+        .description = nullptr,
+        .help = "usage: pinInfo\r\n",
+        .exec = [](FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
+            ush_printf(self, "Digital Pin Count: %d\r\n", NUM_DIGITAL_PINS);
+            ush_printf(self, "Analog Input Count: %d\r\n", NUM_ANALOG_INPUTS);
+        },
+    },
+    {
+        .name = "ledColor",
+        .description = nullptr,
+        .help = "usage: ledColor ?r ?g ?b\r\n",
+        .exec = [](FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
+#define X(pin, arg, cmp, val) \
+                             if (strcmp(arg, cmp) == 0) { \
+                                 digitalWrite(pin, val);  \
+                                 break; \
+                             }
+            switch (argc) {
+                case 1:
+                case 2:
+                case 3:
+                    ush_print_status(self, USH_STATUS_ERROR_COMMAND_WRONG_ARGUMENTS);
+                    break;
+                default:
+                    X(LED_RED, argv[1], "0", LOW);
+                    X(LED_RED, argv[1], "1", HIGH);
+                    X(LED_GREEN, argv[2], "0", LOW);
+                    X(LED_GREEN, argv[2], "1", HIGH);
+                    X(LED_BLUE, argv[3], "0", LOW);
+                    X(LED_BLUE, argv[3], "1", HIGH);
+                    break;
+            }
+#undef X
+        },
+    },
 };
 
 
@@ -345,6 +382,12 @@ extern void targetSpecificSetup();
 void 
 setup() {
     Serial1.begin(115200);
+    pinMode(LED_GREEN, OUTPUT);
+    pinMode(LED_BLUE, OUTPUT);
+    pinMode(LED_RED, OUTPUT);
+    digitalWrite(LED_GREEN, LOW);
+    digitalWrite(LED_RED, LOW);
+    digitalWrite(LED_BLUE, LOW);
     // setup a random source
     currentRandomSeed = computeRandomSeed();
 
