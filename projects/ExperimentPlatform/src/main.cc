@@ -45,6 +45,35 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
             } \
         }, \
     }
+
+#define ByteFile_RO(n, reg) { \
+        .name = n , \
+        .description = nullptr, \
+        .help = nullptr, \
+        .exec = nullptr, \
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) noexcept { \
+            return sendByte(PASS_FILE_DESCRIPTOR_ARGS, data, reg ); \
+        }, \
+        .set_data = nullptr, \
+    }
+
+#define ByteFile_CCP(n, reg) { \
+        .name = n , \
+        .description = nullptr, \
+        .help = nullptr, \
+        .exec = nullptr, \
+        .get_data = [](FILE_DESCRIPTOR_ARGS, uint8_t** data) noexcept { \
+            return sendByte(PASS_FILE_DESCRIPTOR_ARGS, data, reg ); \
+        }, \
+        .set_data = [](FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size) noexcept { \
+            uint8_t value = 0; \
+            if (retrieveByte(PASS_FILE_DESCRIPTOR_ARGS, data, size, value)) { \
+                CCP = 0xD8; \
+                reg = value; \
+                asm volatile ("nop"); \
+            } \
+        }, \
+    }
 #define WordFile(n, reg) { \
         .name = n , \
         .description = nullptr, \
@@ -60,13 +89,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     }
 
 #define NELEM(obj) (sizeof(obj) / sizeof(obj[0]))
-
-unsigned int sendByte(FILE_DESCRIPTOR_ARGS, uint8_t** data, uint8_t value) noexcept;
-bool retrieveWord(FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size, uint16_t& result) noexcept;
-bool retrieveByte(FILE_DESCRIPTOR_ARGS, uint8_t* data, size_t size, uint8_t& result) noexcept;
-unsigned int sendDword(FILE_DESCRIPTOR_ARGS, uint8_t** data, uint32_t value) noexcept;
-unsigned int sendWord(FILE_DESCRIPTOR_ARGS, uint8_t** data, uint16_t value) noexcept;
-
 
 unsigned int sendDword(FILE_DESCRIPTOR_ARGS, uint8_t** data, uint32_t value) noexcept {
     static char buf[16];
@@ -402,6 +424,14 @@ const struct ush_file_descriptor specificCmdFiles[] = {
     },
 };
 
+struct ush_node_object clkCtrl;
+const struct ush_file_descriptor clkCtrlFiles[] = { 
+    ByteFile_CCP("ctrla", CLKCTRL.MCLKCTRLA),
+    ByteFile_CCP("ctrlb", CLKCTRL.MCLKCTRLB),
+    ByteFile_CCP("lock", CLKCTRL.MCLKLOCK),
+    ByteFile_RO("status", CLKCTRL.MCLKSTATUS),
+};
+
 
 
 uint32_t
@@ -417,6 +447,7 @@ void
 setup() {
     Serial1.swap(1);
     Serial1.begin(115200);
+    EEPROM.begin();
     // setup a random source
     currentRandomSeed = computeRandomSeed();
 
@@ -425,6 +456,7 @@ setup() {
     ush_commands_add(&ush, &specificCmd, specificCmdFiles, NELEM(specificCmdFiles));
     ush_node_mount(&ush, "/", &root, rootFiles, NELEM(rootFiles));
     ush_node_mount(&ush, "/dev", &dev, devFiles, NELEM(devFiles));
+    ush_node_mount(&ush, "/dev/clkctrl", &clkCtrl, clkCtrlFiles, NELEM(clkCtrlFiles));
 #define RegisterPort(path, id) \
     ush_node_mount(&ush, path , & gpioVPort ## id ## Dir , gpioVPort ## id ## Files , NELEM( gpioVPort ## id ## Files ))
 #define X(index) RegisterPort( "/dev/vport" #index , index );
@@ -432,6 +464,7 @@ setup() {
 #undef X
 #undef RegisterPort
 }
+
 
 void 
 loop() {
