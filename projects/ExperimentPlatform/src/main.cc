@@ -246,13 +246,6 @@ const struct ush_file_descriptor specificCmdFiles[] = {
             ush_printf(self, "Unknown port %s\r\n", arg1);
         },
     },
-};
-
-
-struct ush_node_object commonCmd;
-
-extern void configureFileSystem(ush_object& obj);
-const struct ush_file_descriptor commonCmdFiles[] = {
     {
         .name = "rand",
         .description = nullptr,
@@ -283,6 +276,8 @@ const struct ush_file_descriptor commonCmdFiles[] = {
     },
 };
 
+
+
 uint32_t
 computeRandomSeed() {
     uint32_t x = 0;
@@ -301,7 +296,6 @@ setup() {
 
     randomSeed(currentRandomSeed);
     ush_init(&ush, &ush_desc);
-    ush_commands_add(&ush, &commonCmd, commonCmdFiles, NELEM(commonCmdFiles));
     ush_commands_add(&ush, &specificCmd, specificCmdFiles, NELEM(specificCmdFiles));
     ush_node_mount(&ush, "/", &root, rootFiles, NELEM(rootFiles));
     ush_node_mount(&ush, "/dev", &dev, devFiles, NELEM(devFiles));
