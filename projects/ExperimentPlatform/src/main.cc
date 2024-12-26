@@ -287,13 +287,30 @@ const struct ush_file_descriptor specificCmdFiles[] = {
                     break;
                 default: {
                              long pin = 0;
-                             long value = 0;
+                             char* value = argv[2];
                              (void)sscanf(argv[1], "%ld", &pin);
-                             if (sscanf(argv[2], "%ld", &value) == EOF) {
-                                ush_print_status(self, USH_STATUS_ERROR_COMMAND_WRONG_ARGUMENTS);
-                                return;
+#define X(cmp, val) \
+                             if (strcmp(value, cmp) == 0) { \
+                                 digitalWrite(pin, val);  \
+                                 break; \
                              }
-                             digitalWrite(pin, value != 0 ? HIGH : LOW);
+                             X("0", LOW);
+                             X("LOW", LOW);
+                             X("low", LOW);
+                             X("false", LOW);
+                             X("f", LOW);
+                             X("F", LOW);
+                             X("HIGH", HIGH);
+                             X("high", HIGH);
+                             X("1", HIGH);
+                             X("true", HIGH);
+                             X("TRUE", HIGH);
+                             X("t", HIGH);
+                             X("T", HIGH);
+                             X("True", HIGH);
+                             X("False", LOW);
+#undef X
+                             ush_print_status(self, USH_STATUS_ERROR_COMMAND_WRONG_ARGUMENTS);
                              break;
                           }
             }
