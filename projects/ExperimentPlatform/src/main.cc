@@ -27,6 +27,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <SPI.h>
 #include <EEPROM.h>
 #include <microshell.h>
+#include <STM32SD.h>
+
+#ifndef SD_DETECT_PIN
+#define SD_DETECT_PIN 2
+#endif
+
+Sd2Card card;
+SdFatFs fatFs;
+bool sdcardFound = false;
 
 #define FILE_DESCRIPTOR_ARGS struct ush_object* self, struct ush_file_descriptor const * file
 #define PASS_FILE_DESCRIPTOR_ARGS self, file
@@ -335,6 +344,7 @@ const struct ush_file_descriptor specificCmdFiles[] = {
         .exec = [](FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
             ush_printf(self, "Digital Pin Count: %d\r\n", NUM_DIGITAL_PINS);
             ush_printf(self, "Analog Input Count: %d\r\n", NUM_ANALOG_INPUTS);
+
         },
     },
     {
@@ -365,6 +375,45 @@ const struct ush_file_descriptor specificCmdFiles[] = {
 #undef X
         },
     },
+    {
+        .name = "lsperiph",
+        .description = nullptr,
+        .help = "usage: pinInfo\r\n",
+        .exec = [](FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
+            ush_printf(self, "Digital Pin Count: %d\r\n", NUM_DIGITAL_PINS);
+            ush_printf(self, "Analog Input Count: %d\r\n", NUM_ANALOG_INPUTS);
+
+        },
+    },
+    {
+        .name = "sdcard_info",
+        .description = nullptr,
+        .help = "usage: sdcard_info\r\n",
+        .exec = [](FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
+            if (sdcardFound) {
+                auto displayCardType = [&self](const char* string) {
+                    ush_printf(self, "Card Type: %s\n", string);
+                };
+                switch (card.type()) {
+                    case SD_CARD_TYPE_SD1:
+                        displayCardType("SD1");
+                        break;
+                    case SD_CARD_TYPE_SD2:
+                        displayCardType("SD2");
+                        break;
+                    case SD_CARD_TYPE_SDHC:
+                        displayCardType("SDHC");
+                        break;
+                    default:
+                        displayCardType("Unknown");
+                        break;
+                }
+            } else {
+                ush_printf(self, "NO SDCARD Inserted!\r\n");
+            }
+
+        },
+    }
 };
 
 
@@ -381,7 +430,15 @@ computeRandomSeed() {
 extern void targetSpecificSetup();
 void 
 setup() {
-    Serial1.begin(115200);
+    Serial.begin(115200);
+    while (!Serial);
+    Serial.print("\nInitializing SD Card...");
+    sdcardFound = card.init(SD_DETECT_PIN);
+    if (!sdcardFound) {
+        Serial.println("initialization failed. Is a card inserted?");
+    } else {
+        Serial.println("Found!");
+    }
     pinMode(LED_GREEN, OUTPUT);
     pinMode(LED_BLUE, OUTPUT);
     pinMode(LED_RED, OUTPUT);

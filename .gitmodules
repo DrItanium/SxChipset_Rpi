@@ -4,3 +4,9 @@
 [submodule "projects/common/WiFiNINA"]
 	path = projects/common/WiFiNINA
 	url = https://github.com/DrItanium/WiFiNINA
+[submodule "projects/common/FatFs_stm32"]
+	path = projects/common/FatFs_stm32
+	url = https://github.com/DrItanium/FatFs_stm32
+[submodule "projects/common/STM32SD"]
+	path = projects/common/STM32SD
+	url = https://github.com/DrItanium/STM32SD
