@@ -29,10 +29,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <microshell.h>
 #include <STM32SD.h>
 
-#ifndef SD_DETECT_PIN
-#define SD_DETECT_PIN 2
-#endif
-
 Sd2Card card;
 SdFatFs fatFs;
 bool sdcardFound = false;
@@ -413,9 +409,7 @@ const struct ush_file_descriptor specificCmdFiles[] = {
                 uint64_t volumeSize = fatFs.blocksPerCluster();
                 volumeSize *= fatFs.clusterCount(); 
                 volumeSize *= 512; // sd card block are always 512 bytes
-                ush_printf(self, "Volume size (bytes): %llu\r\n", volumeSize);
-                ush_printf(self, "Volume size (Kbytes): %llu\r\n", volumeSize / 1024);
-                ush_printf(self, "Volume size (MBytes): %llu\r\n", volumeSize / 1024 / 1024);
+                ush_printf(self, "Volume size (MBytes): %lu\r\n", volumeSize / 1024 / 1024);
 
             } else {
                 ush_printf(self, "NO SDCARD Inserted!\r\n");
@@ -442,7 +436,7 @@ constexpr auto Pin_SDMMC_D2 = PC_10;
 constexpr auto Pin_SDMMC_D3 = PC_11;
 constexpr auto Pin_SDMMC_CK = PC_12;
 constexpr auto Pin_SDMMC_CMD = PD_2;
-constexpr auto Pin_SDMMC_DET = SD_DETECT_PIN; 
+constexpr auto Pin_SDMMC_DET = PG_2; 
 constexpr auto Pin_SDMMC_DET_LEVEL = HIGH;
 void 
 setup() {
