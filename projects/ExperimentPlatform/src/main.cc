@@ -408,6 +408,15 @@ const struct ush_file_descriptor specificCmdFiles[] = {
                         displayCardType("Unknown");
                         break;
                 }
+                // compute the size
+                ush_printf(self, "Volume Type is FAT%d\r\n", fatFs.fatType());
+                uint64_t volumeSize = fatFs.blocksPerCluster();
+                volumeSize *= fatFs.clusterCount(); 
+                volumeSize *= 512; // sd card block are always 512 bytes
+                ush_printf(self, "Volume size (bytes): %llu\r\n", volumeSize);
+                ush_printf(self, "Volume size (Kbytes): %llu\r\n", volumeSize / 1024);
+                ush_printf(self, "Volume size (MBytes): %llu\r\n", volumeSize / 1024 / 1024);
+
             } else {
                 ush_printf(self, "NO SDCARD Inserted!\r\n");
             }
@@ -427,19 +436,30 @@ computeRandomSeed() {
 #undef X
     return x;
 }
-extern void targetSpecificSetup();
+constexpr auto Pin_SDMMC_D0 = PC_8;
+constexpr auto Pin_SDMMC_D1 = PC_9;
+constexpr auto Pin_SDMMC_D2 = PC_10;
+constexpr auto Pin_SDMMC_D3 = PC_11;
+constexpr auto Pin_SDMMC_CK = PC_12;
+constexpr auto Pin_SDMMC_CMD = PD_2;
+constexpr auto Pin_SDMMC_DET = SD_DETECT_PIN; 
+constexpr auto Pin_SDMMC_DET_LEVEL = HIGH;
 void 
 setup() {
     Serial.begin(115200);
     while (!Serial);
     Serial.print("\nInitializing SD Card...");
-    card.setDx(PC_8, PC_9, PC_10, PC_11);
-    card.setCK(PC_12);
-    card.setCMD(PD_2);
-    while (!card.init(SD_DETECT_PIN, HIGH)) {
+    card.setDx(Pin_SDMMC_D0, Pin_SDMMC_D1, Pin_SDMMC_D2, Pin_SDMMC_D3);
+    card.setCK(Pin_SDMMC_CK);
+    card.setCMD(Pin_SDMMC_CMD);
+    while (!card.init(Pin_SDMMC_DET, Pin_SDMMC_DET_LEVEL)) {
         delay(10);
     }
     sdcardFound = true;
+    if (!fatFs.init()) {
+        Serial.println("Could not find Fat16/Fat32 partition");
+        Serial.println("Make sure you've formatted the card");
+    }
     pinMode(LED_GREEN, OUTPUT);
     pinMode(LED_BLUE, OUTPUT);
     pinMode(LED_RED, OUTPUT);
