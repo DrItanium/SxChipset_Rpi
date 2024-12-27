@@ -30,7 +30,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <STM32SD.h>
 
 #ifndef SD_DETECT_PIN
-#define SD_DETECT_PIN SD_DETECT_NONE
+#define SD_DETECT_PIN 2
 #endif
 
 Sd2Card card;
@@ -433,12 +433,13 @@ setup() {
     Serial.begin(115200);
     while (!Serial);
     Serial.print("\nInitializing SD Card...");
-    sdcardFound = card.init(SD_DETECT_PIN);
-    if (!sdcardFound) {
-        Serial.println("initialization failed. Is a card inserted?");
-    } else {
-        Serial.println("Found!");
+    card.setDx(PC_8, PC_9, PC_10, PC_11);
+    card.setCK(PC_12);
+    card.setCMD(PD_2);
+    while (!card.init(SD_DETECT_PIN, HIGH)) {
+        delay(10);
     }
+    sdcardFound = true;
     pinMode(LED_GREEN, OUTPUT);
     pinMode(LED_BLUE, OUTPUT);
     pinMode(LED_RED, OUTPUT);
