@@ -457,8 +457,7 @@ setup() {
     }
     sdcardFound = true;
     if (!fatFs.init()) {
-        Serial.println("Could not find Fat16/Fat32 partition");
-        Serial.println("Make sure you've formatted the card");
+        Serial.println("FATFS wasn't able to be initialized");
     }
     pinMode(LED_GREEN, OUTPUT);
     pinMode(LED_BLUE, OUTPUT);
