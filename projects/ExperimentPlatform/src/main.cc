@@ -39,9 +39,10 @@ constexpr auto Pin_SDMMC_CMD = PD2;
 constexpr auto Pin_SDMMC_DET = D49; 
 constexpr auto Pin_SDMMC_DET_LEVEL = HIGH;
 constexpr auto Pin_Timer_CLK2 = D32;
+constexpr auto Pin_Timer_CLK1 = D81;
 Sd2Card card;
 SdFatFs fatFs;
-HardwareTimer dev5_1;
+HardwareTimer clk2_gen;
 bool sdcardFound = false;
 
 #define FILE_DESCRIPTOR_ARGS struct ush_object* self, struct ush_file_descriptor const * file
@@ -480,14 +481,22 @@ setup() {
     ush_commands_add(&ush, &specificCmd, specificCmdFiles, NELEM(specificCmdFiles));
     ush_node_mount(&ush, "/", &root, rootFiles, NELEM(rootFiles));
     ush_node_mount(&ush, "/dev", &dev, devFiles, NELEM(devFiles));
-    //dev5_1.setOverflow(10, HERTZ_FORMAT);
     auto* instance = (TIM_TypeDef* )pinmap_peripheral(digitalPinToPinName(Pin_Timer_CLK2), PinMap_PWM);
+    auto* instance2 = (TIM_TypeDef* )pinmap_peripheral(digitalPinToPinName(Pin_Timer_CLK1), PinMap_PWM);
+    if (instance != instance2) {
+        Serial.println("Instance Mismatch!");
+    }
     auto channel = (STM_PIN_CHANNEL(pinmap_function(digitalPinToPinName(Pin_Timer_CLK2), PinMap_PWM)));
-    dev5_1.setup(instance);
-    dev5_1.setMode(channel, TIMER_OUTPUT_COMPARE_TOGGLE, D32);
-    dev5_1.setOverflow(20'000'000, HERTZ_FORMAT);
-    dev5_1.setCaptureCompare(channel, 50, PERCENT_COMPARE_FORMAT); // 50%
-    dev5_1.resume();
+    auto channel2 = (STM_PIN_CHANNEL(pinmap_function(digitalPinToPinName(Pin_Timer_CLK1), PinMap_PWM)));
+    // generate a 20 and 10 mhz signal that are synchronized by using the same
+    // timer :D
+    clk2_gen.setup(instance);
+    clk2_gen.setOverflow(20'000'000, HERTZ_FORMAT);
+    clk2_gen.setMode(channel, TIMER_OUTPUT_COMPARE_PWM1, Pin_Timer_CLK2);
+    clk2_gen.setCaptureCompare(channel, 50, PERCENT_COMPARE_FORMAT); // 50%
+    clk2_gen.setMode(channel2, TIMER_OUTPUT_COMPARE_TOGGLE, Pin_Timer_CLK1); // half of half
+    clk2_gen.setCaptureCompare(channel2, 50, PERCENT_COMPARE_FORMAT);
+    clk2_gen.resume();
 
 }
 
