@@ -36,8 +36,6 @@ constexpr auto Pin_SDMMC_D2 = PC10;
 constexpr auto Pin_SDMMC_D3 = PC11;
 constexpr auto Pin_SDMMC_CK = PC12;
 constexpr auto Pin_SDMMC_CMD = PD2;
-constexpr auto Pin_SDMMC_DET = D49; 
-constexpr auto Pin_SDMMC_DET_LEVEL = HIGH;
 constexpr auto Pin_Timer_CLK2 = D32;
 constexpr auto Pin_Timer_CLK1 = D81;
 constexpr auto CLK2ClockFrequency = 20'000'000; // MHz
@@ -449,7 +447,7 @@ setupSDCard() noexcept {
         card.setDx(Pin_SDMMC_D0, Pin_SDMMC_D1, Pin_SDMMC_D2, Pin_SDMMC_D3);
         card.setCK(Pin_SDMMC_CK);
         card.setCMD(Pin_SDMMC_CMD);
-        while (!card.init(Pin_SDMMC_DET, Pin_SDMMC_DET_LEVEL)) {
+        while (!card.init()) {
             delay(1000);
         }
         delay(100);
