@@ -461,6 +461,21 @@ setupSDCard() noexcept {
             return true;
         }
 }
+void
+configureClocks() noexcept {
+    auto* instance = (TIM_TypeDef* )pinmap_peripheral(digitalPinToPinName(Pin_Timer_CLK2), PinMap_PWM);
+    auto channel = (STM_PIN_CHANNEL(pinmap_function(digitalPinToPinName(Pin_Timer_CLK2), PinMap_PWM)));
+    auto channel2 = (STM_PIN_CHANNEL(pinmap_function(digitalPinToPinName(Pin_Timer_CLK1), PinMap_PWM)));
+    // generate a 20 and 10 mhz signal that are synchronized by using the same
+    // timer :D
+    clk2_gen.setup(instance);
+    clk2_gen.setOverflow(CLK2ClockFrequency, HERTZ_FORMAT);
+    clk2_gen.setMode(channel, TIMER_OUTPUT_COMPARE_PWM1, Pin_Timer_CLK2);
+    clk2_gen.setCaptureCompare(channel, 50, PERCENT_COMPARE_FORMAT); // 50%
+    clk2_gen.setMode(channel2, TIMER_OUTPUT_COMPARE_TOGGLE, Pin_Timer_CLK1); // half of half
+    clk2_gen.setCaptureCompare(channel2, 50, PERCENT_COMPARE_FORMAT);
+    clk2_gen.resume();
+}
 void 
 setup() {
     Serial.begin(115200);
@@ -476,26 +491,11 @@ setup() {
     currentRandomSeed = computeRandomSeed();
     //pinMode(Pin_Timer_CLK2, OUTPUT);
     randomSeed(currentRandomSeed);
+    configureClocks();
     ush_init(&ush, &ush_desc);
     ush_commands_add(&ush, &specificCmd, specificCmdFiles, NELEM(specificCmdFiles));
     ush_node_mount(&ush, "/", &root, rootFiles, NELEM(rootFiles));
     ush_node_mount(&ush, "/dev", &dev, devFiles, NELEM(devFiles));
-    auto* instance = (TIM_TypeDef* )pinmap_peripheral(digitalPinToPinName(Pin_Timer_CLK2), PinMap_PWM);
-    auto* instance2 = (TIM_TypeDef* )pinmap_peripheral(digitalPinToPinName(Pin_Timer_CLK1), PinMap_PWM);
-    if (instance != instance2) {
-        Serial.println("Instance Mismatch!");
-    }
-    auto channel = (STM_PIN_CHANNEL(pinmap_function(digitalPinToPinName(Pin_Timer_CLK2), PinMap_PWM)));
-    auto channel2 = (STM_PIN_CHANNEL(pinmap_function(digitalPinToPinName(Pin_Timer_CLK1), PinMap_PWM)));
-    // generate a 20 and 10 mhz signal that are synchronized by using the same
-    // timer :D
-    clk2_gen.setup(instance);
-    clk2_gen.setOverflow(CLK2ClockFrequency, HERTZ_FORMAT);
-    clk2_gen.setMode(channel, TIMER_OUTPUT_COMPARE_PWM1, Pin_Timer_CLK2);
-    clk2_gen.setCaptureCompare(channel, 50, PERCENT_COMPARE_FORMAT); // 50%
-    clk2_gen.setMode(channel2, TIMER_OUTPUT_COMPARE_TOGGLE, Pin_Timer_CLK1); // half of half
-    clk2_gen.setCaptureCompare(channel2, 50, PERCENT_COMPARE_FORMAT);
-    clk2_gen.resume();
 
 }
 
