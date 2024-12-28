@@ -29,6 +29,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <microshell.h>
 #include <STM32SD.h>
 
+constexpr auto Pin_SDMMC_D0 = PC_8;
+constexpr auto Pin_SDMMC_D1 = PC_9;
+constexpr auto Pin_SDMMC_D2 = PC_10;
+constexpr auto Pin_SDMMC_D3 = PC_11;
+constexpr auto Pin_SDMMC_CK = PC_12;
+constexpr auto Pin_SDMMC_CMD = PD_2;
+constexpr auto Pin_Timer_CLK2 = D32;
 Sd2Card card;
 SdFatFs fatFs;
 bool sdcardFound = false;
@@ -416,7 +423,30 @@ const struct ush_file_descriptor specificCmdFiles[] = {
             }
 
         },
-    }
+    },
+    {
+        .name = "pin_pa0",
+        .description = nullptr,
+        .help = "usage: pin_pa0 [0|1] \r\n",
+        .exec = [](FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
+#define X(pin, arg, cmp, val) \
+                             if (strcmp(arg, cmp) == 0) { \
+                                 digitalWrite(pin, val);  \
+                                 break; \
+                             }
+            switch (argc) {
+                case 2: {
+                            X(Pin_Timer_CLK2, argv[1], "0", LOW);
+                            X(Pin_Timer_CLK2, argv[1], "1", HIGH);
+                            break;
+                        }
+                default:
+                    ush_print_status(self, USH_STATUS_ERROR_COMMAND_WRONG_ARGUMENTS);
+                    break;
+            }
+#undef X
+        },
+    },
 };
 
 
@@ -430,14 +460,6 @@ computeRandomSeed() {
 #undef X
     return x;
 }
-constexpr auto Pin_SDMMC_D0 = PC_8;
-constexpr auto Pin_SDMMC_D1 = PC_9;
-constexpr auto Pin_SDMMC_D2 = PC_10;
-constexpr auto Pin_SDMMC_D3 = PC_11;
-constexpr auto Pin_SDMMC_CK = PC_12;
-constexpr auto Pin_SDMMC_CMD = PD_2;
-constexpr auto Pin_SDMMC_DET = PG_2; 
-constexpr auto Pin_SDMMC_DET_LEVEL = HIGH;
 void 
 setup() {
     Serial.begin(115200);
@@ -446,7 +468,7 @@ setup() {
     card.setDx(Pin_SDMMC_D0, Pin_SDMMC_D1, Pin_SDMMC_D2, Pin_SDMMC_D3);
     card.setCK(Pin_SDMMC_CK);
     card.setCMD(Pin_SDMMC_CMD);
-    while (!card.init(Pin_SDMMC_DET, Pin_SDMMC_DET_LEVEL)) {
+    while (!card.init()) {
         delay(10);
     }
     sdcardFound = true;
@@ -461,7 +483,8 @@ setup() {
     digitalWrite(LED_BLUE, LOW);
     // setup a random source
     currentRandomSeed = computeRandomSeed();
-
+    pinMode(Pin_Timer_CLK2, OUTPUT);
+    digitalWrite(Pin_Timer_CLK2, LOW);
     randomSeed(currentRandomSeed);
     ush_init(&ush, &ush_desc);
     ush_commands_add(&ush, &specificCmd, specificCmdFiles, NELEM(specificCmdFiles));
@@ -473,6 +496,7 @@ setup() {
 void 
 loop() {
     ush_service(&ush);
+
 }
 
 int 
