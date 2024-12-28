@@ -40,6 +40,7 @@ constexpr auto Pin_SDMMC_DET = D49;
 constexpr auto Pin_SDMMC_DET_LEVEL = HIGH;
 constexpr auto Pin_Timer_CLK2 = D32;
 constexpr auto Pin_Timer_CLK1 = D81;
+constexpr auto CLK2ClockFrequency = 20'000'000; // MHz
 Sd2Card card;
 SdFatFs fatFs;
 HardwareTimer clk2_gen;
@@ -491,7 +492,7 @@ setup() {
     // generate a 20 and 10 mhz signal that are synchronized by using the same
     // timer :D
     clk2_gen.setup(instance);
-    clk2_gen.setOverflow(20'000'000, HERTZ_FORMAT);
+    clk2_gen.setOverflow(CLK2ClockFrequency, HERTZ_FORMAT);
     clk2_gen.setMode(channel, TIMER_OUTPUT_COMPARE_PWM1, Pin_Timer_CLK2);
     clk2_gen.setCaptureCompare(channel, 50, PERCENT_COMPARE_FORMAT); // 50%
     clk2_gen.setMode(channel2, TIMER_OUTPUT_COMPARE_TOGGLE, Pin_Timer_CLK1); // half of half
