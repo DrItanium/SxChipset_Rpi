@@ -28,6 +28,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <EEPROM.h>
 #include <microshell.h>
 #include <STM32SD.h>
+#include <HardwareTimer.h>
 
 constexpr auto Pin_SDMMC_D0 = PC8;
 constexpr auto Pin_SDMMC_D1 = PC9;
@@ -40,6 +41,7 @@ constexpr auto Pin_SDMMC_DET_LEVEL = HIGH;
 constexpr auto Pin_Timer_CLK2 = D32;
 Sd2Card card;
 SdFatFs fatFs;
+HardwareTimer dev5_1;
 bool sdcardFound = false;
 
 #define FILE_DESCRIPTOR_ARGS struct ush_object* self, struct ush_file_descriptor const * file
@@ -426,29 +428,6 @@ const struct ush_file_descriptor specificCmdFiles[] = {
 
         },
     },
-    {
-        .name = "pin_pa0",
-        .description = nullptr,
-        .help = "usage: pin_pa0 [0|1] \r\n",
-        .exec = [](FILE_DESCRIPTOR_ARGS, int argc, char* argv[]) noexcept {
-#define X(pin, arg, cmp, val) \
-                             if (strcmp(arg, cmp) == 0) { \
-                                 digitalWrite(pin, val);  \
-                                 break; \
-                             }
-            switch (argc) {
-                case 2: {
-                            X(Pin_Timer_CLK2, argv[1], "0", LOW);
-                            X(Pin_Timer_CLK2, argv[1], "1", HIGH);
-                            break;
-                        }
-                default:
-                    ush_print_status(self, USH_STATUS_ERROR_COMMAND_WRONG_ARGUMENTS);
-                    break;
-            }
-#undef X
-        },
-    },
 };
 
 
@@ -495,13 +474,21 @@ setup() {
     digitalWrite(LED_BLUE, LOW);
     // setup a random source
     currentRandomSeed = computeRandomSeed();
-    pinMode(Pin_Timer_CLK2, OUTPUT);
-    digitalWrite(Pin_Timer_CLK2, LOW);
+    //pinMode(Pin_Timer_CLK2, OUTPUT);
     randomSeed(currentRandomSeed);
     ush_init(&ush, &ush_desc);
     ush_commands_add(&ush, &specificCmd, specificCmdFiles, NELEM(specificCmdFiles));
     ush_node_mount(&ush, "/", &root, rootFiles, NELEM(rootFiles));
     ush_node_mount(&ush, "/dev", &dev, devFiles, NELEM(devFiles));
+    //dev5_1.setOverflow(10, HERTZ_FORMAT);
+    auto* instance = (TIM_TypeDef* )pinmap_peripheral(digitalPinToPinName(Pin_Timer_CLK2), PinMap_PWM);
+    auto channel = (STM_PIN_CHANNEL(pinmap_function(digitalPinToPinName(Pin_Timer_CLK2), PinMap_PWM)));
+    dev5_1.setup(instance);
+    dev5_1.setMode(channel, TIMER_OUTPUT_COMPARE_TOGGLE, D32);
+    dev5_1.setOverflow(20'000'000, HERTZ_FORMAT);
+    dev5_1.setCaptureCompare(channel, 50, PERCENT_COMPARE_FORMAT); // 50%
+    dev5_1.resume();
+
 }
 
 
