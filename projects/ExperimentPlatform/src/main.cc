@@ -29,12 +29,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <microshell.h>
 #include <STM32SD.h>
 
-constexpr auto Pin_SDMMC_D0 = PC_8;
-constexpr auto Pin_SDMMC_D1 = PC_9;
-constexpr auto Pin_SDMMC_D2 = PC_10;
-constexpr auto Pin_SDMMC_D3 = PC_11;
-constexpr auto Pin_SDMMC_CK = PC_12;
-constexpr auto Pin_SDMMC_CMD = PD_2;
+constexpr auto Pin_SDMMC_D0 = PC8;
+constexpr auto Pin_SDMMC_D1 = PC9;
+constexpr auto Pin_SDMMC_D2 = PC10;
+constexpr auto Pin_SDMMC_D3 = PC11;
+constexpr auto Pin_SDMMC_CK = PC12;
+constexpr auto Pin_SDMMC_CMD = PD2;
+constexpr auto Pin_SDMMC_DET = D49; 
+constexpr auto Pin_SDMMC_DET_LEVEL = HIGH;
 constexpr auto Pin_Timer_CLK2 = D32;
 Sd2Card card;
 SdFatFs fatFs;
@@ -131,7 +133,7 @@ constexpr auto PathMaxSize = 128;
 char ushInBuf[BufferInSize];
 char ushOutBuf[BufferOutSize];
 uint32_t currentRandomSeed = 0;
-char hostname[16] = "stm32_u575";
+char hostname[16] = "nucleo";
 
 struct ush_object ush;
 const struct ush_io_interface ushInterface = {
@@ -460,21 +462,31 @@ computeRandomSeed() {
 #undef X
     return x;
 }
+bool
+setupSDCard() noexcept {
+        Serial.println("Looking for SD Card...");
+        card.setDx(Pin_SDMMC_D0, Pin_SDMMC_D1, Pin_SDMMC_D2, Pin_SDMMC_D3);
+        card.setCK(Pin_SDMMC_CK);
+        card.setCMD(Pin_SDMMC_CMD);
+        while (!card.init(Pin_SDMMC_DET, Pin_SDMMC_DET_LEVEL)) {
+            delay(1000);
+        }
+        delay(100);
+        Serial.println("Found SD Card!");
+        Serial.print("FAT Filesystem...");
+        if (!fatFs.init()) {
+            Serial.println("Not Found!");
+            return false;
+        } else {
+            Serial.println("Found!");
+            return true;
+        }
+}
 void 
 setup() {
     Serial.begin(115200);
-    while (!Serial);
-    Serial.print("\nInitializing SD Card...");
-    card.setDx(Pin_SDMMC_D0, Pin_SDMMC_D1, Pin_SDMMC_D2, Pin_SDMMC_D3);
-    card.setCK(Pin_SDMMC_CK);
-    card.setCMD(Pin_SDMMC_CMD);
-    while (!card.init()) {
-        delay(10);
-    }
-    sdcardFound = true;
-    if (!fatFs.init()) {
-        Serial.println("FATFS wasn't able to be initialized");
-    }
+    while(!Serial);
+    sdcardFound = setupSDCard();
     pinMode(LED_GREEN, OUTPUT);
     pinMode(LED_BLUE, OUTPUT);
     pinMode(LED_RED, OUTPUT);
@@ -496,7 +508,6 @@ setup() {
 void 
 loop() {
     ush_service(&ush);
-
 }
 
 int 
