@@ -88,6 +88,7 @@ union SplitWord32 {
     constexpr SplitWord32(uint32_t value = 0) : full(value) { }
     constexpr SplitWord32(uint8_t a, uint8_t b, uint8_t c, uint8_t d) : bytes{a, b, c, d} { }
     constexpr bool isIOOperation() const noexcept { return bytes[3] == 0xFE; }
+    constexpr auto getOffset() const noexcept { return bytes[0] & 0x0F; }
 };
 static_assert(sizeof(SplitWord32) == sizeof(uint32_t));
 
@@ -115,6 +116,7 @@ private:
         _dirty = false;
         _valid = true;
         _key.full = newAddress.full;
+        _key.bytes[0] &= 0xF0;
         (void)CommunicationPrimitive.read(_key.full, const_cast<uint8_t*>(_bytes), NumBytes);
     }
 public:
@@ -127,8 +129,6 @@ public:
         }
     }
     volatile uint8_t* sync(SplitWord32 newAddress) volatile noexcept {
-        uint8_t offset = newAddress.bytes[0] & 0x0F;
-        newAddress.bytes[0] &= 0xF0;
         if (_valid) {
             if (_key.halves[1] != newAddress.halves[1]) {
                 if (_dirty) {
@@ -142,7 +142,7 @@ public:
         } else {
             load(newAddress);
         }
-        return &_bytes[offset];
+        return &_bytes[newAddress.getOffset()];
     }
     void markDirty() volatile noexcept { _dirty = true; }
     private:
@@ -152,6 +152,7 @@ public:
         bool _dirty;
 };
 [[gnu::address(0xFF00)]] volatile FixedCacheLine externalCacheLine;
+static_assert(sizeof(FixedCacheLine) <= 32, "Fixed Cache Line can only be 32 bytes or smaller!");
 union [[gnu::packed]] CH351 {
     struct {
         uint32_t data;
@@ -912,9 +913,9 @@ doIOTransaction(SplitWord32 address) noexcept {
 template<bool readOperation>
 inline void
 doMemoryTransaction(SplitWord32 address) noexcept {
-    using MemoryPointer = volatile uint8_t*;
-    MemoryPointer ptr = externalCacheLine.sync(address.full);
     do {
+        using MemoryPointer = volatile uint8_t*;
+        MemoryPointer ptr = externalCacheLine.sync(address.full);
         if constexpr (readOperation) {
             auto lo = ptr[0];
             auto hi = ptr[1];
