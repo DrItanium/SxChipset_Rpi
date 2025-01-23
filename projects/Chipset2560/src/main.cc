@@ -91,11 +91,11 @@ class PSRAMBackingStore {
     public:
         static constexpr uint32_t LinkSpeed = LS;
         void begin() noexcept;
-        size_t read(Address addr, uint8_t* storage, size_t count) noexcept;
-        size_t write(Address addr, uint8_t* storage, size_t count) noexcept;
+        size_t read(SplitWord32 addr, uint8_t* storage, size_t count) noexcept;
+        size_t write(SplitWord32 addr, uint8_t* storage, size_t count) noexcept;
         void waitForBackingStoreIdle() noexcept { }
     private:
-        void setAddress(Address address) noexcept;
+        void setAddress(SplitWord32 address) noexcept;
 };
 
 using PrimaryBackingStore = PSRAMBackingStore<5'000'000>;
@@ -111,7 +111,7 @@ private:
     void load(SplitWord32 newAddress) volatile noexcept {
         newAddress.full &= AddressMask;
         _key.full = newAddress.full;
-        (void)CommunicationPrimitive.read(newAddress.full, const_cast<uint8_t*>(_bytes), NumBytes);
+        (void)CommunicationPrimitive.read(newAddress, const_cast<uint8_t*>(_bytes), NumBytes);
     }
 public:
     void clear() volatile noexcept {
@@ -130,7 +130,7 @@ public:
                     // just do a compare of the two parts valid and dirty if we
                     // hit 3 or greater then it means we have to perform the
                     // replacement
-                    (void)CommunicationPrimitive.write(_key.full, const_cast<uint8_t*>(_bytes), NumBytes);
+                    (void)CommunicationPrimitive.write(const_cast<SplitWord32&>(_key), const_cast<uint8_t*>(_bytes), NumBytes);
                 }
                 load(newAddress);
             }
@@ -1330,31 +1330,27 @@ installInitialBootImage() noexcept {
 
 template<uint32_t LS>
 void 
-PSRAMBackingStore<LS>::setAddress(Address address) noexcept {
-#if 0
-    uint8_t addr = static_cast<uint8_t>(address >> 23) & 0b111;
-#else
-    uint8_t addr = static_cast<uint8_t>(address >> 24);
+PSRAMBackingStore<LS>::setAddress(SplitWord32 address) noexcept {
+    uint8_t addr = address.bytes[3];
     addr <<= 1;
-    if (static_cast<uint8_t>(address >> 16) & 0b1000'0000) {
+    if (address.bytes[2] & 0b1000'0000) {
         addr |= 0b1;
     } else {
         addr &= 0b1111'1110;
     }
-#endif
     getOutputRegister<Ports::PSRAMSel>() = addr;
 }
 
 template<uint32_t LS>
 inline size_t
-PSRAMBackingStore<LS>::read(Address addr, uint8_t* storage, size_t count) noexcept {
+PSRAMBackingStore<LS>::read(SplitWord32 addr, uint8_t* storage, size_t count) noexcept {
     setAddress(addr);
     SPI.beginTransaction(SPISettings{LS, MSBFIRST, SPI_MODE0});
     digitalWrite<Pins::PSRAM_EN, LOW>();
     SPI.transfer(0x03);
-    SPI.transfer(static_cast<uint8_t>(addr >> 16));
-    SPI.transfer(static_cast<uint8_t>(addr >> 8));
-    SPI.transfer(static_cast<uint8_t>(addr));
+    SPI.transfer(addr.bytes[2]);
+    SPI.transfer(addr.bytes[1]);
+    SPI.transfer(addr.bytes[0]);
     SPI.transfer(storage, count);
     digitalWrite<Pins::PSRAM_EN, HIGH>();
     SPI.endTransaction();
@@ -1363,14 +1359,14 @@ PSRAMBackingStore<LS>::read(Address addr, uint8_t* storage, size_t count) noexce
 
 template<uint32_t LS>
 inline size_t
-PSRAMBackingStore<LS>::write(Address addr, uint8_t* storage, size_t count) noexcept {
+PSRAMBackingStore<LS>::write(SplitWord32 addr, uint8_t* storage, size_t count) noexcept {
     setAddress(addr);
     SPI.beginTransaction(SPISettings{LS, MSBFIRST, SPI_MODE0});
     digitalWrite<Pins::PSRAM_EN, LOW>();
     SPI.transfer(0x02);
-    SPI.transfer(static_cast<uint8_t>(addr >> 16));
-    SPI.transfer(static_cast<uint8_t>(addr >> 8));
-    SPI.transfer(static_cast<uint8_t>(addr));
+    SPI.transfer(addr.bytes[2]);
+    SPI.transfer(addr.bytes[1]);
+    SPI.transfer(addr.bytes[0]);
     SPI.transfer(storage, count);
     digitalWrite<Pins::PSRAM_EN, HIGH>();
     SPI.endTransaction();
