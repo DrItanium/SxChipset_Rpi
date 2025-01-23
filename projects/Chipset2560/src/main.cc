@@ -56,21 +56,6 @@ void configureExternalBus() noexcept;
 OptionalDevice<RTC_DS3231> rtc;
 
 
-template<uint32_t LS>
-class PSRAMBackingStore {
-    public:
-        using SPIDevice = decltype(SPI);
-        PSRAMBackingStore(SPIDevice& link) : _link(link) { }
-        static constexpr uint32_t LinkSpeed = LS;
-        void begin() noexcept;
-        size_t read(Address addr, uint8_t* storage, size_t count) noexcept;
-        size_t write(Address addr, uint8_t* storage, size_t count) noexcept;
-        void waitForBackingStoreIdle() noexcept { }
-    private:
-        void setAddress(Address address) noexcept;
-    private:
-        SPIDevice& _link;
-};
 
 template<typename T, typename V>
 using TypeView = V[sizeof(T) / sizeof(V)];
@@ -101,9 +86,20 @@ union SplitWord16 {
 
 static_assert(sizeof(SplitWord16) == sizeof(uint16_t));
 
+template<uint32_t LS>
+class PSRAMBackingStore {
+    public:
+        static constexpr uint32_t LinkSpeed = LS;
+        void begin() noexcept;
+        size_t read(Address addr, uint8_t* storage, size_t count) noexcept;
+        size_t write(Address addr, uint8_t* storage, size_t count) noexcept;
+        void waitForBackingStoreIdle() noexcept { }
+    private:
+        void setAddress(Address address) noexcept;
+};
 
 using PrimaryBackingStore = PSRAMBackingStore<5'000'000>;
-PrimaryBackingStore psramMemory(SPI);
+PrimaryBackingStore psramMemory;
 #define CommunicationPrimitive psramMemory
 // this is a special case cache line implementation so we can be very specific
 struct FixedCacheLine {
@@ -113,11 +109,9 @@ struct FixedCacheLine {
     static constexpr auto AddressMask = 0xFFFF'FFF0;
 private:
     void load(SplitWord32 newAddress) volatile noexcept {
-        _dirty = false;
-        _valid = true;
+        newAddress.full &= AddressMask;
         _key.full = newAddress.full;
-        _key.bytes[0] &= 0xF0;
-        (void)CommunicationPrimitive.read(_key.full, const_cast<uint8_t*>(_bytes), NumBytes);
+        (void)CommunicationPrimitive.read(newAddress.full, const_cast<uint8_t*>(_bytes), NumBytes);
     }
 public:
     void clear() volatile noexcept {
@@ -132,6 +126,7 @@ public:
         if (_valid) {
             if (_key.halves[1] != newAddress.halves[1]) {
                 if (_dirty) {
+                    _dirty = false;
                     // just do a compare of the two parts valid and dirty if we
                     // hit 3 or greater then it means we have to perform the
                     // replacement
@@ -140,6 +135,7 @@ public:
                 load(newAddress);
             }
         } else {
+            _valid = true;
             load(newAddress);
         }
         return &_bytes[newAddress.getOffset()];
@@ -1229,10 +1225,10 @@ void
 PSRAMBackingStore<LS>::begin() noexcept {
     auto activatePSRAM = [this](bool pullID, bool performSanityChecking) {
         digitalWrite<Pins::PSRAM_EN, LOW>();
-        _link.transfer(0x99);
+        SPI.transfer(0x99);
         digitalWrite<Pins::PSRAM_EN, HIGH>();
         digitalWrite<Pins::PSRAM_EN, LOW>();
-        _link.transfer(0x66);
+        SPI.transfer(0x66);
         digitalWrite<Pins::PSRAM_EN, HIGH>();
         delay(100);
         if (pullID) {
@@ -1249,11 +1245,11 @@ PSRAMBackingStore<LS>::begin() noexcept {
             Id tmp;
             tmp.full = 0;
             digitalWrite<Pins::PSRAM_EN, LOW>();
-            _link.transfer(0x9f);
-            _link.transfer(0);
-            _link.transfer(0);
-            _link.transfer(0);
-            _link.transfer(tmp.bytes, 8);
+            SPI.transfer(0x9f);
+            SPI.transfer(0);
+            SPI.transfer(0);
+            SPI.transfer(0);
+            SPI.transfer(tmp.bytes, 8);
             digitalWrite<Pins::PSRAM_EN, HIGH>();
             delay(100);
             Serial.printf(F("MFID: 0x%x, KGD: 0x%x, EIDHi: 0x%x, EIDLo: 0x%lx\n"), tmp.mfid, tmp.kgd, tmp.eidHi, tmp.eidLo);
@@ -1283,13 +1279,13 @@ PSRAMBackingStore<LS>::begin() noexcept {
 
     };
     delay(1000); // make sure that the waiting duration is enough for powerup
-    _link.beginTransaction(SPISettings{LS, MSBFIRST, SPI_MODE0});
+    SPI.beginTransaction(SPISettings{LS, MSBFIRST, SPI_MODE0});
     for (uint8_t i = 0; i < 8; ++i) {
         // can't use setAddress since that is setup for direct addresses
         getOutputRegister<Ports::PSRAMSel>() = i;
         activatePSRAM(false, true);
     }
-    _link.endTransaction();
+    SPI.endTransaction();
     getOutputRegister<Ports::PSRAMSel>() = 0;
 
 }
@@ -1353,15 +1349,15 @@ template<uint32_t LS>
 inline size_t
 PSRAMBackingStore<LS>::read(Address addr, uint8_t* storage, size_t count) noexcept {
     setAddress(addr);
-    _link.beginTransaction(SPISettings{LS, MSBFIRST, SPI_MODE0});
+    SPI.beginTransaction(SPISettings{LS, MSBFIRST, SPI_MODE0});
     digitalWrite<Pins::PSRAM_EN, LOW>();
-    _link.transfer(0x03);
-    _link.transfer(static_cast<uint8_t>(addr >> 16));
-    _link.transfer(static_cast<uint8_t>(addr >> 8));
-    _link.transfer(static_cast<uint8_t>(addr));
-    _link.transfer(storage, count);
+    SPI.transfer(0x03);
+    SPI.transfer(static_cast<uint8_t>(addr >> 16));
+    SPI.transfer(static_cast<uint8_t>(addr >> 8));
+    SPI.transfer(static_cast<uint8_t>(addr));
+    SPI.transfer(storage, count);
     digitalWrite<Pins::PSRAM_EN, HIGH>();
-    _link.endTransaction();
+    SPI.endTransaction();
     return count;
 }
 
@@ -1369,15 +1365,15 @@ template<uint32_t LS>
 inline size_t
 PSRAMBackingStore<LS>::write(Address addr, uint8_t* storage, size_t count) noexcept {
     setAddress(addr);
-    _link.beginTransaction(SPISettings{LS, MSBFIRST, SPI_MODE0});
+    SPI.beginTransaction(SPISettings{LS, MSBFIRST, SPI_MODE0});
     digitalWrite<Pins::PSRAM_EN, LOW>();
-    _link.transfer(0x02);
-    _link.transfer(static_cast<uint8_t>(addr >> 16));
-    _link.transfer(static_cast<uint8_t>(addr >> 8));
-    _link.transfer(static_cast<uint8_t>(addr));
-    _link.transfer(storage, count);
+    SPI.transfer(0x02);
+    SPI.transfer(static_cast<uint8_t>(addr >> 16));
+    SPI.transfer(static_cast<uint8_t>(addr >> 8));
+    SPI.transfer(static_cast<uint8_t>(addr));
+    SPI.transfer(storage, count);
     digitalWrite<Pins::PSRAM_EN, HIGH>();
-    _link.endTransaction();
+    SPI.endTransaction();
     return count;
 }
 
