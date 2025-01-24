@@ -508,11 +508,14 @@ template<bool readOperation, typename T>
 inline void handleAvailableRequest(const T& item) noexcept {
     transmitValue<readOperation>(item.valid(), TreatAs<bool>{});
 }
+// E2END is a builtin macro which denotes the size of the EEPROM space
+constexpr auto EEPROMSize = E2END + 1;
+constexpr auto EEPROMMask = E2END;
 template<bool readOperation>
 inline void
 handleEEPROMDevice(uint16_t index) noexcept {
     do {
-        index &= 0xFFF;
+        index &= EEPROMMask;
         if constexpr (readOperation) {
             uint16_t curr = 0;
             setDataValue(EEPROM.get<uint16_t>(index, curr));
@@ -634,13 +637,14 @@ handleEEPROMDevice(uint16_t index) noexcept {
     signalReady();
 }
 constexpr auto SRAMCacheCapacity = 2048;
+constexpr auto SRAMCacheMask = SRAMCacheCapacity - 1;
 uint8_t sramCache[SRAMCacheCapacity] = { 0 };
 template<bool readOperation>
 inline void
 handleSRAMDevice(uint16_t address) noexcept {
     uint8_t lo, hi;
     do {
-        address &= 0x7FF;
+        address &= SRAMCacheMask;
         if constexpr (readOperation) {
             lo = sramCache[address + 0];
             hi = sramCache[address + 1];
@@ -804,7 +808,6 @@ handleSRAMDevice(uint16_t address) noexcept {
     } while (false);
     signalReady();
 }
-
 
 template<bool readOperation>
 inline void 
