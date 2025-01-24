@@ -701,25 +701,6 @@ handleSRAMDevice(uint16_t address) noexcept {
             setLowerData(lo);
             setUpperData(hi);
         } else {
-#define X(a) \
-            if (lowerByteEnabled()) { \
-                sramCache[address + a + 0] = lowerData(); \
-            } \
-            if (upperByteEnabled()) { \
-                sramCache[address + a + 1] = upperData(); \
-            } \
-            if (isLastWordOfTransaction()) { \
-                break; \
-            } \
-            signalReady()
-            X(0);
-            X(2);
-            X(4);
-            X(6);
-            X(8);
-            X(10);
-            X(12);
-#undef X
             lo = lowerData();
             hi = upperData();
             if (lowerByteEnabled()) {
