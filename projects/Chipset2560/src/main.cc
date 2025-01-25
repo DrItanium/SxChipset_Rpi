@@ -116,14 +116,14 @@ public:
     }
     void clear() volatile noexcept {
         _dirty = false;
-        //_valid = false;
+        // _valid = false;
         _key.full = 0;
         for (auto i = 0u; i < NumBytes; ++i) {
             _bytes[i] = 0;
         }
     }
     volatile uint8_t* sync(SplitWord32 newAddress) volatile noexcept {
-        //if (_valid) {
+        // if (_valid) {
             if (_key.halves[1] != newAddress.halves[1]) {
                 if (_dirty) {
                     _dirty = false;
@@ -134,17 +134,17 @@ public:
                 }
                 load(newAddress);
             }
-        //} else {
-        //    _valid = true;
-        //    load(newAddress);
-        //}
+        // } else {
+        //     _valid = true;
+        //     load(newAddress);
+        // }
         return &_bytes[newAddress.getOffset()];
     }
     void markDirty() volatile noexcept { _dirty = true; }
     private:
         uint8_t _bytes[NumBytes];
         SplitWord32 _key;
-        //bool _valid;
+        // bool _valid;
         bool _dirty;
 };
 [[gnu::address(0xFF00)]] volatile FixedCacheLine externalCacheLine;
@@ -1361,15 +1361,17 @@ void
 sanityCheckHardwareAcceleratedCacheLine() noexcept {
     Serial.println(F("Using External Hardware Accelerated Cache!"));
     Serial.println(F("Zeroing out cache memory"));
+    // increment by 16 to make sure that the two chips are cleared out correctly
     for (uint32_t i = 0; i < (1024ul * 1024ul); i += 16) {
         interface960.addressLines.view32.data = i;
         if (static_cast<uint16_t>(i) == 0) {
             Serial.print('.');
         }
-        externalCacheLine.clear();
+        externalCacheLine.clear(); 
         // pre-seed the cache
-        externalCacheLine.load(SplitWord32{i});
+        (void)externalCacheLine.load(SplitWord32{i});
     }
+
     Serial.println(F("DONE!"));
 }
 
