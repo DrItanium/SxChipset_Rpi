@@ -107,23 +107,23 @@ struct FixedCacheLine {
     static constexpr auto NumBytes = 16;
     static constexpr auto ShiftAmount = 4;
     static constexpr auto AddressMask = 0xFFFF'FFF0;
-private:
+public:
     void load(SplitWord32 newAddress) volatile noexcept {
         newAddress.full &= AddressMask;
         _key.full = newAddress.full;
         (void)CommunicationPrimitive.read(newAddress, const_cast<uint8_t*>(_bytes), NumBytes);
+
     }
-public:
     void clear() volatile noexcept {
         _dirty = false;
-        _valid = false;
+        //_valid = false;
         _key.full = 0;
         for (auto i = 0u; i < NumBytes; ++i) {
             _bytes[i] = 0;
         }
     }
     volatile uint8_t* sync(SplitWord32 newAddress) volatile noexcept {
-        if (_valid) {
+        //if (_valid) {
             if (_key.halves[1] != newAddress.halves[1]) {
                 if (_dirty) {
                     _dirty = false;
@@ -134,17 +134,17 @@ public:
                 }
                 load(newAddress);
             }
-        } else {
-            _valid = true;
-            load(newAddress);
-        }
+        //} else {
+        //    _valid = true;
+        //    load(newAddress);
+        //}
         return &_bytes[newAddress.getOffset()];
     }
     void markDirty() volatile noexcept { _dirty = true; }
     private:
         uint8_t _bytes[NumBytes];
         SplitWord32 _key;
-        bool _valid;
+        //bool _valid;
         bool _dirty;
 };
 [[gnu::address(0xFF00)]] volatile FixedCacheLine externalCacheLine;
@@ -1367,6 +1367,8 @@ sanityCheckHardwareAcceleratedCacheLine() noexcept {
             Serial.print('.');
         }
         externalCacheLine.clear();
+        // pre-seed the cache
+        externalCacheLine.load(SplitWord32{i});
     }
     Serial.println(F("DONE!"));
 }
