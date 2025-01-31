@@ -107,44 +107,34 @@ struct FixedCacheLine {
     static constexpr auto NumBytes = 16;
     static constexpr auto ShiftAmount = 4;
     static constexpr auto AddressMask = 0xFFFF'FFF0;
-public:
+private:
     void load(SplitWord32 newAddress) volatile noexcept {
         newAddress.full &= AddressMask;
         _key.full = newAddress.full;
         (void)CommunicationPrimitive.read(newAddress, const_cast<uint8_t*>(_bytes), NumBytes);
-
     }
-    void clear() volatile noexcept {
+public:
+    void clear(SplitWord32 address) volatile noexcept {
         _dirty = false;
-        // _valid = false;
-        _key.full = 0;
-        for (auto i = 0u; i < NumBytes; ++i) {
-            _bytes[i] = 0;
-        }
+        load(address);
     }
     volatile uint8_t* sync(SplitWord32 newAddress) volatile noexcept {
-        // if (_valid) {
-            if (_key.halves[1] != newAddress.halves[1]) {
-                if (_dirty) {
-                    _dirty = false;
-                    // just do a compare of the two parts valid and dirty if we
-                    // hit 3 or greater then it means we have to perform the
-                    // replacement
-                    (void)CommunicationPrimitive.write(const_cast<SplitWord32&>(_key), const_cast<uint8_t*>(_bytes), NumBytes);
-                }
-                load(newAddress);
+        if (_key.halves[1] != newAddress.halves[1]) {
+            if (_dirty) {
+                _dirty = false;
+                // just do a compare of the two parts valid and dirty if we
+                // hit 3 or greater then it means we have to perform the
+                // replacement
+                (void)CommunicationPrimitive.write(const_cast<SplitWord32&>(_key), const_cast<uint8_t*>(_bytes), NumBytes);
             }
-        // } else {
-        //     _valid = true;
-        //     load(newAddress);
-        // }
+            load(newAddress);
+        }
         return &_bytes[newAddress.getOffset()];
     }
     void markDirty() volatile noexcept { _dirty = true; }
     private:
         uint8_t _bytes[NumBytes];
         SplitWord32 _key;
-        // bool _valid;
         bool _dirty;
 };
 [[gnu::address(0xFF00)]] volatile FixedCacheLine externalCacheLine;
@@ -1367,9 +1357,8 @@ sanityCheckHardwareAcceleratedCacheLine() noexcept {
         if (static_cast<uint16_t>(i) == 0) {
             Serial.print('.');
         }
-        externalCacheLine.clear(); 
-        // pre-seed the cache
-        (void)externalCacheLine.load(SplitWord32{i});
+        // the act of clearing actually seeds the cache completely
+        externalCacheLine.clear(SplitWord32{i}); 
     }
 
     Serial.println(F("DONE!"));
