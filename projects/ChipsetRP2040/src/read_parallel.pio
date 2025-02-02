@@ -1,4 +1,0 @@
-.program read_parallel 
-.wrap_target
-    in pins, 8
-.wrap
