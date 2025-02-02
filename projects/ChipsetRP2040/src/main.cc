@@ -1,9 +1,11 @@
 #include <Arduino.h>
 #include "hardware/pio.h"
 #include "hardware/clocks.h"
+#if 0
 #include "address_assignment.pio.h"
 #include "read_parallel.pio.h"
 #include "write_parallel.pio.h"
+#endif
 
 constexpr auto SA5 = 0;
 constexpr auto SA4 = 1;
@@ -54,6 +56,7 @@ void setup() {
     digitalWrite(SD6, LOW);
     digitalWrite(SD7, LOW);
 
+#if 0
     // Initialize PIO for address assignment
     auto address_offset = pio_add_program(pio, &address_assignment_program);
     address_sm = pio_claim_unused_sm(pio, true);
@@ -83,17 +86,20 @@ void setup() {
     pio_sm_set_consecutive_pindirs(pio, write_sm, SD0, 8, true);
     pio_sm_init(pio, write_sm, write_offset, &write_config);
     pio_sm_set_enabled(pio, write_sm, true);
+    #endif
 }
 
 void loop() {
+    #if 0
     // Example: Write data 0x55 to address 0x03
     writeParallel(0x03, 0x55);
 
     // Example: Read data from address 0x03
     uint8_t data = readParallel(0x03);
     delay(1000);
+    #endif
 }
-
+#if 0
 void setAddress(uint8_t address) {
     pio_sm_put_blocking(pio, address_sm, address);
 }
@@ -127,3 +133,4 @@ uint8_t readParallel(uint8_t address) {
 
     return data;
 }
+#endif

@@ -4,7 +4,7 @@ from SCons.Script import DefaultEnvironment
 env = DefaultEnvironment()
 
 # Path to the PIO assembler
-pioasm_path = os.path.join(env.PioPlatform().get_package_dir("tool-pico-sdk"), "tools", "pioasm")
+pioasm_path = os.path.join(env.PioPlatform().get_package_dir("toolchain-rp2040"), "tools", "pioasm")
 
 # List of PIO files to compile
 pio_files = [
