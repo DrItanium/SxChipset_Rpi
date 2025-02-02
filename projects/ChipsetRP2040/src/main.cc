@@ -1,4 +1,10 @@
 #include <Arduino.h>
+#include "hardware/pio.h"
+#include "hardware/clocks.h"
+
+#include "address_assignment.pio.h"
+#include "read_parallel.pio.h"
+#include "write_parallel.pio.h"
 constexpr auto SA5 = 0;
 constexpr auto SA4 = 1;
 constexpr auto SA3 = 2;
@@ -16,14 +22,17 @@ constexpr auto SD5 = 13;
 constexpr auto SD6 = 14;
 constexpr auto SD7 = 15;
 void setup() {
+    // initialize control pins
     pinMode(SA5, OUTPUT);
     pinMode(SA4, OUTPUT);
     pinMode(SA3, OUTPUT);
     pinMode(SA2, OUTPUT);
     pinMode(SA1, OUTPUT);
     pinMode(SA0, OUTPUT);
+    // initialize data pins
     pinMode(SOE, OUTPUT);
     pinMode(SWR, OUTPUT);
+    // initialize data pins
     pinMode(SD0, OUTPUT);
     pinMode(SD1, OUTPUT);
     pinMode(SD2, OUTPUT);
@@ -32,6 +41,7 @@ void setup() {
     pinMode(SD5, OUTPUT);
     pinMode(SD6, OUTPUT);
     pinMode(SD7, OUTPUT);
+
     digitalWrite(SA5, LOW);
     digitalWrite(SA4, LOW);
     digitalWrite(SA3, LOW);

@@ -1,0 +1,4 @@
+.program write_parallel
+.wrap_target
+    out pins, 8
+.wrap

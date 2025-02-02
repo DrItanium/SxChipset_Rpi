@@ -1,0 +1,4 @@
+.program address_assignment
+.wrap_target
+    out pins, 6
+.wrap
