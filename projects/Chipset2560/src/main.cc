@@ -1123,6 +1123,7 @@ setup() {
         getDirectionRegister<Ports::DataUpper>() = 0;
     }
     configureInterruptSources();
+    Serial2.begin(SerialBaudRate);
     Serial.begin(SerialBaudRate);
     Serial.printf(F("Serial Up @ %ld\n"), SerialBaudRate);
     EEPROM.begin();
