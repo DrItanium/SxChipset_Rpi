@@ -7,7 +7,8 @@ all: NewCPUCardDecoder.jed \
 	RPiCH351Interface.jed \
 	ConnectionFunctionalityBoard.jed \
 	CacheAndMemoryDecoder.jed \
-	Rearranger.jed 
+	Rearranger.jed \
+	SerializationTestBoard.jed
 
 install_RPiCH351Interface: RPiCH351Interface.jed
 	minipro -p "ATF22V10CQZ(UES)" --write $<
@@ -21,6 +22,8 @@ install_CacheAndMemoryDecoder: CacheAndMemoryDecoder.jed
 install_Rearranger: Rearranger.jed
 	minipro -p "ATF22V10CQZ(UES)" --write $< 
 
+install_SerializationTestBoard: SerializationTestBoard.jed
+	minipro -p "ATF22V10CQZ(UES)" --write $< 
 
 clean:
 	@echo -n "Cleaning..."

@@ -1,0 +1,17 @@
+GAL22V10
+SerializationTestBoard
+
+NC BLAST ADS WR DEN ADREN DATLD DATEN OUTCLR NC NC GND
+NC NC NC NC CLR3 EN3 OE3 EN2 PL2 EN PL VCC
+
+/PL = /ADS
+/EN = /ADREN * /DEN
+/PL2 = /DATLD * /DEN * WR
+/EN2 = /DATEN * /DEN * WR
+/OE3 = /DEN * /WR
+/EN3 = /DATEN * /DEN * /WR
+/CLR3 = /OUTCLR
+
+DESCRIPTION
+
+This the logic for the pld on the serialization board meant to allow for 32-bit, 24-bit and 16 bit capture of different kinds.
