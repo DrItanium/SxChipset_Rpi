@@ -1473,3 +1473,46 @@ void
 processMicroshell() {
     ush_service(&ush);
 }
+
+// riscv32 emulator start
+union RV32IInstruction {
+    uint32_t full;
+    struct {
+        uint32_t opcode : 7;
+    };
+    struct {
+        uint32_t opcode : 7;
+        uint32_t rd : 5;
+        uint32_t funct3 : 3;
+        uint32_t rs1 : 5;
+        uint32_t rs2 : 5;
+        uint32_t funct7 : 7;
+    } rType;
+    struct {
+        uint32_t opcode : 7;
+        uint32_t rd : 5;
+        uint32_t funct3 : 3;
+        uint32_t rs1 : 5;
+        int32_t imm : 12;
+    } iType;
+    struct {
+        uint32_t opcode : 7;
+        uint32_t imm4_0 : 5;
+        uint32_t funct3 : 3;
+        uint32_t rs1 : 5;
+        uint32_t rs2 : 5;
+        int32_t imm11_5 : 7;
+    } sType;
+    struct {
+        uint32_t opcode : 7;
+        uint32_t rd : 5;
+        uint32_t imm31_12 : 20; // upper 20 bits
+    } uType;
+};
+class RV32IEmulator {
+    public:
+        RV32IEmulator() = default;
+    private:
+        uint32_t _gprs[32] = { 0 };
+        uint32_t _pc = 0;
+};
