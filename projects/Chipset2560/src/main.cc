@@ -1513,6 +1513,18 @@ class RV32IEmulator {
     public:
         RV32IEmulator() = default;
     private:
+        void nextInstruction() noexcept { _pc += 4; }
+        [[nodiscard]] uint32_t getRegister(uint8_t index) const noexcept { return _gprs[index & 0b11111]; }
+        void setRegister(uint8_t index, uint32_t value) noexcept {
+            switch (index & 0b11111) {
+                case 0:
+                    break;
+                default:
+                    _gprs[index & 0b11111] = value;
+                    break;
+            }
+        }
+    private:
         uint32_t _gprs[32] = { 0 };
         uint32_t _pc = 0;
 };
